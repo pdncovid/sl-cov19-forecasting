@@ -1,0 +1,15 @@
+*.eps
+*.jpg
+*.png
+*.jpeg
+*.gif
+*.bmp
+logs/
+**/.idea
+**/.vscode
+*.h5
+*.hdf5
+*.out
+**/__pycache__
+*.pb
+*.index
