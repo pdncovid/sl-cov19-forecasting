@@ -1,6 +1,6 @@
 import numpy as np 
 
-def split_on_time_dimension(x_data, y_data, features, x_size, y_size, k_fold, test_fold, reduce_last_dim=False, debug=False):
+def split_on_time_dimension(x_data, y_data, features, x_size, y_size, k_fold, test_fold, reduce_last_dim=False, only_train_test=False, debug=False):
     """
     x_data : (n_regions, timesteps)
     y_data : (n_regions, timesteps)
@@ -37,6 +37,8 @@ def split_on_time_dimension(x_data, y_data, features, x_size, y_size, k_fold, te
     a = (test_fold-1)*samples_per_fold
     b = (test_fold-0)*samples_per_fold
     c = (test_fold+1)*samples_per_fold
+    if only_train_test:
+        a = b
     
     # keep them  as it is and when we select random indexes we will see whether
     # it falls in to testing fold and put it accordingly
@@ -58,9 +60,9 @@ def split_on_time_dimension(x_data, y_data, features, x_size, y_size, k_fold, te
 
     # create training data
     if debug:
-      print(f"selecting {t - 2*samples_per_fold} samples from training part")
+      print(f"selecting {t - (1 if only_train_test else 2)*samples_per_fold} samples from training part")
     _N = 0
-    while _N < t - 2*samples_per_fold:
+    while _N < t - (1 if only_train_test else 2)*samples_per_fold:
         end = x_data_train.shape[1] - (x_size+y_size)
         i=0 if end == 0 else np.random.randint(0, end, 1)[0]
         x_train.append(x_data_train[:, i:i + x_size].T)
@@ -71,12 +73,16 @@ def split_on_time_dimension(x_data, y_data, features, x_size, y_size, k_fold, te
     if debug:
       print(f"selecting {samples_per_fold} samples from validation part")
     _N = 0
-    while _N < samples_per_fold:
-        end = x_data_val.shape[1] - (x_size+y_size)
-        i=0 if end == 0 else np.random.randint(0, end, 1)[0]
-        x_val.append(x_data_val[:,i:i+x_size].T)
-        y_val.append(y_data_val[:, i+x_size:i+x_size+y_size].T)
-        _N += 1
+    if only_train_test:
+        x_val = np.zeros((0,x_size, x_data_val.shape[0]))
+        y_val = np.zeros((0,y_size, x_data_val.shape[0]))
+    else:
+        while _N < samples_per_fold:
+            end = x_data_val.shape[1] - (x_size+y_size)
+            i=0 if end == 0 else np.random.randint(0, end, 1)[0]
+            x_val.append(x_data_val[:,i:i+x_size].T)
+            y_val.append(y_data_val[:, i+x_size:i+x_size+y_size].T)
+            _N += 1
 
     # create testing data
     if debug:
@@ -93,8 +99,12 @@ def split_on_time_dimension(x_data, y_data, features, x_size, y_size, k_fold, te
     X_train_feat = np.expand_dims(features.T,0).repeat(X_train.shape[0],0)
     Y_train = np.stack(y_train, 0)
     
-    X_val = np.stack(x_val, 0)
-    Y_val = np.stack(y_val, 0)
+    if only_train_test:
+        X_val = x_val
+        Y_val = y_val
+    else:
+        X_val = np.stack(x_val, 0)
+        Y_val = np.stack(y_val, 0)
     X_val_feat = np.expand_dims(features.T,0).repeat(X_val.shape[0],0)
     
     X_test = np.stack(x_test, 0)
@@ -215,3 +225,69 @@ def split_on_region_dimension(x_data, y_data, x_size, y_size, n_samples, k_fold,
         Y_test = np.concatenate(Y_test,-1).T
     return X_train, Y_train, X_val, Y_val, X_test, Y_test
 # function end
+
+
+def split_into_pieces_random(x_data, y_data, x_size, y_size, N, reduce_last_dim=False):
+    """
+    x_data : (regions, timesteps)
+    y_data : (regions, timesteps)
+
+    [___________] are from x_data
+    [######]      are from y_data
+    Note that the indexing is preserved when picking [________][#####] on x_data and y_data
+                                                     10     20 21   25
+
+    [___________][#####]
+                [___________][#####]        
+          [___________][#####]                                  
+                                    [___________][#####]
+                        [___________][#####]
+    """
+    
+    n, t = x_data.shape
+    x, y = [], []
+    
+    _N = 0
+    while _N != N:
+        i = np.random.randint(0, t - x_size - y_size, 1)[0]
+        if i + x_size + y_size > t:
+            continue
+        x.append(x_data[:, i:i + x_size].T)
+        y.append(y_data[:, i + x_size:i + x_size + y_size].T)
+        _N += 1
+        
+    X = np.stack(x, 0)
+    Y = np.stack(y, 0)
+    if reduce_last_dim:
+        X = np.concatenate(X,-1).T
+        Y = np.concatenate(Y,-1).T
+    return X, Y
+
+def split_into_pieces_inorder(x_data, y_data, x_size, y_size, window_size, reduce_last_dim=False):
+    """
+    x_data : (regions, timesteps)
+    y_data : (regions, timesteps)
+
+    [___________] are from x_data
+    [######]      are from y_data
+    Note that the indexing is preserved when picking [________][#####] on x_data and y_data
+                                                     10     20 21   25
+
+    [___________][#####]
+    <--window_size-->[___________][#####]
+                     <--window_size-->[___________][#####]
+    """
+    n, t = x_data.shape
+    x, y = [], []
+    
+    for i in range(0, t, window_size):
+        if i + x_size + y_size > t:
+            continue
+        x.append(x_data[:, i:i + x_size].T)
+        y.append(y_data[:, i + x_size:i + x_size + y_size].T)
+    X = np.stack(x, 0)
+    Y = np.stack(y, 0)
+    if reduce_last_dim:
+        X = np.concatenate(X,-1).T
+        Y = np.concatenate(Y,-1).T
+    return X, Y
