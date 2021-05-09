@@ -115,9 +115,14 @@ def split_on_time_dimension(x_data, y_data, features, x_size, y_size, k_fold, te
         X_train = np.concatenate(X_train,-1).T
         X_train_feat = np.concatenate(X_train_feat,-1).T
         Y_train = np.concatenate(Y_train,-1).T
-        X_val = np.concatenate(X_val,-1).T
-        X_val_feat = np.concatenate(X_val_feat,-1).T
-        Y_val = np.concatenate(Y_val,-1).T
+        if only_train_test:
+            X_val = X_val.reshape((0,X_val.shape[1])).T
+            X_val_feat = X_val_feat.reshape((0,X_val_feat.shape[1])).T
+            Y_val = Y_val.reshape((0,Y_val.shape[1])).T
+        else:
+            X_val = np.concatenate(X_val,-1).T
+            X_val_feat = np.concatenate(X_val_feat,-1).T
+            Y_val = np.concatenate(Y_val,-1).T
         X_test = np.concatenate(X_test,-1).T
         X_test_feat = np.concatenate(X_test_feat,-1).T
         Y_test = np.concatenate(Y_test,-1).T

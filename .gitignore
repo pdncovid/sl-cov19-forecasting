@@ -5,6 +5,7 @@
 *.gif
 *.bmp
 logs/
+.ipynb_checkpoints/
 **/.idea
 **/.vscode
 *.h5
