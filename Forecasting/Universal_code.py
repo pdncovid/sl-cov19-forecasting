@@ -27,15 +27,16 @@ import matplotlib.pyplot as plt
 import folium
 import pydot
 
-# path = "/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COVID-AI (PG)/spatio_temporal/Covid19_DL_Forecasting_Codes"
+path = "F:\GitHub\sl-cov19-forecasting"
 # os.chdir(path)
 sys.path.insert(0, os.path.join(sys.path[0], '..'))
-from utils.plots import bar_metrics, plot_prediction
-from utils.functions import split_into_pieces_inorder,split_into_pieces_random,create_dataset_random, distance, convert_lon_lat_to_adjacency_matrix 
-from utils.data_loader import load_data, per_million, get_daily
-from utils.data_splitter import split_on_region_dimension, split_on_time_dimension
-from utils.smoothing_functions import O_LPF,NO_LPF,O_NDA,NO_NDA
-
+from Forecasting.utils.plots import bar_metrics, plot_prediction
+from Forecasting.utils.functions import split_into_pieces_inorder, split_into_pieces_random, create_dataset_random, \
+    distance
+from Forecasting.utils.functions import convert_lon_lat_to_adjacency_matrix
+from Forecasting.utils.data_loader import load_data, per_million, get_daily
+from Forecasting.utils.data_splitter import split_on_region_dimension, split_on_time_dimension
+from Forecasting.utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
 
 # # EXTRACTING DATA
 
@@ -43,7 +44,7 @@ from utils.smoothing_functions import O_LPF,NO_LPF,O_NDA,NO_NDA
 
 
 daily_data = True
-DATASET = "Sri Lanka" # "Texas" "USA" "Global"
+DATASET = "Sri Lanka"  # "Texas" "USA" "Global"
 # DATASET = "Texas"
 
 
@@ -64,164 +65,161 @@ DATASET = "Sri Lanka" # "Texas" "USA" "Global"
 # In[ ]:
 
 
-d = load_data(DATASET,path="../Datasets")
-region_names=d["region_names"] 
-confirmed_cases=d["confirmed_cases"] 
-daily_cases=d["daily_cases"] 
-features=d["features"] 
-START_DATE=d["START_DATE"] 
-n_regions=d["n_regions"] 
+d = load_data(DATASET, path="../Datasets")
+region_names = d["region_names"]
+confirmed_cases = d["confirmed_cases"]
+daily_cases = d["daily_cases"]
+features = d["features"]
+START_DATE = d["START_DATE"]
+n_regions = d["n_regions"]
 
 population = features["Population"]
 for i in range(len(population)):
-    print("{:.2f}%".format(confirmed_cases[i,:].max()/population[i]*100), region_names[i])
+    print("{:.2f}%".format(confirmed_cases[i, :].max() / population[i] * 100), region_names[i])
 
 days = confirmed_cases.shape[1]
 
-print(f"Total population {population.sum()/1e6:.2f}M, regions:{n_regions}, days:{days}")
+print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
 
 
-# # Checking the overfiltering and underfiltering problem
-
-# In[ ]:
-
-
-def NO_LPF(data, datatype, cutoff, order,plot=True,region_names=None):
-
-    if datatype == 'daily':
-        data_sums = np.zeros(data.shape[0],)
-        for i in range(data.shape[0]):
-            data_sums[i] = np.sum(data[i,:])
-
-    data = np.copy(data.T)
-    n_regions = data.shape[1]
-
-    # FILTERING:
-    # Filter requirements.
-    T = data.shape[0]         
-    fs = 1
-    nyq = 0.5 * fs  
-    # order = 2
-    n = int(T * fs)       
-
-    def lowpass_filter(data, cutoff, fs, order):
-        normal_cutoff = cutoff / nyq
-      # Get the filter coefficients 
-        b, a = signal.butter(order, normal_cutoff, btype='low', analog=False)
-        y = signal.filtfilt(b, a, data)
-        return y.astype(np.float32)
-    
-
-    columns = 2
-    rows = math.ceil(n_regions/columns)
-    if plot==True:
-        plt.figure(figsize=(6*columns, 4*rows))
-
-    data_filtered = np.zeros_like(data)
-    for i in range(n_regions):
-        X = data[:,i]
-        X_temp = X/np.amax(X)
-        Y_temp = lowpass_filter(X_temp, cutoff, fs, order)
-        if datatype == 'daily':
-              # Y = np.sum(data_sums[i])*Y_temp/np.sum(Y_temp)
-            Y = np.copy(Y_temp)
-            Y[Y<0]=0
-        else:
-            for n in range(len(Y)-1):
-                if Y[n+1]-Y[n]<0:
-                    Y[n+1]=Y[n]
-                    Y = np.amax(X)*Y/np.amax(Y)
-        data_filtered[:,i] = Y
-
-        if plot==True:
-            plt.subplot(rows,columns,i+1)
-            plt.title('daily new cases in '+str(region_names[i]))
-            plt.plot(X,linewidth=2),plt.plot(Y,linewidth=2,color='r')
-            plt.legend(['original','filtered']),plt.xlabel('days')
-    if plot==True:     
-        plt.show()
-    return data_filtered.T
-
-
-# In[ ]:
-
-
-plt.figure(figsize=(6*4,3.5*7))
-for i in range(len(region_names)):
-    plt.subplot(7,4,i+1)
-    plt.plot(1000000*daily_cases[i,:]/population[i], linewidth=2)
-    nvar = np.around(np.var(daily_cases[i,:]/np.amax(daily_cases[i,:])),decimals=3)
-    plt.title(str(region_names[i])+' normalised variance: '+str(nvar))
-plt.show()
-
-plt.figure(figsize=(6*4,3.5*7))
-for i in range(len(region_names)):
-    _temp = np.abs(scipy.fft.fft(daily_cases[i,:]/np.amax(daily_cases[i,:])))
-    _temp = _temp/np.amax(_temp)
-    _temp1 = []
-    n=5
-    for j in range(len(_temp)-n):
-        _temp1.append(np.mean(_temp[j:j+n]))
-    plt.subplot(7,4,i+1)
-    plt.plot(_temp1, linewidth=2)
-    nvar = np.around(np.var(daily_cases[i,:]/np.amax(daily_cases[i,:])),decimals=3)
-    plt.title(str(region_names[i])+' normalised variance: '+str(nvar))
-    plt.xlim([0, 60])
-plt.show()
-
-
-# In[ ]:
-
-
-for i in range(len(region_names)):
-    if region_names[i] == 'BADULLA':
-        idx_kal = i
-    elif region_names[i] == 'COLOMBO':
-        idx_gam = i
-
-print(idx_kal, idx_gam)
-
-list1 = [idx_kal, idx_gam]
-
-# daily_filtered = NO_LPF(daily_cases, datatype='daily',order=1, cutoff=0.1)
-freqs=[]
-for i in range(40):
-      freqs.append((i+1)/200)
-
-print(freqs)
-
-
-# compare gampaha and kalutara
-# overfiltering 
-for j in freqs:
-    plt.figure(figsize=(14,3))
-    for i in range(len(list1)):
-        daily_filtered1 = NO_LPF(daily_cases, datatype='daily',order=3, cutoff=j, plot=False)
-        plt.subplot(1,2,i+1)
-        plt.plot(daily_cases[list1[i],:]/np.amax(daily_cases[list1[i],:]), linewidth=2)
-        plt.plot(daily_filtered1[list1[i],:],linewidth=2,color='r')
-        RMSE = np.sqrt(np.mean(np.square(daily_cases[list1[i],:]-daily_filtered1[list1[i],:])))
-        plt.title(str(region_names[list1[i]])+ '  cutoff:  '+str(j))
-        # plt.subplot(1,2,2)
-        # plt.plot(daily_cases[i,:], linewidth=2)
-        # RMSE = np.sqrt(np.mean(np.square(daily_cases[i,:]-daily_filtered[i,:])))
-        # plt.plot(daily_filtered[i,:],linewidth=2,color='r'),plt.title(str(region_names[i])+ ' optimised '+'RMSE= '+str(np.around(RMSE,2)))
-    plt.show()
-
-# # underfiltering 
-# for i in list1:
-#   daily_filtered1 = NO_LPF(daily_cases, datatype='daily',order=3, cutoff=0.1, plot=False)
-#   plt.figure(figsize=(6,3.5))
-#   # plt.subplot(1,2,1)
-#   plt.plot(daily_cases[i,:], linewidth=2)
-#   plt.plot(daily_filtered1[i,:],linewidth=2,color='r')
-#   RMSE = np.sqrt(np.mean(np.square(daily_cases[i,:]-daily_filtered1[i,:])))
-#   plt.title(str(region_names[i])+ ' unoptimised '+'RMSE= '+str(np.around(RMSE,2)))
-#   # plt.subplot(1,2,2)
-#   # plt.plot(daily_cases[i,:], linewidth=2)
-#   # RMSE = np.sqrt(np.mean(np.square(daily_cases[i,:]-daily_filtered[i,:])))
-#   # plt.plot(daily_filtered[i,:],linewidth=2,color='r'),plt.title(str(region_names[i])+ ' optimised '+'RMSE= '+str(np.around(RMSE,2)))
+# # # Checking the overfiltering and underfiltering problem (approx LINE 85 TO 222)
+# # In[ ]:
+# def NO_LPF(data, datatype, cutoff, order,plot=True,region_names=None):
+#
+#     if datatype == 'daily':
+#         data_sums = np.zeros(data.shape[0],)
+#         for i in range(data.shape[0]):
+#             data_sums[i] = np.sum(data[i,:])
+#
+#     data = np.copy(data.T)
+#     n_regions = data.shape[1]
+#
+#     # FILTERING:
+#     # Filter requirements.
+#     T = data.shape[0]
+#     fs = 1
+#     nyq = 0.5 * fs
+#     # order = 2
+#     n = int(T * fs)
+#
+#     def lowpass_filter(data, cutoff, fs, order):
+#         normal_cutoff = cutoff / nyq
+#       # Get the filter coefficients
+#         b, a = signal.butter(order, normal_cutoff, btype='low', analog=False)
+#         y = signal.filtfilt(b, a, data)
+#         return y.astype(np.float32)
+#
+#
+#     columns = 2
+#     rows = math.ceil(n_regions/columns)
+#     if plot==True:
+#         plt.figure(figsize=(6*columns, 4*rows))
+#
+#     data_filtered = np.zeros_like(data)
+#     for i in range(n_regions):
+#         X = data[:,i]
+#         X_temp = X/np.amax(X)
+#         Y_temp = lowpass_filter(X_temp, cutoff, fs, order)
+#         if datatype == 'daily':
+#               # Y = np.sum(data_sums[i])*Y_temp/np.sum(Y_temp)
+#             Y = np.copy(Y_temp)
+#             Y[Y<0]=0
+#         else:
+#             for n in range(len(Y)-1):
+#                 if Y[n+1]-Y[n]<0:
+#                     Y[n+1]=Y[n]
+#                     Y = np.amax(X)*Y/np.amax(Y)
+#         data_filtered[:,i] = Y
+#
+#         if plot==True:
+#             plt.subplot(rows,columns,i+1)
+#             plt.title('daily new cases in '+str(region_names[i]))
+#             plt.plot(X,linewidth=2),plt.plot(Y,linewidth=2,color='r')
+#             plt.legend(['original','filtered']),plt.xlabel('days')
+#     if plot==True:
+#         plt.show()
+#     return data_filtered.T
+#
+#
+# # In[ ]:
+#
+#
+# plt.figure(figsize=(6*4,3.5*7))
+# for i in range(len(region_names)):
+#     plt.subplot(7,4,i+1)
+#     plt.plot(1000000*daily_cases[i,:]/population[i], linewidth=2)
+#     nvar = np.around(np.var(daily_cases[i,:]/np.amax(daily_cases[i,:])),decimals=3)
+#     plt.title(str(region_names[i])+' normalised variance: '+str(nvar))
 # plt.show()
+#
+# plt.figure(figsize=(6*4,3.5*7))
+# for i in range(len(region_names)):
+#     _temp = np.abs(scipy.fft.fft(daily_cases[i,:]/np.amax(daily_cases[i,:])))
+#     _temp = _temp/np.amax(_temp)
+#     _temp1 = []
+#     n=5
+#     for j in range(len(_temp)-n):
+#         _temp1.append(np.mean(_temp[j:j+n]))
+#     plt.subplot(7,4,i+1)
+#     plt.plot(_temp1, linewidth=2)
+#     nvar = np.around(np.var(daily_cases[i,:]/np.amax(daily_cases[i,:])),decimals=3)
+#     plt.title(str(region_names[i])+' normalised variance: '+str(nvar))
+#     plt.xlim([0, 60])
+# plt.show()
+#
+#
+# # In[ ]:
+#
+#
+# for i in range(len(region_names)):
+#     if region_names[i] == 'BADULLA':
+#         idx_kal = i
+#     elif region_names[i] == 'COLOMBO':
+#         idx_gam = i
+#
+# print(idx_kal, idx_gam)
+#
+# list1 = [idx_kal, idx_gam]
+#
+# # daily_filtered = NO_LPF(daily_cases, datatype='daily',order=1, cutoff=0.1)
+# freqs=[]
+# for i in range(40):
+#       freqs.append((i+1)/200)
+#
+# print(freqs)
+#
+#
+# # compare gampaha and kalutara
+# # overfiltering
+# for j in freqs:
+#     plt.figure(figsize=(14,3))
+#     for i in range(len(list1)):
+#         daily_filtered1 = NO_LPF(daily_cases, datatype='daily',order=3, cutoff=j, plot=False)
+#         plt.subplot(1,2,i+1)
+#         plt.plot(daily_cases[list1[i],:]/np.amax(daily_cases[list1[i],:]), linewidth=2)
+#         plt.plot(daily_filtered1[list1[i],:],linewidth=2,color='r')
+#         RMSE = np.sqrt(np.mean(np.square(daily_cases[list1[i],:]-daily_filtered1[list1[i],:])))
+#         plt.title(str(region_names[list1[i]])+ '  cutoff:  '+str(j))
+#         # plt.subplot(1,2,2)
+#         # plt.plot(daily_cases[i,:], linewidth=2)
+#         # RMSE = np.sqrt(np.mean(np.square(daily_cases[i,:]-daily_filtered[i,:])))
+#         # plt.plot(daily_filtered[i,:],linewidth=2,color='r'),plt.title(str(region_names[i])+ ' optimised '+'RMSE= '+str(np.around(RMSE,2)))
+#     plt.show()
+#
+# # # underfiltering
+# # for i in list1:
+# #   daily_filtered1 = NO_LPF(daily_cases, datatype='daily',order=3, cutoff=0.1, plot=False)
+# #   plt.figure(figsize=(6,3.5))
+# #   # plt.subplot(1,2,1)
+# #   plt.plot(daily_cases[i,:], linewidth=2)
+# #   plt.plot(daily_filtered1[i,:],linewidth=2,color='r')
+# #   RMSE = np.sqrt(np.mean(np.square(daily_cases[i,:]-daily_filtered1[i,:])))
+# #   plt.title(str(region_names[i])+ ' unoptimised '+'RMSE= '+str(np.around(RMSE,2)))
+# #   # plt.subplot(1,2,2)
+# #   # plt.plot(daily_cases[i,:], linewidth=2)
+# #   # RMSE = np.sqrt(np.mean(np.square(daily_cases[i,:]-daily_filtered[i,:])))
+# #   # plt.plot(daily_filtered[i,:],linewidth=2,color='r'),plt.title(str(region_names[i])+ ' optimised '+'RMSE= '+str(np.around(RMSE,2)))
+# # plt.show()
 
 
 # # Creating datasets
@@ -231,26 +229,26 @@ for j in freqs:
 # In[ ]:
 
 
-def O_LPF(data, datatype, order, R_weight, EIG_weight, corr, region_names, plot_freq=1):  
+def O_LPF(data, datatype, order, R_weight, EIG_weight, corr, region_names, plot_freq=0):
     R_cons = EIG_weight
     EIG_cons = R_weight
 
     if datatype == 'daily':
-        data_sums = np.zeros(data.shape[0],)
+        data_sums = np.zeros(data.shape[0], )
         for i in range(data.shape[0]):
-            data_sums[i] = np.sum(data[i,:])
+            data_sums[i] = np.sum(data[i, :])
 
     data = np.copy(data.T)
     n_regions = data.shape[1]
 
     # FILTERING:
     # Filter requirements.
-    T = data.shape[0]         
+    T = data.shape[0]
     fs = 1
     cutoff = 0.017
-    nyq = 0.5 * fs  
+    nyq = 0.5 * fs
     # order = 1
-    n = int(T * fs)         
+    n = int(T * fs)
 
     def lowpass_filter(data, cutoff, fs, order):
         normal_cutoff = cutoff / nyq
@@ -261,8 +259,8 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, corr, region_names, plot_
 
     # DETERMINE THE RIGHT CUTOFF FREQUENCY
     step = 0.005
-    cutoff_list = range(int(round(1/step)))
-    cutoff_list = 0.1*(np.array(list(cutoff_list))+5)/100
+    cutoff_list = range(int(round(1 / step)))
+    cutoff_list = 0.1 * (np.array(list(cutoff_list)) + 5) / 100
     # print('cutoff_list=',cutoff_list)
 
     sections = 7
@@ -274,27 +272,27 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, corr, region_names, plot_
         J_tot = []
         for n in range(len(cutoff_list)):
             cutoff = cutoff_list[n]
-            X = data[:,i]
+            X = data[:, i]
             Y = lowpass_filter(X, cutoff, fs, order)
 
             # rescale filtered signal
             if datatype == 'daily':
-                Y =data_sums[i]*Y/np.sum(Y)
+                Y = data_sums[i] * Y / np.sum(Y)
                 # Y[Y<0]=0
                 # else:
                 #   for n in range(len(Y)-1):
                 #     if Y[n+1]-Y[n]<0:
                 #       Y[n+1]=Y[n]
-                Y = np.amax(X)*Y/np.amax(Y)
+                Y = np.amax(X) * Y / np.amax(Y)
             if corr == True:
-                J_R.append(np.mean(np.corrcoef(X,Y))) # obtaining correlations
+                J_R.append(np.mean(np.corrcoef(X, Y)))  # obtaining correlations
             else:
-                J_R.append(np.mean(np.square(X-Y))) # obtaining error
+                J_R.append(np.mean(np.square(X - Y)))  # obtaining error
 
             # obtaining power spectral densities
             X_freqs, X_psd = signal.welch(X)
             Y_freqs, Y_psd = signal.welch(Y)
-            
+
             X_psd, Y_psd = np.log10(np.abs(X_psd)), np.log10(np.abs(Y_psd))
 
             # plt.figure()
@@ -305,55 +303,59 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, corr, region_names, plot_
             # PSD_diff = np.abs(X_psd-Y_psd)
             # inc_fn = np.array(list(range(len(PSD_diff))))**0.5
             # J_eig.append(np.sum(inc_fn*PSD_diff))
-            sec_len = int(X_psd.shape[0]/sections)
+            sec_len = int(X_psd.shape[0] / sections)
             for k in range(sections):
-                X_avg = np.mean(X_psd[k*sec_len:(k+1)*sec_len])
-                Y_avg = np.mean(Y_psd[k*sec_len:(k+1)*sec_len])
-                J0.append((k+1)*np.abs(X_avg-Y_avg)**0.2) # eigenvalue spread should increase as k increases for an ideal solution
+                X_avg = np.mean(X_psd[k * sec_len:(k + 1) * sec_len])
+                Y_avg = np.mean(Y_psd[k * sec_len:(k + 1) * sec_len])
+                J0.append((k + 1) * np.abs(
+                    X_avg - Y_avg) ** 0.2)  # eigenvalue spread should increase as k increases for an ideal solution
             J_eig.append(np.sum(J0))
 
-            
-        J_EIG = (J_eig/np.amax(J_eig))
+        J_EIG = (J_eig / np.amax(J_eig))
 
-        if corr == True:  
-            J_E = (J_R/np.amax(J_R))**0.5
+        if corr == True:
+            J_E = (J_R / np.amax(J_R)) ** 0.5
         else:
-            J_E = 1-(J_R/np.amax(J_R))
+            J_E = 1 - (J_R / np.amax(J_R))
 
         # J_tot=R_cons*(J_E) +EIG_cons*(J_EIG)
-        J_tot= 1 - np.abs(R_cons*(J_E)-EIG_cons*(J_EIG))
+        J_tot = 1 - np.abs(R_cons * (J_E) - EIG_cons * (J_EIG))
 
-        J_tot= J_tot/np.amax(J_tot)
+        J_tot = J_tot / np.amax(J_tot)
         idx = np.argmax(J_tot)
         Y = lowpass_filter(X, cutoff_list[idx], fs, order)
         if datatype == 'daily':
-            Y = np.sum(data_sums[i])*Y/np.sum(Y)
-            Y[Y<0]=0
+            Y = np.sum(data_sums[i]) * Y / np.sum(Y)
+            Y[Y < 0] = 0
         else:
-            for n in range(len(Y)-1):
-                if Y[n+1]-Y[n]<0:
-                    Y[n+1]=Y[n]
-            Y = np.amax(X)*Y/np.amax(Y)
-        data_filtered[:,i] = Y
+            for n in range(len(Y) - 1):
+                if Y[n + 1] - Y[n] < 0:
+                    Y[n + 1] = Y[n]
+            Y = np.amax(X) * Y / np.amax(Y)
+        data_filtered[:, i] = Y
 
-        if i%plot_freq==0:
-            plt.figure(figsize=(12,3.5))
+        # if i % plot_freq == 0:
+        #     plt.figure(figsize=(12, 3.5))
+        #
+        #     plt.subplot(1, 2, 1), plt.title('fitness functions of each component')
+        #     plt.plot(cutoff_list, J_E, linewidth=2)
+        #     plt.plot(cutoff_list, J_EIG, linewidth=2)
+        #     plt.plot(cutoff_list, J_tot, linewidth=2)
+        #     plt.xlim([cutoff_list[0], cutoff_list[-1]])
+        #     # plt.ylim([0,1.1])
+        #     plt.legend(
+        #         ['correlation (information retained)', 'eigenvalue spread (noise removed)', 'total fitness function'],
+        #         loc='lower left')
+        #     plt.xlabel('normalized cutoff frequency')
+        #
+        #     plt.subplot(1, 2, 2), plt.title(
+        #         'cumulative cases in ' + str(region_names[i]) + '\noptimum normalized cutoff frequency: ' + str(
+        #             round(cutoff_list[idx], 4)))
+        #     plt.plot(X / np.amax(Y), linewidth=2)
+        #     plt.plot(Y / np.amax(Y), linewidth=2, color='r')
+        #     plt.legend(['original', 'filtered']), plt.xlabel('days')
+        #     plt.show()
 
-            plt.subplot(1,2,1),plt.title('fitness functions of each component')
-            plt.plot(cutoff_list,J_E,linewidth=2)
-            plt.plot(cutoff_list,J_EIG,linewidth=2)
-            plt.plot(cutoff_list,J_tot,linewidth=2)
-            plt.xlim([cutoff_list[0],cutoff_list[-1]])
-            # plt.ylim([0,1.1])
-            plt.legend(['correlation (information retained)', 'eigenvalue spread (noise removed)','total fitness function'],loc='lower left')
-            plt.xlabel('normalized cutoff frequency')
-
-            plt.subplot(1,2,2), plt.title('cumulative cases in '+str(region_names[i])+'\noptimum normalized cutoff frequency: '+str(round(cutoff_list[idx],4)))
-            plt.plot(X/np.amax(Y),linewidth=2)
-            plt.plot(Y/np.amax(Y),linewidth=2,color='r')
-            plt.legend(['original','filtered']),plt.xlabel('days')
-            plt.show()
-        
     return data_filtered.T
 
 
@@ -361,7 +363,10 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, corr, region_names, plot_
 
 
 # confirmed_filtered = O_LPF(confirmed_cases, datatype='daily', order=1, R_cons=1, EIG_cons=1, corr = True)
-daily_filtered = O_LPF(daily_cases, datatype='daily', order=3, R_weight=1.0, EIG_weight=1, corr = True, region_names=region_names)
+daily_filtered = O_LPF(daily_cases, datatype='daily', order=3, R_weight=1.0, EIG_weight=1, corr=True,
+                       region_names=region_names)
+
+
 # confirmed_filtered = NO_LPF(confirmed_cases)
 # confirmed_filtered = O_NDA(confirmed_cases)
 # confirmed_filtered = NO_NDA(confirmed_cases)
@@ -374,92 +379,83 @@ daily_filtered = O_LPF(daily_cases, datatype='daily', order=3, R_weight=1.0, EIG
 # In[ ]:
 
 
-#@title Run this cell only if we are going from filtered confirmed -> daily filtered.
+# @title Run this cell only if we are going from filtered confirmed -> daily filtered.
 
 if not daily_data:
 
-  # fixing the confirmed cases dataset (negative gradients)
+    # fixing the confirmed cases dataset (negative gradients)
     for k in range(confirmed_filtered.shape[0]):
-        for i in range(confirmed_filtered.shape[1]-1):
-            if confirmed_filtered[k,i+1]<confirmed_filtered[k,i]:
-                confirmed_filtered[k,i+1] = confirmed_filtered[k,i]
-    confirmed_per_mio_capita = per_million(confirmed_cases,population)
-    confirmed_per_mio_capita_filtered = per_million(confirmed_filtered,population)
+        for i in range(confirmed_filtered.shape[1] - 1):
+            if confirmed_filtered[k, i + 1] < confirmed_filtered[k, i]:
+                confirmed_filtered[k, i + 1] = confirmed_filtered[k, i]
+    confirmed_per_mio_capita = per_million(confirmed_cases, population)
+    confirmed_per_mio_capita_filtered = per_million(confirmed_filtered, population)
 
     daily_cases = get_daily(confirmed_cases)
     daily_filtered = get_daily(confirmed_filtered)
 
-
 # In[ ]:
 
 
-daily_per_mio_capita = per_million(daily_cases,population)
-daily_per_mio_capita_filtered = per_million(daily_filtered,population)
+daily_per_mio_capita = per_million(daily_cases, population)
+daily_per_mio_capita_filtered = per_million(daily_filtered, population)
 
-
-plots = [daily_cases[:,:].T, daily_filtered[:,:].T]
-titles = [DATASET+': Daily new cases',DATASET+': Daily new cases(filtered)']
-plt.figure(figsize=(12,3.5))
+plots = [daily_cases[:, :].T, daily_filtered[:, :].T]
+titles = [DATASET + ': Daily new cases', DATASET + ': Daily new cases(filtered)']
+plt.figure(figsize=(12, 3.5))
 for i in range(len(titles)):
-    plt.subplot(1,2,i+1)
-    plt.plot(plots[i],linewidth=2)
-    plt.title(titles[i]),plt.xlabel('Days since '+START_DATE)
+    plt.subplot(1, 2, i + 1)
+    plt.plot(plots[i], linewidth=2)
+    plt.title(titles[i]), plt.xlabel('Days since ' + START_DATE)
     # plt.ylim([0,5000])
     plt.ylim([0, 800])
 
 plt.show()
 
-plots = [daily_per_mio_capita[:,:].T, daily_per_mio_capita_filtered[:,:].T]
-titles = [DATASET+': Daily new cases per 1M',DATASET+': Daily new cases per 1M filtered',]
-plt.figure(figsize=(12,3.5))
+plots = [daily_per_mio_capita[:, :].T, daily_per_mio_capita_filtered[:, :].T]
+titles = [DATASET + ': Daily new cases per 1M', DATASET + ': Daily new cases per 1M filtered', ]
+plt.figure(figsize=(12, 3.5))
 for i in range(len(titles)):
-    plt.subplot(1,2,i+1)
-    plt.plot(plots[i],linewidth=2)
-    plt.title(titles[i]),plt.xlabel('Days since '+START_DATE)
+    plt.subplot(1, 2, i + 1)
+    plt.plot(plots[i], linewidth=2)
+    plt.title(titles[i]), plt.xlabel('Days since ' + START_DATE)
     plt.ylim([0, 800])
 plt.show()
-  
 
 if DATASET == 'Texas':
-    nums = [50,125]
-    plt.figure(figsize=(12,3.5))
+    nums = [50, 125]
+    plt.figure(figsize=(12, 3.5))
     for i in range(len(nums)):
-        plt.subplot(1,2,i+1)
-        plt.plot(daily_per_mio_capita[nums[i],:].T,linewidth=1.5)
-        plt.plot(daily_per_mio_capita_filtered[nums[i],:].T,linewidth=3)
+        plt.subplot(1, 2, i + 1)
+        plt.plot(daily_per_mio_capita[nums[i], :].T, linewidth=1.5)
+        plt.plot(daily_per_mio_capita_filtered[nums[i], :].T, linewidth=3)
         # plt.ylim([0,800])
     plt.show
 
 print(daily_per_mio_capita.shape, daily_per_mio_capita_filtered.shape)
 
-
 # In[ ]:
 
 
-if DATASET=='Sri Lanka':
+if DATASET == 'Sri Lanka':
 
     select_regions = ['COLOMBO', 'GAMPAHA', 'KALUTARA']
-    plt.figure(figsize=(len(select_regions)*6,4))
+    plt.figure(figsize=(len(select_regions) * 6, 4))
     for i in range(len(region_names)):
         for j in range(len(select_regions)):
             if region_names[i] == select_regions[j]:
-                plt.subplot(1,len(select_regions),j+1)
-                plt.plot(daily_per_mio_capita[i,:].T,linewidth=2)
-                plt.plot(daily_per_mio_capita_filtered[i,:].T,linewidth=3,color='r')
+                plt.subplot(1, len(select_regions), j + 1)
+                plt.plot(daily_per_mio_capita[i, :].T, linewidth=2)
+                plt.plot(daily_per_mio_capita_filtered[i, :].T, linewidth=3, color='r')
                 plt.xlabel('days since 14/11/2020')
                 plt.ylabel('daily new cases per million')
                 plt.legend([select_regions[j] + ': unfiltered', select_regions[j] + ': filtered'])
 
-
-
-  # plt.figure(figsize=(18,4))
-  # for j in range(len(idx)):
+# plt.figure(figsize=(18,4))
+# for j in range(len(idx)):
 
 
 # In[ ]:
-
-
-
 
 
 # ## Creating Alert-Level data
@@ -467,13 +463,13 @@ if DATASET=='Sri Lanka':
 # In[ ]:
 
 
-places = ['COLOMBO','GAMPAHA','KALUTARA']
+places = ['COLOMBO', 'GAMPAHA', 'KALUTARA']
 idx = []
 
 for k in range(len(places)):
-  for i in range(len(region_names)):
-    if region_names[i]==places[k]:
-      idx.append(i)
+    for i in range(len(region_names)):
+        if region_names[i] == places[k]:
+            idx.append(i)
 
 idx
 
@@ -481,8 +477,7 @@ idx
 # In[ ]:
 
 
-def create_alert_level(ts_data,thresholds,logic=1):
-    
+def create_alert_level(ts_data, thresholds, logic=1):
     inc_thresh = 7
     dec_thresh = 14
     current = 1
@@ -494,26 +489,26 @@ def create_alert_level(ts_data,thresholds,logic=1):
             inc_trig += 1
         else:
             inc_trig = 0
-        if ts_data[i] < thresholds[current-1]:
+        if ts_data[i] < thresholds[current - 1]:
             dec_trig += 1
         else:
             dec_trig = 0
-        if logic==1:    #high inertia (we dont consider spikes here. we want to see how well it responds. need to quantify it.)
+        if logic == 1:  # high inertia (we dont consider spikes here. we want to see how well it responds. need to quantify it.)
             if inc_trig == inc_thresh:
                 current += 1
                 inc_trig = 0
             if dec_trig == dec_thresh:
                 current -= 1
                 dec_trig = 0
-        elif logic==2:
-            if np.mean(ts_data[max(0,i-inc_thresh):i]) >= thresholds[current]:
+        elif logic == 2:
+            if np.mean(ts_data[max(0, i - inc_thresh):i]) >= thresholds[current]:
                 current += 1
-            elif np.mean(ts_data[max(0,i-dec_thresh):i]) < thresholds[current-1]:
+            elif np.mean(ts_data[max(0, i - dec_thresh):i]) < thresholds[current - 1]:
                 current -= 1
-        elif logic==3:  #low inertia (we consider spikes here.)
-            if ts_data[i]>= thresholds[current]:
+        elif logic == 3:  # low inertia (we consider spikes here.)
+            if ts_data[i] >= thresholds[current]:
                 current += 1
-            elif ts_data[i] < thresholds[current-1]:
+            elif ts_data[i] < thresholds[current - 1]:
                 current -= 1
         al.append(current)
     return al
@@ -523,7 +518,7 @@ alert_filt = []
 alert_unfilt = []
 
 # Method 1
-thresholds = [0,10,20,40,1e1000]
+thresholds = [0, 10, 20, 40, 1e1000]
 daily_f = daily_per_mio_capita_filtered
 daily_uf = daily_per_mio_capita
 logic = 3
@@ -535,12 +530,13 @@ logic = 3
 # logic = 3
 
 for dist in range(daily_f.shape[0]):
-    alert_filt.append(create_alert_level(daily_f[dist,:], thresholds, logic=logic))
+    alert_filt.append(create_alert_level(daily_f[dist, :], thresholds, logic=logic))
 alert_filt = np.array(alert_filt)
 
 for dist in range(daily_uf.shape[0]):
-    alert_unfilt.append(create_alert_level(daily_uf[dist,:], thresholds, logic=logic))
+    alert_unfilt.append(create_alert_level(daily_uf[dist, :], thresholds, logic=logic))
 alert_unfilt = np.array(alert_unfilt)
+
 
 # plt.figure()
 # plt.plot(alert_unfilt.T,linewidth=2)
@@ -556,24 +552,25 @@ alert_unfilt = np.array(alert_unfilt)
 
 # count \/ from alert levels
 def count_spikes(data):
-    count_total = np.zeros([data.shape[0],])
+    count_total = np.zeros([data.shape[0], ])
     for d in range(data.shape[0]):
         i = 0
-        count=0
-        while i<(data.shape[1]-2):
-            if data[d,i] - data[d,i+1] == 1 and data[d,i+1] - data[d,i+2] == -1:
-                count = count+1
-            elif data[d,i] - data[d,i+1] == -1 and data[d,i+1] - data[d,i+2] == 1:
-                count = count+1
-            i=i+1
-        count_total[d]=count
+        count = 0
+        while i < (data.shape[1] - 2):
+            if data[d, i] - data[d, i + 1] == 1 and data[d, i + 1] - data[d, i + 2] == -1:
+                count = count + 1
+            elif data[d, i] - data[d, i + 1] == -1 and data[d, i + 1] - data[d, i + 2] == 1:
+                count = count + 1
+            i = i + 1
+        count_total[d] = count
     return count_total
 
+
 count_unfilt = np.sum(count_spikes(alert_unfilt))
-print('count_unfiltered=',count_unfilt)
+print('count_unfiltered=', count_unfilt)
 
 count_filt = np.sum(count_spikes(alert_filt))
-print('count_filtered=',count_filt)
+print('count_filtered=', count_filt)
 
 # # removing \/ from alert levels
 # def remove_spikes(data):
@@ -601,12 +598,9 @@ print('count_filtered=',count_filt)
 alert_f = np.copy(alert_filt)
 alert_uf = np.copy(alert_unfilt)
 
-
-for i in range(len(thresholds)-1):
-  alert_f[alert_f==i+1]=thresholds[i]
-  alert_uf[alert_uf==i+1]=thresholds[i]
-
-
+for i in range(len(thresholds) - 1):
+    alert_f[alert_f == i + 1] = thresholds[i]
+    alert_uf[alert_uf == i + 1] = thresholds[i]
 
 # plt.figure(figsize=(5*5,3*5))
 # for i in range(alert_filt.shape[0]):
@@ -617,22 +611,22 @@ for i in range(len(thresholds)-1):
 #   plt.plot(daily_f[i,:],linewidth=1.5,color='g')
 #   plt.xlim([30,120])
 # plt.show()
-i=13
+i = 13
 
-plt.plot(daily_uf[i,:],'b:')
-plt.plot(daily_f[i,:],'r:')
-plt.plot(alert_uf[i,:],linewidth=2,color='b')
-plt.plot(alert_f[i,:],linewidth=2,color='r')
-plt.legend(["original epicurve", "smoothed epicruve","levels computed using original data (scaled)","levels computed using smoothed data (scaled)"])
+plt.plot(daily_uf[i, :], 'b:')
+plt.plot(daily_f[i, :], 'r:')
+plt.plot(alert_uf[i, :], linewidth=2, color='b')
+plt.plot(alert_f[i, :], linewidth=2, color='r')
+plt.legend(["original epicurve", "smoothed epicruve", "levels computed using original data (scaled)",
+            "levels computed using smoothed data (scaled)"])
 plt.xlabel('days since 14 Nov 2020')
 plt.ylabel('daily cases')
-plt.xlim([30,120])
-plt.ylim([0, thresholds[-2]+20])
+plt.xlim([30, 120])
+plt.ylim([0, thresholds[-2] + 20])
 plt.show()
 
 print(i)
 print(region_names[i])
-
 
 # In[ ]:
 
@@ -640,283 +634,277 @@ print(region_names[i])
 alert_f = np.copy(alert_filt)
 alert_uf = np.copy(alert_unfilt)
 
-idx = np.random.randint(0,24,size=(3,))
+idx = np.random.randint(0, 24, size=(3,))
 
 plt.figure()
 for i in range(len(idx)):
-  if i==0:
-    plt.plot(alert_uf[idx[i],:],'b:')
-    plt.plot(alert_f[idx[i],:],linewidth=2,color='b')
-  elif i==1:
-    plt.plot(alert_uf[idx[i],:],'r:')
-    plt.plot(alert_f[idx[i],:],linewidth=2,color='r')
-  else:
-    plt.plot(alert_uf[idx[i],:],'g:')
-    plt.plot(alert_f[idx[i],:],linewidth=2,color='g')
+    if i == 0:
+        plt.plot(alert_uf[idx[i], :], 'b:')
+        plt.plot(alert_f[idx[i], :], linewidth=2, color='b')
+    elif i == 1:
+        plt.plot(alert_uf[idx[i], :], 'r:')
+        plt.plot(alert_f[idx[i], :], linewidth=2, color='r')
+    else:
+        plt.plot(alert_uf[idx[i], :], 'g:')
+        plt.plot(alert_f[idx[i], :], linewidth=2, color='g')
 
-plt.legend([region_names[idx[0]]+': computed using original data', region_names[idx[0]]+': computed using filtered data',
-            region_names[idx[1]]+': computed using original data', region_names[idx[1]]+': computed using filtered data',
-            region_names[idx[2]]+': computed using original data', region_names[idx[2]]+': computed using filtered data'])
+plt.legend(
+    [region_names[idx[0]] + ': computed using original data', region_names[idx[0]] + ': computed using filtered data',
+     region_names[idx[1]] + ': computed using original data', region_names[idx[1]] + ': computed using filtered data',
+     region_names[idx[2]] + ': computed using original data', region_names[idx[2]] + ': computed using filtered data'])
 
 plt.show()
 print(idx)
-
 
 # # GSP
 
 # ## coordinate stuff
 
 # In[ ]:
-
-
-region_codes = features.index
-dpmc = pd.Series(daily_cases.mean(axis=1), name="Mean Daily Per Million")
-names = pd.Series(region_codes, name="District")
-state_data = pd.concat([names, dpmc], 1)
-print(state_data)
-
-
-# In[ ]:
-
-
-state_geo = "maps/LKA_electrol_districts.geojson"
-
-
-m = folium.Map(location=[8,81], zoom_start=8)
-folium.GeoJson(state_geo, name="geojson").add_to(m)
-
-folium.Choropleth(
-    geo_data=state_geo,
-    name="choropleth",
-    data=state_data,
-    columns=["District", "Mean Daily Per Million"],
-    key_on="properties.electoralDistrictCode",
-    fill_color="YlGn",
-    fill_opacity=0.7,
-    line_opacity=0.2,
-    legend_name="Mean Covid-19 Cases",
-).add_to(m)
-
-folium.LayerControl().add_to(m)
-
-
-# Averaging corrdinates of the map to find the longitudes and latitudes of each region
-
-# In[ ]:
-
-
-import json
-map_json = json.load(open(state_geo))
-
-dist_coor = {"Code":[],"lon":[],"lat":[]}
-for i in range(len(map_json['features'])):
-  coor = np.array(map_json['features'][i]['geometry']['coordinates'])
-  if len(coor.shape)==3:
-    mean_coor = np.mean(coor, 1)[0]
-  else:
-    mean_coor = []
-    for j in range(coor.shape[0]):
-      # print(np.shape(coor[j][0]))
-      mean_coor.append(np.mean(coor[j][0],0))
-    mean_coor = np.mean(mean_coor,0)  
-  dist_coor["Code"] += [map_json['features'][i]['properties']['electoralDistrictCode']]
-  dist_coor["lon"] += [mean_coor[0]]
-  dist_coor["lat"] += [mean_coor[1]]
-dist_coor = pd.DataFrame(dist_coor).set_index('Code').sort_index()
-
-print(dist_coor.index)
-print(region_codes)
-
-
-# ## GSP_old
-
-# In[ ]:
-
-
-def laplacian(A, method=0, plot=False):
-    """
-    A : adjacency matrix
-    method : 0 - combinatorial, 1 - normalized
-    """
-    A_hat = A + np.identity(A.shape[0]) 
-    D_hat = np.zeros_like(A)
-    for i in range(D_hat.shape[0]):
-        D_hat[i,i] = np.sum(A_hat[i,:])
-
-    if method == 0:
-        L = D_hat - A_hat
-    elif method == 1:
-        D1 = np.sqrt(np.linalg.inv(D_hat))
-        A1 = np.matmul(D1,A_hat)
-        L = np.identity(A_hat.shape[0]) - np.matmul(A1,D1)
-    elif method == 2:
-        L = spektral.utils.gcn_filter(A, symmetric=True)
-    if plot == True:
-        plots, names = np.array([A_hat, D_hat, L]), ['adjacency', 'degree matrix', 'laplacian']
-        plt.figure(2,figsize=(16,4))
-        for i in range(plots.shape[0]):
-            plt.subplot(1,4,i+1),plt.title(names[i]),plt.imshow(plots[i,0:50,0:50]), plt.colorbar()
-    return L
-
-
-# In[ ]:
-
-
-dist_coor = features[['Lat',"Lon"]]
-dist_coor
-
-A = convert_lon_lat_to_adjacency_matrix(dist_coor, lat_column="Lat", lon_column="Lon", delta = 1e-5)
-plt.imshow(A)
-plt.show()
-
-
-# In[ ]:
-
-
-L = laplacian(A,0, True)
-
-
-# ## GSP_new
-
-# In[ ]:
-
-
-def adjacency_mat(X, type_, cutoff, self_loops, is_weighted, plot):  
-    nodes = X.shape[0]
-    d1 = np.zeros([nodes,nodes])
-    d = np.zeros(X.shape[1]) 
-    for i in range(nodes):
-        for j in range(nodes):
-            for k in range(X.shape[1]):
-                d[k] = X[i,k]-X[j,k]
-            d1[i,j] = np.sqrt(np.sum(np.square(d)))
-    dist = d1/np.amax(d1)
-    if type_.lower() in ['gaussean']:
-        theta = np.mean(dist) 
-        A_dense = -1*np.square(dist)/(0.3*np.square(theta))
-        A_dense = np.exp(A_dense)
-    else: 
-        A_dense = 1*dist
-
-    if is_weighted == False: 
-        A_dense[A_dense!=0]=1
-    if self_loops == False: 
-        A_dense = A_dense - np.identity(nodes)
-    A = 1*A_dense
-    A[dist>cutoff]=0
-    if plot == True:
-        plots=np.array([dist,A_dense,A])
-        titles = ['distance matrix', 'adjacency matrix: dense (without cutoff)', 'adjacency matrix: sparse (with cutoff)']
-        plt.figure(figsize=(12,4))
-        for i in range(len(plots)):
-            plt.subplot(1,3,i+1),plt.imshow(plots[i,0:25,0:25]),plt.title(titles[i])
-        plt.show()
-    return A
-
-def laplacian(A, type_, plot):
-    D = np.zeros_like(A)
-    D_hat = np.zeros_like(A)
-    A_hat = 1*A
-    if A[0,0]==1:
-        for i in range(A.shape[0]):          
-            A[i,i]=0
-    else:
-        for i in range(A.shape[0]):
-            A_hat[i,i]=1
-    for i in range(D.shape[0]):
-        D[i,i] = np.sum(A[i,:])
-        D_hat[i,i] = np.sum(A_hat[i,:])
-    if type_ == 'combinatorial':
-        L = D - A 
-    elif type_ == 'normalized':
-        D = np.sqrt(np.linalg.inv(D))
-        L = np.identity(A.shape[0]) - np.matmul(np.matmul(D,A),D)
-    if plot == True:
-            plots, names = np.array([A_hat, D, L]), ['Adjacency matrix with self loops','Degree','Laplacian']
-            plt.figure(figsize=(12,4))
-            for i in range(plots.shape[0]):
-                plt.subplot(1,3,i+1),plt.title(names[i]),plt.imshow(plots[i,0:25,0:25])  
-            plt.show()
-    return L
-
-
-# In[ ]:
-
-
-# GETTING THE COORDINATES for SL
-dist_coor = features[['Lat',"Lon"]]
-coordinates = np.float64(np.array(dist_coor.iloc[:,:]))
-
-# obtain weight matrices to convert into adjacency matrix
-cutoff = 0.2
-dist_type = 'gaussean'
-laplacian_type = 'normalized'
-A = adjacency_mat(coordinates, dist_type, cutoff, self_loops=False, is_weighted =True, plot=True)
-L = laplacian(A,laplacian_type, plot=True)
-
-
-# In[ ]:
-
-
-""" 
-eigenvectors of laplacian
-"""
-[eig_L,v_L] = np.linalg.eig(L)
-
-plt.plot(eig_L)
-
-eig_L.shape, v_L.shape
-
-
-# In[ ]:
-
-
-# state_var = confirmed_per_mio_capita_filtered
-state_var = daily_per_mio_capita_filtered
-state_var.shape
-
-""" 
-total variation of graph signal (smoothness measure)
-"""
-
-total_variation = np.zeros((state_var.shape[1],))
-
-for i in range(state_var.shape[1]):
-  temp = np.matmul(L, state_var[:,i]) 
-  total_variation[i] = np.matmul(state_var[:,i].T, temp)
-
-""" 
-total variation of eigenvectors (signal energy)
-"""
-total_variation_eig = np.zeros((v_L.shape[0],))
-
-for i in range(v_L.shape[0]):
-  temp = np.matmul(L, v_L[:,i]) 
-  total_variation_eig[i] = np.matmul(v_L[:,i].T, temp)
-
-
-""" 
-graph fourier transform
-"""
-state_var_GFT = np.zeros_like(state_var)
-
-for i in range(state_var_GFT.shape[1]):
-  state_var_GFT[:,i] = np.matmul(v_L.T, state_var[:,i])
-
-""" 
-lowpass filters
-"""
-filter_size = 10
-filter_start = 0
-
-H_L = np.zeros((filter_size))
-
-
-# In[ ]:
-
-
-plt.plot(total_variation)
-
+#
+#
+# region_codes = features.index
+# dpmc = pd.Series(daily_cases.mean(axis=1), name="Mean Daily Per Million")
+# names = pd.Series(region_codes, name="District")
+# state_data = pd.concat([names, dpmc], 1)
+# print(state_data)
+#
+# # In[ ]:
+#
+#
+# state_geo = "maps/LKA_electrol_districts.geojson"
+#
+# m = folium.Map(location=[8, 81], zoom_start=8)
+# folium.GeoJson(state_geo, name="geojson").add_to(m)
+#
+# folium.Choropleth(
+#     geo_data=state_geo,
+#     name="choropleth",
+#     data=state_data,
+#     columns=["District", "Mean Daily Per Million"],
+#     key_on="properties.electoralDistrictCode",
+#     fill_color="YlGn",
+#     fill_opacity=0.7,
+#     line_opacity=0.2,
+#     legend_name="Mean Covid-19 Cases",
+# ).add_to(m)
+#
+# folium.LayerControl().add_to(m)
+#
+# # Averaging corrdinates of the map to find the longitudes and latitudes of each region
+#
+# # In[ ]:
+#
+#
+# import json
+#
+# map_json = json.load(open(state_geo))
+#
+# dist_coor = {"Code": [], "lon": [], "lat": []}
+# for i in range(len(map_json['features'])):
+#     coor = np.array(map_json['features'][i]['geometry']['coordinates'])
+#     if len(coor.shape) == 3:
+#         mean_coor = np.mean(coor, 1)[0]
+#     else:
+#         mean_coor = []
+#         for j in range(coor.shape[0]):
+#             # print(np.shape(coor[j][0]))
+#             mean_coor.append(np.mean(coor[j][0], 0))
+#         mean_coor = np.mean(mean_coor, 0)
+#     dist_coor["Code"] += [map_json['features'][i]['properties']['electoralDistrictCode']]
+#     dist_coor["lon"] += [mean_coor[0]]
+#     dist_coor["lat"] += [mean_coor[1]]
+# dist_coor = pd.DataFrame(dist_coor).set_index('Code').sort_index()
+#
+# print(dist_coor.index)
+# print(region_codes)
+#
+#
+# # ## GSP_old
+#
+# # In[ ]:
+#
+#
+# def laplacian(A, method=0, plot=False):
+#     """
+#     A : adjacency matrix
+#     method : 0 - combinatorial, 1 - normalized
+#     """
+#     A_hat = A + np.identity(A.shape[0])
+#     D_hat = np.zeros_like(A)
+#     for i in range(D_hat.shape[0]):
+#         D_hat[i, i] = np.sum(A_hat[i, :])
+#
+#     if method == 0:
+#         L = D_hat - A_hat
+#     elif method == 1:
+#         D1 = np.sqrt(np.linalg.inv(D_hat))
+#         A1 = np.matmul(D1, A_hat)
+#         L = np.identity(A_hat.shape[0]) - np.matmul(A1, D1)
+#     elif method == 2:
+#         L = spektral.utils.gcn_filter(A, symmetric=True)
+#     if plot == True:
+#         plots, names = np.array([A_hat, D_hat, L]), ['adjacency', 'degree matrix', 'laplacian']
+#         plt.figure(2, figsize=(16, 4))
+#         for i in range(plots.shape[0]):
+#             plt.subplot(1, 4, i + 1), plt.title(names[i]), plt.imshow(plots[i, 0:50, 0:50]), plt.colorbar()
+#     return L
+#
+#
+# # In[ ]:
+#
+#
+# dist_coor = features[['Lat', "Lon"]]
+# dist_coor
+#
+# A = convert_lon_lat_to_adjacency_matrix(dist_coor, lat_column="Lat", lon_column="Lon", delta=1e-5)
+# plt.imshow(A)
+# plt.show()
+#
+# # In[ ]:
+#
+#
+# L = laplacian(A, 0, True)
+#
+#
+# # ## GSP_new
+#
+# # In[ ]:
+#
+#
+# def adjacency_mat(X, type_, cutoff, self_loops, is_weighted, plot):
+#     nodes = X.shape[0]
+#     d1 = np.zeros([nodes, nodes])
+#     d = np.zeros(X.shape[1])
+#     for i in range(nodes):
+#         for j in range(nodes):
+#             for k in range(X.shape[1]):
+#                 d[k] = X[i, k] - X[j, k]
+#             d1[i, j] = np.sqrt(np.sum(np.square(d)))
+#     dist = d1 / np.amax(d1)
+#     if type_.lower() in ['gaussean']:
+#         theta = np.mean(dist)
+#         A_dense = -1 * np.square(dist) / (0.3 * np.square(theta))
+#         A_dense = np.exp(A_dense)
+#     else:
+#         A_dense = 1 * dist
+#
+#     if is_weighted == False:
+#         A_dense[A_dense != 0] = 1
+#     if self_loops == False:
+#         A_dense = A_dense - np.identity(nodes)
+#     A = 1 * A_dense
+#     A[dist > cutoff] = 0
+#     if plot == True:
+#         plots = np.array([dist, A_dense, A])
+#         titles = ['distance matrix', 'adjacency matrix: dense (without cutoff)',
+#                   'adjacency matrix: sparse (with cutoff)']
+#         plt.figure(figsize=(12, 4))
+#         for i in range(len(plots)):
+#             plt.subplot(1, 3, i + 1), plt.imshow(plots[i, 0:25, 0:25]), plt.title(titles[i])
+#         plt.show()
+#     return A
+#
+#
+# def laplacian(A, type_, plot):
+#     D = np.zeros_like(A)
+#     D_hat = np.zeros_like(A)
+#     A_hat = 1 * A
+#     if A[0, 0] == 1:
+#         for i in range(A.shape[0]):
+#             A[i, i] = 0
+#     else:
+#         for i in range(A.shape[0]):
+#             A_hat[i, i] = 1
+#     for i in range(D.shape[0]):
+#         D[i, i] = np.sum(A[i, :])
+#         D_hat[i, i] = np.sum(A_hat[i, :])
+#     if type_ == 'combinatorial':
+#         L = D - A
+#     elif type_ == 'normalized':
+#         D = np.sqrt(np.linalg.inv(D))
+#         L = np.identity(A.shape[0]) - np.matmul(np.matmul(D, A), D)
+#     if plot == True:
+#         plots, names = np.array([A_hat, D, L]), ['Adjacency matrix with self loops', 'Degree', 'Laplacian']
+#         plt.figure(figsize=(12, 4))
+#         for i in range(plots.shape[0]):
+#             plt.subplot(1, 3, i + 1), plt.title(names[i]), plt.imshow(plots[i, 0:25, 0:25])
+#         plt.show()
+#     return L
+#
+#
+# # In[ ]:
+#
+#
+# # GETTING THE COORDINATES for SL
+# dist_coor = features[['Lat', "Lon"]]
+# coordinates = np.float64(np.array(dist_coor.iloc[:, :]))
+#
+# # obtain weight matrices to convert into adjacency matrix
+# cutoff = 0.2
+# dist_type = 'gaussean'
+# laplacian_type = 'normalized'
+# A = adjacency_mat(coordinates, dist_type, cutoff, self_loops=False, is_weighted=True, plot=True)
+# L = laplacian(A, laplacian_type, plot=True)
+#
+# # In[ ]:
+#
+#
+# """
+# eigenvectors of laplacian
+# """
+# [eig_L, v_L] = np.linalg.eig(L)
+#
+# plt.plot(eig_L)
+#
+# eig_L.shape, v_L.shape
+#
+# # In[ ]:
+#
+#
+# # state_var = confirmed_per_mio_capita_filtered
+# state_var = daily_per_mio_capita_filtered
+# state_var.shape
+#
+# """
+# total variation of graph signal (smoothness measure)
+# """
+#
+# total_variation = np.zeros((state_var.shape[1],))
+#
+# for i in range(state_var.shape[1]):
+#     temp = np.matmul(L, state_var[:, i])
+#     total_variation[i] = np.matmul(state_var[:, i].T, temp)
+#
+# """
+# total variation of eigenvectors (signal energy)
+# """
+# total_variation_eig = np.zeros((v_L.shape[0],))
+#
+# for i in range(v_L.shape[0]):
+#     temp = np.matmul(L, v_L[:, i])
+#     total_variation_eig[i] = np.matmul(v_L[:, i].T, temp)
+#
+# """
+# graph fourier transform
+# """
+# state_var_GFT = np.zeros_like(state_var)
+#
+# for i in range(state_var_GFT.shape[1]):
+#     state_var_GFT[:, i] = np.matmul(v_L.T, state_var[:, i])
+#
+# """
+# lowpass filters
+# """
+# filter_size = 10
+# filter_start = 0
+#
+# H_L = np.zeros((filter_size))
+#
+# # In[ ]:
+#
+#
+# plt.plot(total_variation)
 
 # # TRAINING MODEL
 
@@ -924,6 +912,8 @@ plt.plot(total_variation)
 
 
 # TRAINING PARAMETERS
+
+# TRAINING MODEL
 batch_size = 16
 epochs = 100
 lr = 0.002
@@ -933,7 +923,6 @@ n_dem = 16
 s_per_example = 30
 n_features = 4
 
-
 # ## Dense Models
 
 # In[ ]:
@@ -941,35 +930,33 @@ n_features = 4
 
 reduce_regions2batch = True
 model_type = "DENSE"
+
+
 def get_model_ANN(seq_size, predict_steps, n_features=n_features, n_regions=n_regions):
-    
     inp_seq = tf.keras.layers.Input(seq_size, name="input_sequence")
     inp_fea = tf.keras.layers.Input(n_features, name="input_features")
-    
+
     x = inp_seq
     xf = inp_fea
     n = n_features
-    while (n>0):
-        xf = tf.keras.layers.Dense(n,activation='relu')(xf) 
-        n = n//2
-    
+    while (n > 0):
+        xf = tf.keras.layers.Dense(n, activation='relu')(xf)
+        n = n // 2
+
     x = tf.keras.layers.Dense(10, activation='relu')(x)
-    x = tf.keras.layers.Dense(predict_steps,activation='relu')(x)
-    
+    x = tf.keras.layers.Dense(predict_steps, activation='relu')(x)
+
     if n_features > 0:
-        x = x*xf
-    model = tf.keras.models.Model([inp_seq,inp_fea], x)
+        x = x * xf
+    model = tf.keras.models.Model([inp_seq, inp_fea], x)
     return model
+
 
 model_ANN = get_model_ANN(seq_size, predict_steps)
 model_ANN.summary()
 tf.keras.utils.plot_model(model_ANN, show_shapes=True, rankdir='LR')
 
-
 # In[ ]:
-
-
-
 
 
 # In[ ]:
@@ -977,21 +964,23 @@ tf.keras.utils.plot_model(model_ANN, show_shapes=True, rankdir='LR')
 
 reduce_regions2batch = False
 model_type = "DENSE"
+
+
 def get_model_ANN(input_seq_size, output_seq_size, n_features=n_features, n_regions=n_regions):
-    
-    inp_seq = tf.keras.layers.Input((input_seq_size,n_regions), name="input_sequence")
-    inp_fea = tf.keras.layers.Input((n_features,n_regions), name="input_features")
-    
-    x = tf.keras.layers.Reshape((input_seq_size*n_regions,))(inp_seq)
-    x = tf.keras.layers.Dense(output_seq_size*n_regions, activation='sigmoid')(x)
-    x = tf.keras.layers.Reshape((output_seq_size,n_regions))(x)
+    inp_seq = tf.keras.layers.Input((input_seq_size, n_regions), name="input_sequence")
+    inp_fea = tf.keras.layers.Input((n_features, n_regions), name="input_features")
+
+    x = tf.keras.layers.Reshape((input_seq_size * n_regions,))(inp_seq)
+    x = tf.keras.layers.Dense(output_seq_size * n_regions, activation='sigmoid')(x)
+    x = tf.keras.layers.Reshape((output_seq_size, n_regions))(x)
 
     model = tf.keras.models.Model([inp_seq, inp_fea], x)
     return model
+
+
 model_ANN = get_model_ANN(seq_size, predict_steps, n_regions=n_regions)
 model_ANN.summary()
 tf.keras.utils.plot_model(model_ANN, show_shapes=True, rankdir='LR')
-
 
 # ## LSTM Models
 
@@ -1000,13 +989,15 @@ tf.keras.utils.plot_model(model_ANN, show_shapes=True, rankdir='LR')
 
 reduce_regions2batch = True
 model_type = "LSTM"
+
+
 def get_model_LSTM(input_seq_size, output_seq_size, n_features=n_features, n_regions=n_regions):
-    inp_seq = tf.keras.layers.Input((input_seq_size,1), name="input_seq")
+    inp_seq = tf.keras.layers.Input((input_seq_size, 1), name="input_seq")
     inp_fea = tf.keras.layers.Input(n_features, name="input_fea")
-    
+
     out = tf.keras.layers.LSTM(output_seq_size, activation='sigmoid')(inp_seq)
-    
-    model = tf.keras.models.Model([inp_seq,inp_fea], out)
+
+    model = tf.keras.models.Model([inp_seq, inp_fea], out)
     return model
 
 
@@ -1014,50 +1005,52 @@ model_LSTM = get_model_LSTM(seq_size, predict_steps)
 model_LSTM.summary()
 tf.keras.utils.plot_model(model_LSTM, show_shapes=True, rankdir='LR')
 
-
 # In[ ]:
 
 
 reduce_regions2batch = False
 model_type = "LSTM"
+
+
 def get_model_LSTM(input_seq_size, output_seq_size, n_regions):
-    
-    inp_seq = tf.keras.layers.Input((input_seq_size,n_regions), name="input_seq")
-    x = tf.keras.layers.LSTM(output_seq_size*n_regions, activation='sigmoid')(inp_seq)
+    inp_seq = tf.keras.layers.Input((input_seq_size, n_regions), name="input_seq")
+    x = tf.keras.layers.LSTM(output_seq_size * n_regions, activation='sigmoid')(inp_seq)
     x = tf.keras.layers.Reshape((output_seq_size, n_regions))(x)
-    
+
     model = tf.keras.models.Model(inp_seq, x)
-    
+
     return model
+
 
 model_LSTM = get_model_LSTM(seq_size, predict_steps, n_regions)
 model_LSTM.summary()
 tf.keras.utils.plot_model(model_LSTM, show_shapes=True, rankdir='LR')
-
 
 # In[ ]:
 
 
 reduce_regions2batch = False
 model_type = "LSTM_MULTI"
+
+
 def get_model_LSTM(input_seq_size, output_seq_size, n_regions):
-    
-    inp_seq = tf.keras.layers.Input((input_seq_size,n_regions), name="input_seq")
-    
+    inp_seq = tf.keras.layers.Input((input_seq_size, n_regions), name="input_seq")
+
     lstm_input = inp_seq
     for i in range(output_seq_size):
-      xx = tf.keras.layers.LSTM(n_regions, activation='relu')(lstm_input)
-      if i==0:
-        out = xx
-      else:
-        out = tf.keras.layers.concatenate([out,xx])
+        xx = tf.keras.layers.LSTM(n_regions, activation='relu')(lstm_input)
+        if i == 0:
+            out = xx
+        else:
+            out = tf.keras.layers.concatenate([out, xx])
 
-      xx = tf.reshape(xx,(-1,1,n_regions))
-      lstm_input = tf.keras.layers.concatenate([lstm_input[:,1:,:], xx], axis=1)
-    
-    out = tf.reshape(out,(-1,output_seq_size,n_regions))
+        xx = tf.reshape(xx, (-1, 1, n_regions))
+        lstm_input = tf.keras.layers.concatenate([lstm_input[:, 1:, :], xx], axis=1)
+
+    out = tf.reshape(out, (-1, output_seq_size, n_regions))
     model = tf.keras.models.Model(inp_seq, out)
     return model
+
 
 model_LSTM_multi = get_model_LSTM(seq_size, predict_steps, n_regions)
 model_LSTM_multi.summary()
@@ -1070,18 +1063,20 @@ tf.keras.utils.plot_model(model_LSTM_multi, show_shapes=True, rankdir='TB')
 
 
 def reset():
-  if model_type == "DENSE":
-    model = get_model_ANN(seq_size, predict_steps, n_regions)
-  elif model_type == "LSTM":
-    model =  get_model_LSTM(seq_size, predict_steps, n_regions)
-  elif model_type == "LSTM_MULTI":
-    model =  get_model_LSTM(seq_size, predict_steps, n_regions)
-  loss_f = tf.keras.losses.MeanSquaredError()
-  opt = Adam(lr=lr)
-  return model, loss_f, opt
+    if model_type == "DENSE":
+        model = get_model_ANN(seq_size, predict_steps, n_regions)
+    elif model_type == "LSTM":
+        model = get_model_LSTM(seq_size, predict_steps, n_regions)
+    elif model_type == "LSTM_MULTI":
+        model = get_model_LSTM(seq_size, predict_steps, n_regions)
+    loss_f = tf.keras.losses.MeanSquaredError()
+    opt = Adam(lr=lr)
+    return model, loss_f, opt
 
-def eval_metric(y_true, y_pred):  
-  return np.mean((y_true-y_pred)**2)**0.5
+
+def eval_metric(y_true, y_pred):
+    return np.mean((y_true - y_pred) ** 2) ** 0.5
+
 
 model, loss_f, opt = reset()
 model.summary()
@@ -1106,8 +1101,9 @@ def get_data_daily():
 def get_data_confirmed():
     x_data = np.copy(confirmed_per_mio_capita_filtered)
     y_data = np.copy(confirmed_per_mio_capita_filtered)
-    #y_data = np.copy(alert_unfilt)
+    # y_data = np.copy(alert_unfilt)
     return x_data, y_data
+
 
 TRAINING_DATA_TYPE = "Filtered"
 
@@ -1120,14 +1116,16 @@ TRAINING_DATA_TYPE = "Filtered"
 def get_data_daily():
     x_data = np.copy(daily_per_mio_capita)
     y_data = np.copy(daily_per_mio_capita)
-    #y_data = np.copy(alert_unfilt)
+    # y_data = np.copy(alert_unfilt)
     return x_data, y_data
+
 
 def get_data_confirmed():
     x_data = np.copy(confirmed_per_mio_capita)
     y_data = np.copy(confirmed_per_mio_capita)
-    #y_data = np.copy(alert_unfilt)
+    # y_data = np.copy(alert_unfilt)
     return x_data, y_data
+
 
 TRAINING_DATA_TYPE = "Unfiltered"
 
@@ -1141,23 +1139,24 @@ TRAINING_DATA_TYPE = "Unfiltered"
 
 # ==================================== TODO: find a good normalization technique
 def normalize_for_nn(data, given_scalers=None):
-  print(f"NORMALIZING; Data: {data.shape}")
-  data = data.astype('float32')
-  scalers = []
-  for i in range(data.shape[0]):
-    if given_scalers is not None:
-      scale = given_scalers[i]
-    else:
-      scale = float(np.max(data[:,:]))
-    scalers.append(scale)
-    data[i,:] /= scale
-  return data, scalers
+    print(f"NORMALIZING; Data: {data.shape}")
+    data = data.astype('float32')
+    scalers = []
+    for i in range(data.shape[0]):
+        if given_scalers is not None:
+            scale = given_scalers[i]
+        else:
+            scale = float(np.max(data[:, :]))
+        scalers.append(scale)
+        data[i, :] /= scale
+    return data, scalers
+
 
 def undo_normalization(normalized_data, scalers):
-  print(f"UNNORMALIZING; Norm Data: {normalized_data.shape}")
-  for i in range(len(scalers)):
-    normalized_data[:,:,i] *= scalers[i]
-  return normalized_data
+    print(f"UNNORMALIZING; Norm Data: {normalized_data.shape}")
+    for i in range(len(scalers)):
+        normalized_data[:, :, i] *= scalers[i]
+    return normalized_data
 
 
 # ### Split dataset on region dimension.
@@ -1166,13 +1165,12 @@ def undo_normalization(normalized_data, scalers):
 
 
 if daily_data == True:
-  x_data, y_data = get_data_daily()
+    x_data, y_data = get_data_daily()
 else:
-  x_data, y_data = get_data_confirmed()
+    x_data, y_data = get_data_confirmed()
 
-
-x_data, x_data_scalers=normalize_for_nn(x_data)
-y_data, x_data_scalers=normalize_for_nn(y_data,x_data_scalers)
+x_data, x_data_scalers = normalize_for_nn(x_data)
+y_data, x_data_scalers = normalize_for_nn(y_data, x_data_scalers)
 
 plt.figure()
 plt.subplot(121)
@@ -1188,18 +1186,19 @@ plt.subplot(122)
 plt.hist(y_data.reshape(-1)), plt.title("Y data")
 plt.show()
 
-#shuffle regions so that we don't get the same k fold everytime 
+# shuffle regions so that we don't get the same k fold everytime
 index = np.arange(x_data.shape[0])
 np.random.shuffle(index)
 x_data = x_data[index]
 y_data = y_data[index]
-X_train, Y_train, X_val, Y_val, X_test, Y_test = split_on_region_dimension(x_data, y_data, seq_size, predict_steps, s_per_example, 
-                                                         k_fold=5, test_fold=1, reduce_last_dim=reduce_regions2batch)
+X_train, Y_train, X_val, Y_val, X_test, Y_test = split_on_region_dimension(x_data, y_data, seq_size, predict_steps,
+                                                                           s_per_example,
+                                                                           k_fold=5, test_fold=1,
+                                                                           reduce_last_dim=reduce_regions2batch)
 
 print("Train", X_train.shape, Y_train.shape)
 print("Val", X_val.shape, Y_val.shape)
 print("Test", X_test.shape, Y_test.shape)
-
 
 # ### Split dataset on time dimension.
 
@@ -1214,14 +1213,13 @@ print("Test", X_test.shape, Y_test.shape)
 # In[ ]:
 
 
-if daily_data == True:
-  x_data, y_data = get_data_daily()
+if daily_data:
+    x_data, y_data = get_data_daily()
 else:
-  x_data, y_data = get_data_confirmed()
+    x_data, y_data = get_data_confirmed()
 
-
-x_data, x_data_scalers=normalize_for_nn(x_data)
-y_data, x_data_scalers=normalize_for_nn(y_data,x_data_scalers)
+x_data, x_data_scalers = normalize_for_nn(x_data)
+y_data, x_data_scalers = normalize_for_nn(y_data, x_data_scalers)
 
 plt.figure()
 plt.subplot(121)
@@ -1242,19 +1240,23 @@ plt.show()
 # np.random.shuffle(index)
 # x_data = x_data[index]
 # y_data = y_data[index]
-X_train, X_train_feat, Y_train, X_val, X_val_feat, Y_val, X_test, X_test_feat, Y_test = split_on_time_dimension(x_data, y_data, features, seq_size, predict_steps,  
-                                                         k_fold=3, test_fold=2, reduce_last_dim=reduce_regions2batch)
+X_train, X_train_feat, Y_train, X_val, X_val_feat, Y_val, X_test, X_test_feat, Y_test = split_on_time_dimension(x_data,
+                                                                                                                y_data,
+                                                                                                                features,
+                                                                                                                seq_size,
+                                                                                                                predict_steps,
+                                                                                                                k_fold=3,
+                                                                                                                test_fold=2,
+                                                                                                                reduce_last_dim=reduce_regions2batch)
 
 print("Train", X_train.shape, Y_train.shape, X_train_feat.shape)
 print("Val", X_val.shape, Y_val.shape, X_val_feat.shape)
-print("Test", X_test.shape, Y_test.shape,X_test_feat.shape)
-
+print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
 
 # In[ ]:
 
 
-x_data.shape , y_data.shape, X_train.shape, Y_train.shape
-
+x_data.shape, y_data.shape, X_train.shape, Y_train.shape
 
 # ## undersampling
 # currently it works when dataset is split on region dimension. i.e data.shape = [regions, samples, sample size]
@@ -1265,21 +1267,23 @@ x_data.shape , y_data.shape, X_train.shape, Y_train.shape
 
 
 import random
+
+
 def get_count(segments, data):
     bounds = []
     count = []
     idx = []
     for i in range(segments):
         data = (data - np.amin(data))
-        bounds.append(np.round((i+1)*np.amax(data)/segments,3))
-        if i==0:
+        bounds.append(np.round((i + 1) * np.amax(data) / segments, 3))
+        if i == 0:
             ineq = data <= bounds[i]
-        elif i==(segments-1):
-            ineq = data > bounds[i-1]
+        elif i == (segments - 1):
+            ineq = data > bounds[i - 1]
         else:
-            ineq = (data > bounds[i-1])*(data <= bounds[i])
+            ineq = (data > bounds[i - 1]) * (data <= bounds[i])
         count.append(np.sum(ineq))
-        idx.append(np.reshape(np.array(np.where(ineq)),[-1,]))
+        idx.append(np.reshape(np.array(np.where(ineq)), [-1, ]))
     count = np.array(count).astype(int)
     bounds = np.array(bounds).astype(np.float64)
     return count, bounds, idx
@@ -1288,42 +1292,42 @@ def get_count(segments, data):
 # In[ ]:
 
 
-samples_all = np.transpose(X_train, [2,0,1])
-X_train_reshaped = np.transpose(X_train, [2,0,1])
-Y_train_reshaped = np.transpose(Y_train, [2,0,1])
+samples_all = np.transpose(X_train, [2, 0, 1])
+X_train_reshaped = np.transpose(X_train, [2, 0, 1])
+Y_train_reshaped = np.transpose(Y_train, [2, 0, 1])
 
 count_power = 1
 plot_state = 1
 
 samples_mean = np.zeros([samples_all.shape[0], samples_all.shape[1]])
 # evaluating optimal number of segments for each district
-segment_array = [2,3,4,5,6,7,8,9,10]
+segment_array = [2, 3, 4, 5, 6, 7, 8, 9, 10]
 segment_dist = []
 if plot_state == 1:
-    plt.figure(figsize=(5*6,5*4))
+    plt.figure(figsize=(5 * 6, 5 * 4))
 for i in range(samples_all.shape[0]):
     for k in range(samples_all.shape[1]):
-        samples_mean[i,k] = np.mean(samples_all[i,k,:])
+        samples_mean[i, k] = np.mean(samples_all[i, k, :])
     all_counts = []
     count_score = []
     # evaluating the count score for each district
-    for n in range(len(segment_array)):    
+    for n in range(len(segment_array)):
         segments = segment_array[n]
-        [count, bounds, idx] = get_count(segments, samples_mean[i,:])              
-        all_counts.append(np.amin(count)*len(count))
-        count_score.append((all_counts[n]**count_power)*(n+1))
-    if plot_state ==1:
-        plt.subplot(5,5,i+1)
-        plt.plot(segment_array,all_counts/np.amax(all_counts),linewidth=2)
-        plt.plot(segment_array,count_score/np.amax(count_score),linewidth=2)
-        plt.legend(['normalised total counts','segment score'])
-        plt.title('dist: '+region_names[i]+'  segments: '+str(segment_array[np.argmax(count_score)])+'  samples: '+str(all_counts[np.argmax(count_score)]))
-    segment_dist.append(segment_array[np.argmax(count_score)]) 
+        [count, bounds, idx] = get_count(segments, samples_mean[i, :])
+        all_counts.append(np.amin(count) * len(count))
+        count_score.append((all_counts[n] ** count_power) * (n + 1))
+    if plot_state == 1:
+        plt.subplot(5, 5, i + 1)
+        plt.plot(segment_array, all_counts / np.amax(all_counts), linewidth=2)
+        plt.plot(segment_array, count_score / np.amax(count_score), linewidth=2)
+        plt.legend(['normalised total counts', 'segment score'])
+        plt.title('dist: ' + region_names[i] + '  segments: ' + str(
+            segment_array[np.argmax(count_score)]) + '  samples: ' + str(all_counts[np.argmax(count_score)]))
+    segment_dist.append(segment_array[np.argmax(count_score)])
 segment_dist = np.array(segment_dist).astype(int)
-if plot_state ==1:    
+if plot_state == 1:
     plt.show()
 print('segments per district= ', segment_dist)
-
 
 # #### output shape:  data[region][sample][length].
 # Now we have a list (not numpy) with undersampled train and test data. We may have to convert it to a numpy array at the training phase itself.
@@ -1336,44 +1340,42 @@ idx_rand_all = []
 X_undersampled = []
 Y_undersampled = []
 for i in range(samples_all.shape[0]):
-    data = samples_mean[i,:]
+    data = samples_mean[i, :]
     segments = segment_dist[i]
     [count_dist, bounds_dist, idx_dist] = get_count(segments, data)
     n_per_seg = np.amin(count_dist)
     data_new = []
-    idx_rand = np.zeros([segments,n_per_seg])
+    idx_rand = np.zeros([segments, n_per_seg])
     for k in range(segments):
         idx_temp = list(idx_dist[k])
-        idx_rand[k,:] = random.sample(idx_temp,n_per_seg)
-    idx_rand = np.reshape(idx_rand, [-1,]).astype(int)
-    
-    X_undersampled.append(X_train_reshaped[i,idx_rand,:])
-    Y_undersampled.append(Y_train_reshaped[i,idx_rand,:])
-    idx_rand_all.append(idx_rand)
+        idx_rand[k, :] = random.sample(idx_temp, n_per_seg)
+    idx_rand = np.reshape(idx_rand, [-1, ]).astype(int)
 
+    X_undersampled.append(X_train_reshaped[i, idx_rand, :])
+    Y_undersampled.append(Y_train_reshaped[i, idx_rand, :])
+    idx_rand_all.append(idx_rand)
 
 # In[ ]:
 
 
 region_ = 'COLOMBO'
 for i in range(len(region_names)):
-    if region_names[i]==region_:
+    if region_names[i] == region_:
         idx = i
 
-plt.figure(figsize = (6*4,6*2))
+plt.figure(figsize=(6 * 4, 6 * 2))
 for i in range(len(X_undersampled[idx])):
-    plt.subplot(6,6,i+1)
+    plt.subplot(6, 6, i + 1)
     plt.plot(X_undersampled[idx][i])
     plt.tick_params(
-    axis='x',          # changes apply to the x-axis
-    which='both',      # both major and minor ticks are affected
-    bottom=False,      # ticks along the bottom edge are off
-    top=False,         # ticks along the top edge are off
-    labelbottom=False) # labels along the bottom edge are off
-    plt.title('index: '+str(idx_rand_all[idx][i]))
-plt.suptitle('all samples for '+region_names[idx])
+        axis='x',  # changes apply to the x-axis
+        which='both',  # both major and minor ticks are affected
+        bottom=False,  # ticks along the bottom edge are off
+        top=False,  # ticks along the top edge are off
+        labelbottom=False)  # labels along the bottom edge are off
+    plt.title('index: ' + str(idx_rand_all[idx][i]))
+plt.suptitle('all samples for ' + region_names[idx])
 plt.show()
-
 
 # ## Training phase
 
@@ -1382,11 +1384,10 @@ plt.show()
 
 k_fold = 5
 
-
 # In[ ]:
 
 
-folder = time.strftime('%Y.%m.%d-%H.%M.%S', time.localtime())+"_"+DATASET
+folder = time.strftime('%Y.%m.%d-%H.%M.%S', time.localtime()) + "_" + DATASET
 os.makedirs('./logs/' + folder)
 tensorboard = TensorBoard(log_dir='./logs/' + folder, write_graph=True, histogram_freq=1, write_images=True)
 tensorboard.set_model(model)
@@ -1395,22 +1396,21 @@ train_metric = []
 val_metric = []
 test_metric = []
 
-
 if daily_data == True:
-  x_data, y_data = get_data_daily()
+    x_data, y_data = get_data_daily()
 else:
-  x_data, y_data = get_data_confirmed()
+    x_data, y_data = get_data_confirmed()
 
-x_data, x_data_scalers=normalize_for_nn(x_data)
-y_data, x_data_scalers=normalize_for_nn(y_data,x_data_scalers)
+x_data, x_data_scalers = normalize_for_nn(x_data)
+y_data, x_data_scalers = normalize_for_nn(y_data, x_data_scalers)
 
-#shuffle regions so that we don't get the same regions order everytime  when training
+# shuffle regions so that we don't get the same regions order everytime  when training
 index = np.arange(x_data.shape[0])
 np.random.shuffle(index)
 x_data = x_data[index]
 y_data = y_data[index]
 best_test_value = 1e10
-for test_fold in range(k_fold-1,k_fold):
+for test_fold in range(k_fold - 1, k_fold):
     print(f"************* k fold: {test_fold}/{k_fold}")
     model_name = DATASET + "_" + model_type + "_" + TRAINING_DATA_TYPE + "_fold_" + str(test_fold)
     # model, loss_f, opt = reset()
@@ -1433,14 +1433,14 @@ for test_fold in range(k_fold-1,k_fold):
     #         grad = tape.gradient(loss, model.trainable_variables)
     #         # gradients applied to optimizer
     #         opt.apply_gradients(zip(grad, model.trainable_variables))
-            
+
     #         losses.append(loss)
 
     #         # val loss
     #         val_loss = loss_f(Y_val, model(X_val, training=False))
 
     #         print(f"\r Epoch {epoch}: mean loss = {np.mean(losses):.5f} mean val loss = {np.mean(val_loss):.5f}", end='')
-            
+
     #     # add metric value of the prediction (from training data)
     #     pred_train_y = model(X_train, training=False)
     #     train_metric.append(eval_metric(Y_train,pred_train_y))
@@ -1486,38 +1486,40 @@ for test_fold in range(k_fold-1,k_fold):
 
     print("Training using training+validation data.")
     model, loss_f, opt = reset()
-    
-    X_train, Y_train,X_train_feat = np.concatenate([X_train, X_val],0), np.concatenate([Y_train, Y_val],0), np.concatenate([X_train_feat, X_val_feat],0)
+
+    X_train, Y_train, X_train_feat = np.concatenate([X_train, X_val], 0), np.concatenate([Y_train, Y_val],
+                                                                                         0), np.concatenate(
+        [X_train_feat, X_val_feat], 0)
     for epoch in range(epochs):
         losses = []
         for i in range(0, len(X_train), batch_size):
             if i + batch_size > len(X_train):
                 continue
-            x = X_train[i:i+batch_size]
-            y = Y_train[i:i+batch_size]
-            
+            x = X_train[i:i + batch_size]
+            y = Y_train[i:i + batch_size]
+
             with tf.GradientTape() as tape:
                 y_pred = model(x, training=True)
                 loss = tf.reduce_mean(loss_f(y, y_pred))
-            
+
             grad = tape.gradient(loss, model.trainable_variables)
             opt.apply_gradients(zip(grad, model.trainable_variables))
             losses.append(loss)
 
             print(f"\r Epoch {epoch}: mean loss = {np.mean(losses):.5f}", end='')
-            
+
         # add metric value of the prediction (from training data)
         pred_train_y = model(X_train, training=False)
-        train_metric.append(eval_metric(Y_train,pred_train_y))
+        train_metric.append(eval_metric(Y_train, pred_train_y))
         # add metric value of the prediction (from testing data)
         pred_test_y = model(X_test, training=False)
-        test_metric.append(eval_metric(Y_test,pred_test_y))
+        test_metric.append(eval_metric(Y_test, pred_test_y))
         if test_metric[-1] < best_test_value:
-          best_test_value = test_metric[-1]
-          model.save("temp.h5")
-          print(f"Best test metric {best_test_value}. Saving model...")
+            best_test_value = test_metric[-1]
+            model.save("temp.h5")
+            print(f"Best test metric {best_test_value}. Saving model...")
 
-    plt.figure(figsize=(10,3))
+    plt.figure(figsize=(10, 3))
     plt.subplot(121)
     plt.ion()
     plt.plot(train_metric, label='Train')
@@ -1529,10 +1531,9 @@ for test_fold in range(k_fold-1,k_fold):
     plt.show()
     train_metric = []
     test_metric = []
-model =  tf.keras.models.load_model("temp.h5")
+model = tf.keras.models.load_model("temp.h5")
 fmodel_name = DATASET + "_" + model_type + "_" + TRAINING_DATA_TYPE
-model.save("models/"+fmodel_name+".h5")
-
+model.save("models/" + fmodel_name + ".h5")
 
 # ## Loading a model from drive
 
@@ -1572,35 +1573,35 @@ TRAINING_DATA_TYPE = model_name_[2]
 # In[ ]:
 
 
-def eval_model(model,x_data_raw,y_data_raw,dis=18,predict_data_label="Unfiltered"):
-
-    x_data, x_data_scalers=normalize_for_nn(x_data_raw)
-    y_data, x_data_scalers=normalize_for_nn(y_data_raw, x_data_scalers)
-    X_train, Y_train, X_val, Y_val, X_test, Y_test = split_on_time_dimension(x_data, y_data, seq_size, predict_steps, s_per_example, 
-                                                         k_fold=k_fold, test_fold=k_fold-1, reduce_last_dim=False)
-    if len(model.output.shape)==2:
+def eval_model(model, x_data_raw, y_data_raw, dis=18, predict_data_label="Unfiltered"):
+    x_data, x_data_scalers = normalize_for_nn(x_data_raw)
+    y_data, x_data_scalers = normalize_for_nn(y_data_raw, x_data_scalers)
+    X_train, Y_train, X_val, Y_val, X_test, Y_test = split_on_time_dimension(x_data, y_data, seq_size, predict_steps,
+                                                                             s_per_example,
+                                                                             k_fold=k_fold, test_fold=k_fold - 1,
+                                                                             reduce_last_dim=False)
+    if len(model.output.shape) == 2:
         Y_pred = np.zeros_like(Y_test)
         for i in range(len(region_names)):
-            Y_pred[:,:,i] = model(X_test[:,:,i])
+            Y_pred[:, :, i] = model(X_test[:, :, i])
     else:
         Y_pred = model(X_test).numpy()
 
-    
     Y_test = undo_normalization(Y_test, x_data_scalers)
     Y_pred = undo_normalization(Y_pred, x_data_scalers)
 
-    rmse = np.mean((Y_test- Y_pred)**2)**0.5
-    mae = np.mean((np.abs(Y_test- Y_pred)))
+    rmse = np.mean((Y_test - Y_pred) ** 2) ** 0.5
+    mae = np.mean((np.abs(Y_test - Y_pred)))
     print(f"RMSE={rmse:.2f} MAE={mae:.2f}")
 
-
     # CREATING TRAIN-TEST SETS FOR CASES
-    X_test, Y_test = split_into_pieces_inorder(x_data,y_data, seq_size, predict_steps, s_per_example, seq_size+predict_steps, reduce_last_dim=False)
-    
-    if len(model.output.shape)==2:
+    X_test, Y_test = split_into_pieces_inorder(x_data, y_data, seq_size, predict_steps, s_per_example,
+                                               seq_size + predict_steps, reduce_last_dim=False)
+
+    if len(model.output.shape) == 2:
         Y_pred = np.zeros_like(Y_test)
         for i in range(len(region_names)):
-            Y_pred[:,:,i] = model(X_test[:,:,i])
+            Y_pred[:, :, i] = model(X_test[:, :, i])
     else:
         Y_pred = model(X_test).numpy()
 
@@ -1614,33 +1615,31 @@ def eval_model(model,x_data_raw,y_data_raw,dis=18,predict_data_label="Unfiltered
     print(x_data_scalers)
     tmp = []
     tmpgt = []
-    
+
     for i in range(len(X_test)):
-      for j in range(seq_size):
-        tmp.append(X_test[i,j,dis])
-        tmpgt.append(X_test[i,j,dis])
-      for j in range(predict_steps):
-        tmp.append(Y_pred[i,j,dis])
-        tmpgt.append(Y_test[i,j,dis])
-      
-    plt.figure(figsize=(10,10))
+        for j in range(seq_size):
+            tmp.append(X_test[i, j, dis])
+            tmpgt.append(X_test[i, j, dis])
+        for j in range(predict_steps):
+            tmp.append(Y_pred[i, j, dis])
+            tmpgt.append(Y_test[i, j, dis])
+
+    plt.figure(figsize=(10, 10))
     plt.plot(tmpgt)
     plt.plot(tmp)
-    plt.plot(y_data_raw[dis,:],'--')
-    plt.plot(x_data_raw[dis,:],'--')
-    plt.legend(['ground truth', 'forecast','all GT data','all Input data'])
-    plt.title(f"Sample district {region_names[dis]}"),plt.xlabel("Days"),plt.ylabel("Cases")
+    plt.plot(y_data_raw[dis, :], '--')
+    plt.plot(x_data_raw[dis, :], '--')
+    plt.legend(['ground truth', 'forecast', 'all GT data', 'all Input data'])
+    plt.title(f"Sample district {region_names[dis]}"), plt.xlabel("Days"), plt.ylabel("Cases")
     plt.show()
 
-    region_mask = (np.mean(x_data_raw,1) > 80).astype('int32')
+    region_mask = (np.mean(x_data_raw, 1) > 80).astype('int32')
 
-    plt.figure(figsize=(20,10))
+    plt.figure(figsize=(20, 10))
     plot_prediction2(X_test, Y_test, Y_pred, region_names, region_mask)
     plt.savefig(f"images/{model_type}_{TRAINING_DATA_TYPE}_{predict_data_label}.eps")
     plt.savefig(f"images/{model_type}_{TRAINING_DATA_TYPE}_{predict_data_label}.jpg")
     plt.show()
-
-   
 
 
 # ## Evaluate on unfiltered data
@@ -1651,23 +1650,21 @@ def eval_model(model,x_data_raw,y_data_raw,dis=18,predict_data_label="Unfiltered
 print(f"=================================== Trained on {TRAINING_DATA_TYPE} data. Evaluating on Unfiltered data")
 
 if daily_data == True:
-  x_data, y_data = get_data_daily()
-  y_data = np.copy(daily_per_mio_capita)
+    x_data, y_data = get_data_daily()
+    y_data = np.copy(daily_per_mio_capita)
 else:
-  x_data, y_data = get_data_confirmed()
-  y_data = np.copy(confirmed_per_mio_capita)
+    x_data, y_data = get_data_confirmed()
+    y_data = np.copy(confirmed_per_mio_capita)
 # y_data = np.copy(alert_unfilt) 
 
-plt.plot(x_data.T), plt.title("Input original data"), plt.xlabel("Days"), plt.ylabel("Cases"),plt.show()
-plt.plot(y_data.T), plt.title("Expecting prediction (GT)"), plt.xlabel("Days"), plt.ylabel("Cases"),plt.show()
+plt.plot(x_data.T), plt.title("Input original data"), plt.xlabel("Days"), plt.ylabel("Cases"), plt.show()
+plt.plot(y_data.T), plt.title("Expecting prediction (GT)"), plt.xlabel("Days"), plt.ylabel("Cases"), plt.show()
 
-eval_model(model,x_data,y_data,dis=0,predict_data_label="Unfiltered")
-
+eval_model(model, x_data, y_data, dis=0, predict_data_label="Unfiltered")
 
 # ## Evaluate on Filtered data
 
 # In[ ]:
-
 
 
 print(f"================================= Trained on {TRAINING_DATA_TYPE} data. Evaluating on Filtered data")
@@ -1675,78 +1672,68 @@ print(f"================================= Trained on {TRAINING_DATA_TYPE} data. 
 # y_data = np.copy(daily_per_mio_capita_filtered) 
 
 if daily_data == True:
-  x_data, y_data = get_data_daily()
-  y_data = np.copy(daily_per_mio_capita_filtered) 
+    x_data, y_data = get_data_daily()
+    y_data = np.copy(daily_per_mio_capita_filtered)
 else:
-  x_data, y_data = get_data_confirmed()
-  y_data = np.copy(confirmed_per_mio_capita_filtered)
+    x_data, y_data = get_data_confirmed()
+    y_data = np.copy(confirmed_per_mio_capita_filtered)
 
 # y_data = np.copy(alert_unfilt) 
 
-eval_model(model,x_data,y_data,dis=0,predict_data_label="Filtered")
-
+eval_model(model, x_data, y_data, dis=0, predict_data_label="Filtered")
 
 # In[ ]:
 
 
-x=14
-start_seqs = [np.random.random((1,x))*0,
-              np.ones((1,x))*0,
-              np.ones((1,x))*0.5,
-              np.ones((1,x))*1,
-              np.arange(x).reshape((1,x))/30,
-              np.sin(np.arange(x)/x*np.pi/2).reshape((1,x))
-]
+x = 14
+start_seqs = [np.random.random((1, x)) * 0,
+              np.ones((1, x)) * 0,
+              np.ones((1, x)) * 0.5,
+              np.ones((1, x)) * 1,
+              np.arange(x).reshape((1, x)) / 30,
+              np.sin(np.arange(x) / x * np.pi / 2).reshape((1, x))
+              ]
 
 predictions = []
 for start_seq in start_seqs:
-  input_seq = np.copy(start_seq)
-  predict_seq = [start_seq[0]]
-  for _ in range(50):
-    output = model(input_seq, training=False)
-    predict_seq.append(output[0])
-    input_seq = input_seq[:,output.shape[1]:]
-    input_seq = np.append(input_seq, output).reshape((1,-1))
-  
-  predictions.append(np.concatenate(predict_seq))
+    input_seq = np.copy(start_seq)
+    predict_seq = [start_seq[0]]
+    for _ in range(50):
+        output = model(input_seq, training=False)
+        predict_seq.append(output[0])
+        input_seq = input_seq[:, output.shape[1]:]
+        input_seq = np.append(input_seq, output).reshape((1, -1))
+
+    predictions.append(np.concatenate(predict_seq))
 plt.plot(np.array(predictions).T)
 plt.show()
-
 
 # In[ ]:
 
 
 x = 21
-start_seqs = [np.random.random((1,x,1))*0,
-              np.ones((1,x,1))*0,
-              np.ones((1,x,1))*0.5,
-              np.ones((1,x,1))*1,
-              np.arange(x).reshape((1,x,1))/30,
-              np.sin(np.arange(x)/x*np.pi/2).reshape((1,x,1))
-]
+start_seqs = [np.random.random((1, x, 1)) * 0,
+              np.ones((1, x, 1)) * 0,
+              np.ones((1, x, 1)) * 0.5,
+              np.ones((1, x, 1)) * 1,
+              np.arange(x).reshape((1, x, 1)) / 30,
+              np.sin(np.arange(x) / x * np.pi / 2).reshape((1, x, 1))
+              ]
 
 predictions = []
 for start_seq in start_seqs:
-  input_seq = np.copy(start_seq)
-  predict_seq = [start_seq[0,:,0]]
-  for _ in range(10):
-    output = model(input_seq, training=False)
-    predict_seq.append(output[0])
-    input_seq = input_seq[:,output.shape[1]:,:]
-    input_seq = np.append(input_seq, output).reshape((1,-1,1))
-  predictions.append(np.concatenate(predict_seq))
+    input_seq = np.copy(start_seq)
+    predict_seq = [start_seq[0, :, 0]]
+    for _ in range(10):
+        output = model(input_seq, training=False)
+        predict_seq.append(output[0])
+        input_seq = input_seq[:, output.shape[1]:, :]
+        input_seq = np.append(input_seq, output).reshape((1, -1, 1))
+    predictions.append(np.concatenate(predict_seq))
 plt.plot(np.array(predictions).T)
 plt.show()
 
-
 # In[ ]:
 
 
-
-
-
 # In[ ]:
-
-
-
-
