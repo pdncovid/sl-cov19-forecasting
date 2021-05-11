@@ -70,6 +70,7 @@ def get_data(filtered, normalize=False):
 
 def get_loss_f(undersampling, xcheck, freq):
     def loss_f_normal(y_true, y_pred, x):
+        y_pred = tf.dtypes.cast(y_pred, tf.float64)
         return tf.reduce_mean((y_true - y_pred) ** 2)
 
     def loss_f_new(y_true, y_pred, x):
@@ -170,7 +171,7 @@ def main():
     parser.add_argument('--lr', help='Learning rate', type=int, default=0.002)
     parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
                         default="Filtered")
-    parser.add_argument('--undersampling', help='under-sampling method (Loss, Reduce)', type=str, default="Loss")
+    parser.add_argument('--undersampling', help='under-sampling method (Loss, Reduce)', type=str, default="Reduce")
 
     parser.add_argument('--path', help='default dataset path', type=str, default="../Datasets")
     parser.add_argument('--asymptotic_t',
@@ -299,7 +300,7 @@ def main():
     # ==================================================================================================== Undersampling
 
     if UNDERSAMPLING == "Reduce" and reduce_regions2batch:  # Currently optimal undersampling supports independatly on regions.
-        x_train_opt, y_train_opt = undersample(x_data, y_data, WINDOW_LENGTH, PREDICT_STEPS, region_names, PLOT)
+        x_train_opt, y_train_opt = undersample(x_data.T, y_data.T, WINDOW_LENGTH, PREDICT_STEPS, region_names, PLOT)
         X_train = x_train_opt
         Y_train = y_train_opt
 

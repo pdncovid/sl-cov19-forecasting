@@ -89,6 +89,7 @@ def undersample(x_data, y_data, WINDOW_LENGTH, PREDICT_STEPS, region_names, PLOT
     print(len(idx_rand_all))
 
     x_train_opt, y_train_opt = [], []
+    fig = plt.figure(figsize=(5 * 6, 5 * 4))
     # undersampling using optimal number of segments
     for i in range(samples_all.shape[0]):
         data = samples_mean[i, :]
@@ -102,11 +103,11 @@ def undersample(x_data, y_data, WINDOW_LENGTH, PREDICT_STEPS, region_names, PLOT
             #         print(idx_temp)
             idx_rand[k, :] = random.sample(idx_temp, n_per_seg)
         idx_rand = np.reshape(idx_rand, [-1, ])
-        print(region_names[i], idx_rand)
 
         if PLOT:
-            fig, ax = plt.subplots(figsize=(9, 3))
-            ax.plot(x_data[i, :])
+            plt.subplot(5, 5, i + 1)
+            plt.plot(x_data[i, :])
+            ax = plt.gca()
         for j, idx in enumerate(idx_rand):
             idx = int(idx)
 
@@ -120,8 +121,8 @@ def undersample(x_data, y_data, WINDOW_LENGTH, PREDICT_STEPS, region_names, PLOT
 
             x_train_opt.append(x_data[i, idx:idx + WINDOW_LENGTH])
             y_train_opt.append(y_data[i, idx + WINDOW_LENGTH:idx + WINDOW_LENGTH + PREDICT_STEPS])
-        if PLOT:
-            plt.show()
+    if PLOT:
+        plt.show()
 
     x_train_opt = np.array(x_train_opt)
     y_train_opt = np.array(y_train_opt)
