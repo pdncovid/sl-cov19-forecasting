@@ -25,12 +25,9 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.callbacks import TensorBoard
 
-
 # plots
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-
-
 
 from utils.plots import bar_metrics, plot_prediction
 from utils.functions import distance, normalize_for_nn, undo_normalization, bs
@@ -164,7 +161,7 @@ def main():
                         default='Sri Lanka')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-02-01')
 
-    parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
+    parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
     parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=14)
     parser.add_argument('--output_days', help='Number of days predicted by the model', type=float, default=7)
@@ -203,7 +200,7 @@ def main():
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
 
-    PLOT = False
+    PLOT = True
 
     # ===================================================================================================== Loading data
     global daily_cases, daily_filtered, population, region_names
@@ -321,22 +318,21 @@ def main():
     print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
 
     if PLOT:
+        fig, axs = plt.subplots(2, 2)
         x_data, y_data, _ = get_data(filtered=False, normalize=True)
-        plt.plot(x_data)
-        plt.title("Original data")
-        plt.show()
+        axs[0, 0].plot(x_data)
+        axs[0, 0].set_title("Original data")
 
         for i in range(X_train.shape[-1]):
-            plt.plot(np.concatenate([X_train[:, :, i], Y_train[:, :, i]], 1).T)
-        plt.axvline(X_train.shape[1], color='r', linestyle='--')
-        plt.show()
+            axs[0, 1].plot(np.concatenate([X_train[:, :, i], Y_train[:, :, i]], 1).T)
+        axs[0, 1].axvline(X_train.shape[1], color='r', linestyle='--')
 
-        plt.hist(X_train.reshape(-1), bins=100)
-        plt.title("Histogram of cases")
-        plt.show()
+        axs[1, 0].hist(X_train.reshape(-1), bins=100)
+        axs[1, 0].set_title("Histogram of cases")
 
-        plt.hist(np.concatenate(X_train, -1).mean(0), bins=100)
-        plt.title("Histogram of mean of training samples")
+        axs[1, 1].hist(np.concatenate(X_train, -1).mean(0), bins=100)
+        axs[1, 1].set_title("Histogram of mean of training samples")
+
         plt.show()
 
     # =================================================================================================  Train
@@ -416,7 +412,7 @@ def test2(model, x_data_scalers):
         print(f"Predicting from model. X={x_data.shape} Y={y_data.shape}")
         X_w = []
         y_w = []
-        for i in range(WINDOW_LENGTH - 1, len(X)):
+        for i in range(WINDOW_LENGTH - 1, len(x_data)):
             X_w.append(x_data[i - WINDOW_LENGTH + 1:i + 1])
             y_w.append(y_data[i])
         X_w, y_w = np.array(X_w), np.array(y_w)
