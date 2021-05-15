@@ -4,6 +4,7 @@ import argparse
 import sys
 import os
 import time
+
 sys.path.insert(0, os.path.join(sys.path[0], '..'))
 
 import pandas as pd  # Basic library for all of our dataset operations
@@ -25,8 +26,7 @@ from utils.data_splitter import split_on_region_dimension, split_on_time_dimensi
 
 from eval_methods.naive import naive_mean, naive_yesterday
 from eval_methods.utsf import SES, HWES, mAR, MA, ARIMA, SARIMA, AutoSARIMA
-from eval_methods.mtsf import BaysianRegression,Lasso,Randomforest,XGBoost,Lightgbm,SVM_RBF,Kneighbors
-
+from eval_methods.mtsf import BaysianRegression, Lasso, Randomforest, XGBoost, Lightgbm, SVM_RBF, Kneighbors
 
 # Extra settings
 seed = 42
@@ -197,73 +197,89 @@ def main():
     predictionsDict['Yesterdays value'] = yesterday
     gtDict['Yesterdays value'] = df_test.values[1:, :]
 
-    ses = SES(df, df_training, df_test)
-    resultsDict['SES'] = evaluate(df_test.values, ses)
-    predictionsDict['SES'] = ses
+    # ses = SES(df, df_training, df_test)
+    # resultsDict['SES'] = evaluate(df_test.values, ses)
+    # predictionsDict['SES'] = ses
+    #
+    # hwes = HWES(df, df_training, df_test)
+    # resultsDict['HWES'] = evaluate(df_test.values, hwes)
+    # predictionsDict['HWES'] = hwes
+    #
+    # ar = mAR(df, df_training, df_test)
+    # resultsDict['AR'] = evaluate(df_test.values, ar)
+    # predictionsDict['AR'] = ar
+    # # *we can observe a little delay.*
+    #
+    # ma = MA(df, df_training, df_test)
+    # resultsDict['MA'] = evaluate(df_test.values, ma)
+    # predictionsDict['MA'] = ma
+    # # *this is also not fitting ne?*
+    #
+    # arima = ARIMA(df, df_training, df_test)
+    # resultsDict['ARIMA'] = evaluate(df_test.values, arima)
+    # predictionsDict['ARIMA'] = arima
+    #
+    # sarimax = SARIMA(df, df_training, df_test)
+    # resultsDict['SARIMAX'] = evaluate(df_test.values, sarimax)
+    # predictionsDict['SARIMAX'] = sarimax
+    #
+    # autosarimax = AutoSARIMA(df, df_training, df_test)
+    # resultsDict['AutoSARIMAX'] = evaluate(df_test.values, autosarimax)
+    # predictionsDict['AutoSARIMAX'] = autosarimax
+    #
+    # br = BaysianRegression(df, df_training, df_test)
+    # resultsDict['BayesianRidge'] = evaluate(df_test.values, br)
+    # predictionsDict['BayesianRidge'] = br
+    #
+    # lasso = Lasso(df, df_training, df_test)
+    # resultsDict['Lasso'] = evaluate(df_test.values, lasso)
+    # predictionsDict['Lasso'] = lasso
+    #
+    # rf = Randomforest(df, df_training, df_test)
+    # resultsDict['Randomforest'] = evaluate(df_test.values, rf)
+    # predictionsDict['Randomforest'] = rf
+    #
+    # xg = XGBoost(df, df_training, df_test)
+    # resultsDict['XGBoost'] = evaluate(df_test.values, xg)
+    # predictionsDict['XGBoost'] = xg
+    #
+    # lgbm = Lightgbm(df, df_training, df_test)
+    # resultsDict['Lightgbm'] = evaluate(df_test.values, lgbm)
+    # predictionsDict['Lightgbm'] = lgbm
+    #
+    # svmrbf = SVM_RBF(df, df_training, df_test)
+    # resultsDict['SVM RBF'] = evaluate(df_test.values, svmrbf)
+    # predictionsDict['SVM RBF'] = svmrbf
+    #
+    # kn = Kneighbors(df, df_training, df_test)
+    # resultsDict['Kneighbors'] = evaluate(df_test.values, kn)
+    # predictionsDict['Kneighbors'] = kn
 
-    hwes = HWES(df, df_training, df_test)
-    resultsDict['HWES'] = evaluate(df_test.values, hwes)
-    predictionsDict['HWES'] = hwes
-
-    ar = mAR(df, df_training, df_test)
-    resultsDict['AR'] = evaluate(df_test.values, ar)
-    predictionsDict['AR'] = ar
-    # *we can observe a little delay.*
-
-    ma = MA(df, df_training, df_test)
-    resultsDict['MA'] = evaluate(df_test.values, ma)
-    predictionsDict['MA'] = ma
-    # *this is also not fitting ne?*
-
-    arima = ARIMA(df, df_training, df_test)
-    resultsDict['ARIMA'] = evaluate(df_test.values, arima)
-    predictionsDict['ARIMA'] = arima
-
-    sarimax = SARIMA(df, df_training, df_test)
-    resultsDict['SARIMAX'] = evaluate(df_test.values, sarimax)
-    predictionsDict['SARIMAX'] = sarimax
-
-    autosarimax = AutoSARIMA(df, df_training, df_test)
-    resultsDict['AutoSARIMAX'] = evaluate(df_test.values, autosarimax)
-    predictionsDict['AutoSARIMAX'] = autosarimax
-
-    br = BaysianRegression(df, df_training, df_test)
-    resultsDict['BayesianRidge'] = evaluate(df_test.values, br)
-    predictionsDict['BayesianRidge'] = br
-
-    lasso = Lasso(df, df_training, df_test)
-    resultsDict['Lasso'] = evaluate(df_test.values, lasso)
-    predictionsDict['Lasso'] = lasso
-
-    rf = Randomforest(df, df_training, df_test)
-    resultsDict['Randomforest'] = evaluate(df_test.values, rf)
-    predictionsDict['Randomforest'] = rf
-
-    xg = XGBoost(df, df_training, df_test)
-    resultsDict['XGBoost'] = evaluate(df_test.values, xg)
-    predictionsDict['XGBoost'] = xg
-
-    lgbm = Lightgbm(df, df_training, df_test)
-    resultsDict['Lightgbm'] = evaluate(df_test.values, lgbm)
-    predictionsDict['Lightgbm'] = lgbm
-
-    svmrbf = SVM_RBF(df, df_training, df_test)
-    resultsDict['SVM RBF'] = evaluate(df_test.values, svmrbf)
-    predictionsDict['SVM RBF'] = svmrbf
-
-    kn = Kneighbors(df, df_training, df_test)
-    resultsDict['Kneighbors'] = evaluate(df_test.values, kn)
-    predictionsDict['Kneighbors'] = kn
-
-    # ### Deep learning
+    # ================================================================================================### Deep learning
     x_data, y_data, x_data_scalers = get_data(False, normalize=True)
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True)
 
-    test1(x_data_scalers, resultsDict, predictionsDict, gtDict)
-    test2(x_data_scalers, resultsDict, predictionsDict, gtDict)
-    test3(x_data_scalers, resultsDict, predictionsDict, gtDict)
+    # model_names = [('Sri Lanka_LSTM_Simple_WO_Regions_Unfiltered_Reduce_14_7', 'LSTM-R-Under'),
+    #                ('Sri Lanka_LSTM_Simple_WO_Regions_Filtered_Reduce_14_7', 'LSTM-F-Under'), ]
+    # plot_data = [[{'label_name': 'Method A', 'line_size': 4}, {}],
+    #              [{'label_name': 'Method C', 'line_size': 4}, {'label_name': 'Method B', 'line_size': 3}],]
 
-    # ## Comparison of methods
+
+    model_names = [('Sri Lanka_LSTM_Simple_WO_Regions_Unfiltered_Reduce_14_7', 'LSTM-R-Under'),
+                   ('Sri Lanka_LSTM_Simple_WO_Regions_Filtered_Reduce_14_7', 'LSTM-F-Under'),
+                   ('Sri Lanka_LSTM4EachDay_WO_Regions_Unfiltered_Reduce_14_7', 'LSTM*-R-Under'),
+                   ('Sri Lanka_LSTM4EachDay_WO_Regions_Filtered_Reduce_14_7', 'LSTM*-F-Under'),]
+    plot_data = [[{'label_name':model_names[0][1]+'-raw', 'line_size': 4}, {}],
+                 [{'label_name':model_names[1][1]+'-raw', 'line_size': 4}, {'label_name': model_names[1][1]+'-fil', 'line_size': 3}],
+                 [{'label_name':model_names[2][1]+'-raw', 'line_size': 4}, {}],
+                 [{'label_name':model_names[3][1]+'-raw', 'line_size': 4}, {'label_name': model_names[3][1]+'-fil', 'line_size': 3}]
+                 ]
+    show_predictions(x_data_scalers, model_names)
+
+    show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data)
+    show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data)
+
+    # ======================================================================================== ## Comparison of methods
 
     metric = 'mae'
 
@@ -283,28 +299,24 @@ def main():
     for i in range(len(arr)):
         ax.bar(X + w * i, arr[i, :], width=w)
 
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(15, 8))
     arr = []
-    methods = []
-
-    methods = list(predictionsDict.keys())
-    # methods = ['Method A','Method B','Method C']
-
     i = 0
-    # for method in ['LSTM-R-SL (Raw)','LSTM-F-SL (Filtered)','LSTM-F-SL (Raw)']:
-    for method in predictionsDict.keys():
-        if method == "Yesterdays value":
-            continue
-        err = predictionsDict[method] - gtDict['LSTM-F-SL (Raw)']
+    for method in resultsDict.keys():
+        # if method == "Yesterdays value":
+        #     continue
+        err = predictionsDict[method] - gtDict[method]
         abserr = np.abs(err)
         sqderr = err ** 2
-        mape = (abserr / (gtDict['LSTM-F-SL (Raw)'] + predictionsDict[method]) * 100)
-
-        arr.append(abserr)
-        methods.append(method)
+        mape = (abserr / (gtDict[method] + predictionsDict[method]) * 100)
+        # mean = 0
+        # for r in range(len(resultsDict[method])):
+        #     mean += resultsDict[method][r][metric]
+        # mean = mean/len(resultsDict[method])
+        # arr.append(mean)
 
         n, bins, patches = plt.hist(abserr.reshape(-1), 1000, density=True, histtype='step',
-                                    cumulative=True, label=methods[i])
+                                    cumulative=True, label=method)
         i += 1
 
         patches[0].set_xy(patches[0].get_xy()[:-1])
@@ -312,22 +324,13 @@ def main():
         print(method)
         print(f'{np.mean(abserr):.2f} {np.mean(sqderr) ** 0.5:.2f} {np.mean(mape):.2f}')
 
-    # err = predictionsDict['LSTM-F-SL (Filtered)'] - gtDict['LSTM-F-SL (Raw)']
-    # abserr = np.abs(err)
-    # sqderr = err**2
-    # print(np.mean(abserr),np.mean(sqderr)**0.5)
-
-    # arr.append(abserr)
-    # methods.append('ll')
-    # n, bins, patches =plt.hist(abserr.reshape(-1), 1000, density=True, histtype='step',
-    #                            cumulative=True, label=methods[-1])
-    # patches[0].set_xy(patches[0].get_xy()[:-1])
     plt.legend(loc='lower right')
     plt.xlabel("Absolute error")
     plt.ylabel("Cumulative probability density")
 
     plt.plot(np.mean(arr, -1).T)
     plt.legend(predictionsDict.keys())
+    plt.show()
 
     import pickle
 
@@ -336,10 +339,6 @@ def main():
 
     with open('results/predictions.pickle', 'wb') as handle:
         pickle.dump(predictionsDict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-
-if __name__ == "__main__":
-    main()
 
 
 def get_data(filtered, normalize=False):
@@ -359,7 +358,7 @@ def get_data(filtered, normalize=False):
         return x.T, y.T
 
 
-def test1(x_data_scalers, resultsDict, predictionsDict, gtDict):
+def show_predictions(x_data_scalers, model_names):
     n_regions = len(x_data_scalers)
 
     def get_model_predictions(model, x_data, y_data, scalers):
@@ -377,7 +376,7 @@ def test1(x_data_scalers, resultsDict, predictionsDict, gtDict):
         if model.input.shape[-1] == 1:
             y_pred = np.zeros_like(y_test)
             for i in range(len(region_names)):
-                y_pred[:, :, i] = model(x_test[:, :, i:i + 1])
+                y_pred[:, :, i] = model(x_test[:, :, i:i + 1])[:, :, 0]
         else:
             y_pred = model(x_test).numpy()
         print(x_test.shape, "-->", y_pred.shape)
@@ -390,38 +389,43 @@ def test1(x_data_scalers, resultsDict, predictionsDict, gtDict):
 
         return x_test, y_test, y_pred
 
-    model = tf.keras.models.load_model("models/Sri Lanka_LSTM_Filtered.h5")
-    x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
-    x_test, y_test, y_pred = get_model_predictions(model, x_data, y_data, x_data_scalers)
-    x_data, y_data, _ = get_data(filtered=True, normalize=x_data_scalers)
-    x_testf, y_testf, y_predf = get_model_predictions(model, x_data, y_data, x_data_scalers)
-
-    model = tf.keras.models.load_model("models/Sri Lanka_LSTM_Unfiltered.h5")
-    x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
-    x_test, y_test, y_pred_unfmodel = get_model_predictions(model, x_data, y_data, x_data_scalers)
-
-    # model =  tf.keras.models.load_model("models/Texas_LSTM_Filtered.h5")
-    # x_data, y_data, _ = get_data(filtered=False, normalize=True)
-    # X_test, Y_test, Y_pred_texmodel = get_model_predictions(model,x_data,y_data,x_data_scalers)
-
-    Ys = np.stack([y_test, y_testf, y_pred, y_predf, y_pred_unfmodel], 1)
-    method_list = ['Observations Raw',
-                   'Observations Filtered',
-                   'LSTM-F-SL (R-SL)',
-                   'LSTM-F-SL (F-SL)',
-                   'LSTM-R-SL (R-SL)',
-                   #                'Predictions using Raw data (Model trained on Filtered Texas data)',
-                   ]
+    Ys = []
+    method_list = []
     styles = {
         'X': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 2},
         'Xf': {'Preprocessing': 'Filtered', 'Data': 'Training', 'Size': 2},
         'Observations Raw': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 2},
         'Observations Filtered': {'Preprocessing': 'Filtered', 'Data': 'Training', 'Size': 2},
-        'LSTM-F-SL (R-SL)': {'Preprocessing': 'Raw', 'Data': 'LSTM-F-SL (R-SL)', 'Size': 4},
-        'LSTM-F-SL (F-SL)': {'Preprocessing': 'Filtered', 'Data': 'LSTM-F-SL (F-SL)', 'Size': 3},
-        'LSTM-R-SL (R-SL)': {'Preprocessing': 'Raw', 'Data': 'LSTM-R-SL (R-SL)', 'Size': 4},
     }
-    x_data, y_data = get_data(filtered=False, normalize=False)
+
+    #########################################################################
+    for i in range(len(model_names)):
+        model_filename, model_label = model_names[i]
+        model = tf.keras.models.load_model(f"models/{model_filename}.h5")
+
+        x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
+        x_test, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
+
+        Ys.append(yhat)
+        method_name = model_label
+        method_list.append(method_name)
+        styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': 4}
+
+        x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers)
+        x_testf, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
+
+        Ys.append(yhatf)
+        method_name = model_label
+        method_list.append(method_name)
+        styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': 4}
+
+    #########################################################################
+
+    Ys = [y_test, y_testf] + Ys
+    Ys = np.stack(Ys, 1)
+    method_list = ['Observations Raw', 'Observations Filtered'] + method_list
+
+    # x_data, y_data = get_data(filtered=False, normalize=False)
     # region_mask = (np.mean(x_data,0) > 140).astype('int32')
     region_mask = (np.arange(n_regions) == 4).astype('int32')
 
@@ -436,7 +440,14 @@ def test1(x_data_scalers, resultsDict, predictionsDict, gtDict):
 # ### Continuous prediction into future from given sequence of data.
 
 # #### Prediction of next day from last 14 days for the test period
-def test2(x_data_scalers, resultsDict, predictionsDict, gtDict):
+def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data):
+    """
+    model_names : list of tuples [(model names to load, model label), ...]  let SIZE = n
+    plot_data : list of dictionaries [ [ {dict for raw pred} , {dict for filtered pred} ], ... ] SIZE == n
+                if not plotting empty dict
+                otherwise dict should contain; label_name, line_size
+    """
+
     n_regions = len(x_data_scalers)
 
     def window_data(X, Y, window=7):
@@ -471,44 +482,6 @@ def test2(x_data_scalers, resultsDict, predictionsDict, gtDict):
         y_test_w = undo_normalization(y_test_w, scalers)[0]
         return X_test_w, y_test_w, yhat
 
-    #########################################################################
-
-    model = tf.keras.models.load_model("models/Sri Lanka_LSTM_Filtered.h5")
-
-    x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
-    _, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
-    resultsDict['LSTM-F-SL (Raw)'] = evaluate(y_test, yhat)
-    predictionsDict['LSTM-F-SL (Raw)'] = yhat
-    gtDict['LSTM-F-SL (Raw)'] = y_test
-
-    x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers)
-    _, y_test, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
-    resultsDict['LSTM-F-SL (Filtered)'] = evaluate(y_test, yhatf)
-    predictionsDict['LSTM-F-SL (Filtered)'] = yhatf
-    gtDict['LSTM-F-SL (Filtered)'] = y_test
-
-    #########################################################################
-
-    model = tf.keras.models.load_model("models/Sri Lanka_LSTM_Unfiltered.h5")
-
-    x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
-    _, y_test, y_pred_raw = get_model_predictions(model, x_data, y_data, x_data_scalers)
-    resultsDict['LSTM-R-SL (Raw)'] = evaluate(y_test, y_pred_raw)
-    predictionsDict['LSTM-R-SL (Raw)'] = y_pred_raw
-    gtDict['LSTM-R-SL (Raw)'] = y_test
-
-    #########################################################################
-
-    # model =  tf.keras.models.load_model("models/Texas_LSTM_Filtered.h5")
-
-    # x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers)
-    # _, y_test, y_pred_rawtex = get_model_predictions(model,x_dataf,y_dataf,x_data_scalers)
-    # resultsDict['LSTM-F-Texas (Filtered)'] = evaluate(y_test, y_pred_rawtex)
-    # predictionsDict['LSTM-F-Texas (Filtered)'] = y_pred_rawtex
-    # gtDict['LSTM-F-Texas (Filtered)'] = y_test
-
-    #########################################################################
-
     x_data, y_data = get_data(filtered=False, normalize=False)
     x_dataf, y_dataf = get_data(filtered=True, normalize=False)
     X = np.expand_dims(x_data[split_days - 14:split_days, :], 0)
@@ -518,31 +491,47 @@ def test2(x_data_scalers, resultsDict, predictionsDict, gtDict):
     Y = y_data[split_days - 1:, :]
     Yf = y_dataf[split_days - 1:, :]
 
-    Ys = [Y,
-          y_pred_raw,
-          yhatf,
-          yhat,
-          ]
-    method_list = ['Observations Raw',
-                   'Method A',
-                   'Method B',
-                   'Method C',
-                   ]
+    Ys = [Y]
+    method_list = ['Observations Raw']
     styles = {
         'X': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 2},
         'Xf': {'Preprocessing': 'Filtered', 'Data': 'Training', 'Size': 2},
         'Observations Raw': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 2},
-        'Method A': {'Preprocessing': 'Raw', 'Data': 'Method A', 'Size': 4},
-        'Method B': {'Preprocessing': 'Filtered', 'Data': 'Method B', 'Size': 3},
-        'Method C': {'Preprocessing': 'Raw', 'Data': 'Method C', 'Size': 4},
     }
+
+    #########################################################################
+    for i in range(len(model_names)):
+        model_filename, model_label = model_names[i]
+        plot = plot_data[i]
+        model = tf.keras.models.load_model(f"models/{model_filename}.h5")
+
+        x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
+        _, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
+        resultsDict[f'{model_label} (Raw)'] = evaluate(y_test, yhat)  # raw predictions v raw true values
+        predictionsDict[f'{model_label} (Raw)'] = yhat
+        gtDict[f'{model_label} (Raw)'] = y_test
+        if len(plot[0].keys()) != 0:
+            Ys.append(yhat)
+            method_name = plot[0]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
+
+        x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers)
+        _, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
+        resultsDict[f'{model_label} (Filtered)'] = evaluate(y_test, yhatf)  # filtered prediction v raw true values
+        predictionsDict[f'{model_label} (Filtered)'] = yhatf
+        gtDict[f'{model_label} (Filtered)'] = y_test
+        if len(plot[1].keys()) != 0:
+            Ys.append(yhatf)
+            method_name = plot[1]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
+    #########################################################################
 
     for i in range(len(Ys)):
         print(method_list[i], Ys[i].shape)
         Ys[i] = np.expand_dims(Ys[i], 0)
     Ys = np.stack(Ys, 1)
-
-    # In[ ]:
 
     # region_mask = ((200 > np.mean(x_data,0)) * (np.mean(x_data,0) > 140)).astype('int32')
     region_mask = (np.arange(n_regions) == 4).astype('int32')
@@ -557,7 +546,7 @@ def test2(x_data_scalers, resultsDict, predictionsDict, gtDict):
 
 
 # #### Model prediction evolution from given only last 14 days of data.
-def test3(x_data_scalers, resultsDict, predictionsDict, gtDict):
+def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data):
     n_regions = len(x_data_scalers)
 
     def get_model_predictions(model, x_data, y_data, scalers):
@@ -577,7 +566,7 @@ def test3(x_data_scalers, resultsDict, predictionsDict, gtDict):
                 y_pred = model.predict(X_test_w)
 
                 X_test_w[:, :-1, :] = X_test_w[:, 1:, :]
-                X_test_w[:, -1, :] = y_pred[:, 0:1]
+                X_test_w[:, -1, :] = y_pred[:, 0:1, 0]
 
                 yhat.append(y_pred[:, 0])
 
@@ -600,40 +589,6 @@ def test3(x_data_scalers, resultsDict, predictionsDict, gtDict):
 
         return X_test_w, y_test_w, yhat
 
-    #########################################################################
-
-    model = tf.keras.models.load_model("models/Sri Lanka_LSTM_Filtered.h5")
-
-    x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
-    _, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
-    resultsDict['ELSTM-F-SL (Raw)'] = evaluate(y_test, yhat)
-    predictionsDict['ELSTM-F-SL (Raw)'] = yhat
-
-    x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers)
-    _, y_test, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
-    resultsDict['ELSTM-F (Filtered)'] = evaluate(y_test, yhatf)
-    predictionsDict['ELSTM-F-SL (Filtered)'] = yhatf
-
-    #########################################################################
-
-    model = tf.keras.models.load_model("models/Sri Lanka_LSTM_Unfiltered.h5")
-
-    x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
-    _, y_test, y_pred_raw = get_model_predictions(model, x_data, y_data, x_data_scalers)
-    resultsDict['ELSTM-R-SL (Raw)'] = evaluate(y_test, y_pred_raw)
-    predictionsDict['ELSTM-R-SL (Raw)'] = y_pred_raw
-
-    #########################################################################
-
-    # model =  tf.keras.models.load_model("models/Texas_LSTM_Filtered.h5")
-
-    # x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
-    # _, y_test, y_pred_rawtex = get_model_predictions(model,x_data,y_data,x_data_scalers)
-    # resultsDict['ELSTM-F-T (Raw)'] = evaluate(y_test, y_pred_rawtex)
-    # predictionsDict['ELSTM-F-T (Raw)'] = y_pred_rawtex
-
-    #########################################################################
-
     x_data, y_data = get_data(filtered=False, normalize=False)
     x_dataf, y_dataf = get_data(filtered=True, normalize=False)
     X = np.expand_dims(x_data[split_days - 14:split_days, :], 0)
@@ -643,32 +598,48 @@ def test3(x_data_scalers, resultsDict, predictionsDict, gtDict):
     Y = y_data[split_days - 1:, :]
     Yf = y_dataf[split_days - 1:, :]
 
-    Ys = [Y,
-          y_pred_raw,
-          yhatf,
-          yhat,
-          ]
-    method_list = ['Observations Raw',
-                   'Method A',
-                   'Method B',
-                   'Method C',
-                   ]
-
+    Ys = [Y]
+    method_list = ['Observations Raw']
     styles = {
         'X': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 2},
         'Xf': {'Preprocessing': 'Filtered', 'Data': 'Training', 'Size': 2},
         'Observations Raw': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 2},
-        'Method A': {'Preprocessing': 'Raw', 'Data': 'Method A', 'Size': 4},
-        'Method B': {'Preprocessing': 'Filtered', 'Data': 'Method B', 'Size': 3},
-        'Method C': {'Preprocessing': 'Raw', 'Data': 'Method C', 'Size': 4},
     }
+
+    #########################################################################
+    for i in range(len(model_names)):
+        model_filename, model_label = model_names[i]
+        plot = plot_data[i]
+        model = tf.keras.models.load_model(f"models/{model_filename}.h5")
+
+        x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
+        _, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
+        resultsDict[f'{model_label} (Raw E)'] = evaluate(y_test, yhat)  # raw predictions v raw true values
+        predictionsDict[f'{model_label} (Raw E)'] = yhat
+        gtDict[f'{model_label} (Raw E)'] = y_test
+        if len(plot[0].keys()) != 0:
+            Ys.append(yhat)
+            method_name = plot[0]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
+
+        x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers)
+        _, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
+        resultsDict[f'{model_label} (Filtered E)'] = evaluate(y_test, yhatf)  # filtered prediction v raw true values
+        predictionsDict[f'{model_label} (Filtered E)'] = yhatf
+        gtDict[f'{model_label} (Filtered E)'] = y_test
+        if len(plot[1].keys()) != 0:
+            Ys.append(yhatf)
+            method_name = plot[1]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
+
+    #########################################################################
 
     for i in range(len(Ys)):
         print(method_list[i], Ys[i].shape)
         Ys[i] = np.expand_dims(Ys[i], 0)
     Ys = np.stack(Ys, 1)
-
-    # In[ ]:
 
     # region_mask = (np.mean(x_data,0) > 140).astype('int32')
     region_mask = (np.arange(n_regions) == 4).astype('int32')
@@ -731,6 +702,10 @@ def test_evolution(model):
     plt.semilogy(1 + np.array(predictions)[:, :30, 0].T)
     plt.title("Model trained using unfiltered data")
     plt.show()
+
+
+if __name__ == "__main__":
+    main()
 
 # ### Autoregressive Moving Average (ARMA) - Not fitting!
 #

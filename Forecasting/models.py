@@ -31,22 +31,24 @@ def get_model(modeltype, input_days, output_days, n_features, n_regions):
 
 
 def Dense_WO_regions(seq_size, predict_steps, n_features):
-    inp_seq = tf.keras.layers.Input(seq_size, name="input_sequence")
-    inp_fea = tf.keras.layers.Input(n_features, name="input_features")
+    inp_seq = tf.keras.layers.Input((seq_size,1), name="input_sequence")
+    x = tf.keras.layers.Reshape((seq_size,))(inp_seq)
+    # inp_fea = tf.keras.layers.Input(n_features, name="input_features")
 
-    x = inp_seq
-    xf = inp_fea
-    n = n_features
-    while (n > 0):
-        xf = tf.keras.layers.Dense(n, activation='relu')(xf)
-        n = n // 2
+    # xf = inp_fea
+    # n = n_features
+    # while (n > 0):
+    #     xf = tf.keras.layers.Dense(n, activation='relu')(xf)
+    #     n = n // 2
 
     x = tf.keras.layers.Dense(10, activation='relu')(x)
     x = tf.keras.layers.Dense(predict_steps, activation='relu')(x)
 
-    if n_features > 0:
-        x = x * xf
-    model = tf.keras.models.Model([inp_seq, inp_fea], x, name="Dense_WO_regions")
+    # if n_features > 0:
+    #     x = x * xf
+    # model = tf.keras.models.Model([inp_seq, inp_fea], x, name="Dense_WO_regions")
+    x = tf.keras.layers.Reshape((predict_steps, 1))(x)
+    model = tf.keras.models.Model(inp_seq, x, name="Dense_WO_regions")
     return model
 
 

@@ -85,7 +85,7 @@ def get_loss_f(undersampling, xcheck, freq):
 
         return tf.reduce_mean(mse * (1 / np.log(region_sample_freq)) ** 2 * 10)
 
-    if undersampling == "Reduce":
+    if undersampling == "Reduce" or undersampling == 'None':
         return loss_f_normal
     else:
         return loss_f_new
@@ -95,7 +95,7 @@ def train(model, train_data, X_train, Y_train, X_test, Y_test):
     print("Model Input shape", model.input.shape)
     print("Model Output shape", model.output.shape)
 
-    fmodel_name = DATASET + "_" + model.name + "_" + TRAINING_DATA_TYPE
+    fmodel_name = DATASET + "_" + model.name + "_" + TRAINING_DATA_TYPE+'_'+UNDERSAMPLING+'_'+str(model.input.shape[1])+'_'+str(model.output.shape[1])
 
     print(fmodel_name)
 
@@ -117,7 +117,6 @@ def train(model, train_data, X_train, Y_train, X_test, Y_test):
     for epoch in range(EPOCHS):
         losses = []
         for x, y in train_data:
-            plt.show()
             with tf.GradientTape() as tape:
                 y_pred = model(x, training=True)
                 loss = loss_f(y, y_pred, x)
@@ -165,25 +164,16 @@ def main():
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
     parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=14)
-    parser.add_argument('--output_days', help='Number of days predicted by the model', type=float, default=7)
+    parser.add_argument('--output_days', help='Number of days predicted by the model', type=int, default=7)
     parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM_Simple_WO_Regions')
 
-    parser.add_argument('--lr', help='Learning rate', type=int, default=0.002)
+    parser.add_argument('--lr', help='Learning rate', type=float, default=0.002)
     parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
                         default="Filtered")
-    parser.add_argument('--undersampling', help='under-sampling method (Loss, Reduce)', type=str, default="Reduce")
+    parser.add_argument('--undersampling', help='under-sampling method (None, Loss, Reduce)', type=str, default="Reduce")
 
     parser.add_argument('--path', help='default dataset path', type=str, default="../Datasets")
-    parser.add_argument('--asymptotic_t',
-                        help='Mean asymptotic period. (Test acc gradually increases with disease age)',
-                        type=int, default=14)
 
-    parser.add_argument('--initialize',
-                        help='How to initialize the positions (0-Random, 1-From file 2-From probability map)', type=int,
-                        default=0)
-
-    parser.add_argument('--mobility', help='How people move around (0-Random, 1-Brownian)', type=int, default=0)
-    parser.add_argument('--mobility_r', help='mobility radius', type=int, default=10)
 
     args = parser.parse_args()
 
@@ -201,7 +191,7 @@ def main():
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
 
-    PLOT = True
+    PLOT = False
 
     # ===================================================================================================== Loading data
     global daily_cases, daily_filtered, population, region_names
