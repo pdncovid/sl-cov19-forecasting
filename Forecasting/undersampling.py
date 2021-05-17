@@ -59,7 +59,7 @@ def undersample(x_data, y_data, WINDOW_LENGTH, PREDICT_STEPS, region_names, PLOT
         segment_dist.append(segment_array[np.argmax(count_score)])
 
         if PLOT:
-            plt.subplot(5, 5, i + 1)
+            plt.subplot(samples_all.shape[0]//5, 5, i + 1)
             plt.plot(segment_array, all_counts / np.amax(all_counts), linewidth=2)
             plt.plot(segment_array, count_score / np.amax(count_score), linewidth=2)
             plt.legend(['normalised total counts', 'segment score'])

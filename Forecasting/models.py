@@ -23,7 +23,7 @@ def get_model(modeltype, input_days, output_days, n_features, n_regions):
     else:
         raise TypeError("Model type not defined")
     model.summary()
-    # tf.keras.utils.plot_model(model, show_shapes=True, rankdir='LR')
+    tf.keras.utils.plot_model(model, show_shapes=True, rankdir='LR')
     return model, reduce_regions2batch
 
 
@@ -123,9 +123,9 @@ def LSTM4EachDay_WO_Regions(input_seq_size, output_seq_size):
 
     lstm_input = inp_seq
     for i in range(output_seq_size):
-        xx = tf.keras.layers.LSTM(output_seq_size, activation='relu')(lstm_input)
+        xx = tf.keras.layers.LSTM(output_seq_size-i, activation='relu')(lstm_input)
         xx = xx[:, 0:1]
-        out = xx if i == 0 else tf.keras.layers.concatenate([out, xx])
+        out = xx if i == 0 else tf.keras.layers.concatenate([out, xx], axis=1)
 
         xx = tf.reshape(xx, (-1, 1, 1))
 

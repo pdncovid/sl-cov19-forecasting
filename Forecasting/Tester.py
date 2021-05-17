@@ -41,6 +41,9 @@ mpl.rcParams['figure.figsize'] = 18, 8
 
 print(tf.__version__)
 
+# x_data, y_data = get_data(filtered=False, normalize=False)
+# region_mask = (np.mean(x_data,0) > 140).astype('int32')
+region_mask = (np.arange(25) == 5).astype('int32')
 
 # # Methods for time series forecasting
 
@@ -265,14 +268,12 @@ def main():
     #              [{'label_name': 'Method C', 'line_size': 4}, {'label_name': 'Method B', 'line_size': 3}],]
 
 
-    model_names = [('Sri Lanka_LSTM_Simple_WO_Regions_Unfiltered_Reduce_14_7', 'LSTM-R-Under'),
-                   ('Sri Lanka_LSTM_Simple_WO_Regions_Filtered_Reduce_14_7', 'LSTM-F-Under'),
-                   ('Sri Lanka_LSTM4EachDay_WO_Regions_Unfiltered_Reduce_14_7', 'LSTM*-R-Under'),
-                   ('Sri Lanka_LSTM4EachDay_WO_Regions_Filtered_Reduce_14_7', 'LSTM*-F-Under'),]
+    model_names = [
+                   ('Sri Lanka_LSTM4EachDay_WO_Regions_Unfiltered_Loss_14_7', 'LSTM*-R-Under'),
+                   ('Sri Lanka_LSTM4EachDay_WO_Regions_Filtered_Loss_14_7', 'LSTM*-F-Under'),]
     plot_data = [[{'label_name':model_names[0][1]+'-raw', 'line_size': 4}, {}],
                  [{'label_name':model_names[1][1]+'-raw', 'line_size': 4}, {'label_name': model_names[1][1]+'-fil', 'line_size': 3}],
-                 [{'label_name':model_names[2][1]+'-raw', 'line_size': 4}, {}],
-                 [{'label_name':model_names[3][1]+'-raw', 'line_size': 4}, {'label_name': model_names[3][1]+'-fil', 'line_size': 3}]
+
                  ]
     show_predictions(x_data_scalers, model_names)
 
@@ -425,9 +426,6 @@ def show_predictions(x_data_scalers, model_names):
     Ys = np.stack(Ys, 1)
     method_list = ['Observations Raw', 'Observations Filtered'] + method_list
 
-    # x_data, y_data = get_data(filtered=False, normalize=False)
-    # region_mask = (np.mean(x_data,0) > 140).astype('int32')
-    region_mask = (np.arange(n_regions) == 4).astype('int32')
 
     plt.figure(figsize=(20, 10))
     plot_prediction(x_test, x_testf, Ys, method_list, styles, region_names, region_mask)
@@ -532,9 +530,6 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
         print(method_list[i], Ys[i].shape)
         Ys[i] = np.expand_dims(Ys[i], 0)
     Ys = np.stack(Ys, 1)
-
-    # region_mask = ((200 > np.mean(x_data,0)) * (np.mean(x_data,0) > 140)).astype('int32')
-    region_mask = (np.arange(n_regions) == 4).astype('int32')
 
     plt.figure(figsize=(18, 9))
 
@@ -641,8 +636,6 @@ def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, mo
         Ys[i] = np.expand_dims(Ys[i], 0)
     Ys = np.stack(Ys, 1)
 
-    # region_mask = (np.mean(x_data,0) > 140).astype('int32')
-    region_mask = (np.arange(n_regions) == 4).astype('int32')
 
     plt.figure(figsize=(18, 9))
     plot_prediction(X, Xf, Ys, method_list, styles, region_names, region_mask)

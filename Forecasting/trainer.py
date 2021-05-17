@@ -137,6 +137,8 @@ def train(model, train_data, X_train, Y_train, X_test, Y_test):
             best_test_value = test_metric[-1]
             print(f" Best test metric {best_test_value:.5f}. Saving model...")
             model.save("temp.h5")
+        if PLOT:
+            test1(model, x_data_scalers, "Final")
     if PLOT:
         plt.figure(figsize=(10, 3))
         plt.subplot(121)
@@ -161,16 +163,16 @@ def main():
                         default='Sri Lanka')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-02-01')
 
-    parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
+    parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
     parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=14)
     parser.add_argument('--output_days', help='Number of days predicted by the model', type=int, default=7)
-    parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM_Simple_WO_Regions')
+    parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM4EachDay_WO_Regions')
 
     parser.add_argument('--lr', help='Learning rate', type=float, default=0.002)
     parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
                         default="Filtered")
-    parser.add_argument('--undersampling', help='under-sampling method (None, Loss, Reduce)', type=str, default="Reduce")
+    parser.add_argument('--undersampling', help='under-sampling method (None, Loss, Reduce)', type=str, default="Loss")
 
     parser.add_argument('--path', help='default dataset path', type=str, default="../Datasets")
 
@@ -191,7 +193,7 @@ def main():
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
 
-    PLOT = False
+    PLOT = True
 
     # ===================================================================================================== Loading data
     global daily_cases, daily_filtered, population, region_names
@@ -231,9 +233,6 @@ def main():
     daily_filtered = O_LPF(daily_cases, datatype='daily', order=3, R_weight=1.0, EIG_weight=1, corr=True,
                            region_names=region_names)
 
-    daily_per_mio_capita = per_million(daily_cases, population)
-    daily_per_mio_capita_filtered = per_million(daily_filtered, population)
-
     df = pd.DataFrame(daily_cases.T, columns=features.index)
     df.index = pd.to_datetime(pd.to_datetime(START_DATE).value + df.index * 24 * 3600 * 1000000000)
 
@@ -245,7 +244,7 @@ def main():
     df_test.to_csv('../Datasets/test.csv')
 
     features = features.values
-    global split_days
+    global split_days, x_data_scalers
     split_days = (pd.to_datetime(split_date) - pd.to_datetime(START_DATE)).days
 
     # ================================================================================================= Initialize Model
@@ -333,12 +332,12 @@ def main():
     # ================================================================================================= Few Evaluations
 
     if PLOT:
-        test1(model, x_data_scalers)
+        test1(model, x_data_scalers,"Final")
         test2(model, x_data_scalers)
         test_evolution(model)
 
 
-def test1(model, x_data_scalers):
+def test1(model, x_data_scalers, epoch):
     n_regions = len(x_data_scalers)
 
     def get_model_predictions(model, x_data, y_data, scalers):
@@ -390,9 +389,9 @@ def test1(model, x_data_scalers):
 
     plt.figure(figsize=(20, 10))
     plot_prediction(x_test, x_testf, Ys, method_list, styles, region_names, region_mask)
-
-    plt.savefig(f"images/{DATASET}_{TRAINING_DATA_TYPE}.eps")
-    plt.savefig(f"images/{DATASET}_{TRAINING_DATA_TYPE}.jpg")
+    plt.title(str(epoch))
+    plt.savefig(f"images/{DATASET}_{TRAINING_DATA_TYPE}_{epoch}.eps")
+    plt.savefig(f"images/{DATASET}_{TRAINING_DATA_TYPE}_{epoch}.jpg")
     plt.show()
 
 
