@@ -64,14 +64,18 @@ import lightgbm as lgb
 
 def BaysianRegression(df, df_training, df_test):
     n_regions = df_training.shape[1]
-    yhat = []
+    yhat = [[] for _ in range(n_regions)]
     for col in range(n_regions):
         reg = linear_model.BayesianRidge()
 
         today = df_training.iloc[:-1, col:col + 1]
         tomorrow = df_training.iloc[1:, col:col + 1]
         reg.fit(today, tomorrow)
-        yhat.append(reg.predict(df_test.iloc[:, col:col + 1]))
+        inp = tomorrow[-1:]
+        for _ in range(len(df_test)):
+            yhat[col].append(reg.predict(inp))
+            inp = yhat[col][-1]
+            inp = np.expand_dims(inp, -1)
 
     yhat = np.squeeze(np.array(yhat)).T
     return yhat
@@ -79,13 +83,17 @@ def BaysianRegression(df, df_training, df_test):
 def Lasso(df, df_training, df_test):
     n_regions = df_training.shape[1]
 
-    yhat = []
+    yhat = [[] for _ in range(n_regions)]
     for col in range(n_regions):
         reg = linear_model.Lasso(alpha=0.1)
         today = df_training.iloc[:-1, col:col + 1]
         tomorrow = df_training.iloc[1:, col:col + 1]
         reg.fit(today, tomorrow)
-        yhat.append(reg.predict(df_test.iloc[:, col:col + 1]))
+        inp = tomorrow[-1:]
+        for _ in range(len(df_test)):
+            yhat[col].append(reg.predict(inp))
+            inp = yhat[col][-1]
+            inp = np.expand_dims(inp, -1)
 
     yhat = np.squeeze(np.array(yhat)).T
     return yhat
@@ -94,22 +102,34 @@ def Lasso(df, df_training, df_test):
 def Randomforest(df, df_training, df_test):
     n_regions = df_training.shape[1]
 
-    yhat = []
+    yhat = [[] for _ in range(n_regions)]
     for col in range(n_regions):
         reg = RandomForestRegressor(max_depth=2, random_state=0)
-        reg.fit(df_training.iloc[:-1, col:col + 1], df_training.iloc[1:, col:col + 1])
-        yhat.append(reg.predict(df_test.iloc[:, col:col + 1]))
+        today = df_training.iloc[:-1, col:col + 1]
+        tomorrow = df_training.iloc[1:, col:col + 1]
+        reg.fit(today, tomorrow)
+        inp = tomorrow[-1:]
+        for _ in range(len(df_test)):
+            yhat[col].append(reg.predict(inp))
+            inp = yhat[col][-1]
+            inp = np.expand_dims(inp, -1)
 
     yhat = np.squeeze(np.array(yhat)).T
     return yhat
 
 def XGBoost(df, df_training, df_test):
     n_regions = df_training.shape[1]
-    yhat = []
+    yhat = [[] for _ in range(n_regions)]
     for col in range(n_regions):
         reg = xgb.XGBRegressor(objective='reg:squarederror', n_estimators=1000)
-        reg.fit(df_training.iloc[:-1, col:col + 1], df_training.iloc[1:, col:col + 1], verbose=False)
-        yhat.append(reg.predict(df_test.iloc[:, col:col + 1]))
+        today = df_training.iloc[:-1, col:col + 1]
+        tomorrow = df_training.iloc[1:, col:col + 1]
+        reg.fit(today, tomorrow, verbose=False)
+        inp = tomorrow[-1:]
+        for _ in range(len(df_test)):
+            yhat[col].append(reg.predict(inp))
+            inp = yhat[col][-1]
+            inp = np.expand_dims(inp, -1)
 
     yhat = np.squeeze(np.array(yhat)).T
     return yhat
@@ -119,33 +139,50 @@ def Lightgbm(df, df_training, df_test):
     # A tree gradient boosting model by [microsoft](https://github.com/microsoft/LightGBM)
     n_regions = df_training.shape[1]
 
-    yhat = []
+    yhat = [[] for _ in range(n_regions)]
     for col in range(n_regions):
         reg = lgb.LGBMRegressor()
-        reg.fit(df_training.iloc[:-1, col:col + 1], df_training.iloc[1:, col:col + 1])
-        yhat.append(reg.predict(df_test.iloc[:, col:col + 1]))
+        today = df_training.iloc[:-1, col:col + 1]
+        tomorrow = df_training.iloc[1:, col:col + 1]
+        reg.fit(today, tomorrow)
+        inp = tomorrow[-1:]
+        for _ in range(len(df_test)):
+            yhat[col].append(reg.predict(inp))
+            inp = yhat[col][-1]
+            inp = np.expand_dims(inp, -1)
 
     yhat = np.squeeze(np.array(yhat)).T
     return yhat
 
 def SVM_RBF(df, df_training, df_test):
     n_regions = df_training.shape[1]
-    yhat = []
+    yhat = [[] for _ in range(n_regions)]
     for col in range(n_regions):
         reg = svm.SVR(kernel='rbf', C=100, gamma=0.1, epsilon=.1)
-        reg.fit(df_training.iloc[:-1, col:col + 1], df_training.iloc[1:, col:col + 1])
-        yhat.append(reg.predict(df_test.iloc[:, col:col + 1]))
+        today = df_training.iloc[:-1, col:col + 1]
+        tomorrow = df_training.iloc[1:, col:col + 1]
+        reg.fit(today, tomorrow)
+        inp = tomorrow[-1:]
+        for _ in range(len(df_test)):
+            yhat[col].append(reg.predict(inp))
+            inp = yhat[col][-1]
+            inp = np.expand_dims(inp, -1)
 
     yhat = np.squeeze(np.array(yhat)).T
     return yhat
 
 def Kneighbors(df, df_training, df_test):
     n_regions = df_training.shape[1]
-    yhat = []
+    yhat = [[] for _ in range(n_regions)]
     for col in range(n_regions):
         reg = KNeighborsRegressor(n_neighbors=2)
-        reg.fit(df_training.iloc[:-1, col:col + 1], df_training.iloc[1:, col:col + 1])
-        yhat.append(reg.predict(df_test.iloc[:, col:col + 1]))
+        today = df_training.iloc[:-1, col:col + 1]
+        tomorrow = df_training.iloc[1:, col:col + 1]
+        reg.fit(today, tomorrow)
+        inp = tomorrow[-1:]
+        for _ in range(len(df_test)):
+            yhat[col].append(reg.predict(inp))
+            inp = yhat[col][-1]
 
     yhat = np.squeeze(np.array(yhat)).T
     return yhat
