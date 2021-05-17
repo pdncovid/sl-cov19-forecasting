@@ -25,14 +25,10 @@ from utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
 from utils.data_splitter import split_on_region_dimension, split_on_time_dimension, split_into_pieces_inorder
 
 from eval_methods.naive import naive_mean, naive_yesterday
-<<<<<<< Updated upstream
-from eval_methods.utsf2 import SES, HWES, mAR, MA, ARIMA, SARIMA, AutoSARIMA
-from eval_methods.mtsf2 import BaysianRegression, Lasso, Randomforest, XGBoost, Lightgbm, SVM_RBF, Kneighbors
-=======
 
 # from eval_methods.utsf import SES, HWES, mAR, MA, ARIMA, SARIMA, AutoSARIMA
 # from eval_methods.mtsf import BaysianRegression, Lasso, Randomforest, XGBoost, Lightgbm, SVM_RBF, Kneighbors
->>>>>>> Stashed changes
+
 
 # Extra settings
 seed = 42
@@ -284,7 +280,6 @@ def main():
     x_data, y_data, x_data_scalers = get_data(False, normalize=True)
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True)
 
-<<<<<<< Updated upstream
     # model_names = [('Sri Lanka_LSTM_Simple_WO_Regions_Unfiltered_Reduce_14_7', 'LSTM-R-Under'),
     #                ('Sri Lanka_LSTM_Simple_WO_Regions_Filtered_Reduce_14_7', 'LSTM-F-Under'), ]
     # plot_data = [[{'label_name': 'Method A', 'line_size': 4}, {}],
@@ -294,28 +289,11 @@ def main():
         ('Sri Lanka_LSTM4EachDay_WO_Regions_Unfiltered_Loss_14_7', 'LSTM*-R-Under'),
         ('Sri Lanka_LSTM4EachDay_WO_Regions_Filtered_Loss_14_7', 'LSTM*-F-Under'), ]
     plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4}, {}],
-                 [{'label_name': model_names[1][1] + '-raw', 'line_size': 4}, {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
+                 [{'label_name': model_names[1][1] + '-raw', 'line_size': 4},
+                  {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
 
                  ]
     show_predictions(x_data_scalers, model_names, plot_data)
-=======
-    model_names = [('Sri Lanka_LSTM_Simple_WO_Regions_Unfiltered_Reduce_14_7', 'LSTM-F-Under'),
-                   ('Sri Lanka_LSTM_Simple_WO_Regions_Filtered_None_14_7', 'LSTM-F-None'),
-                   ('Sri Lanka_LSTM_Simple_WO_Regions_Filtered_Loss_14_7', 'LSTM-F-Loss'), ]
-    plot_data = [[{'label_name': model_names[0][1], 'line_size': 4}, {}],
-                 [{'label_name': model_names[1][1], 'line_size': 4}, {}],
-                 [{'label_name': model_names[2][1], 'line_size': 4}, {}],
-                 ]
-
-    # model_names = [
-    #                ('Sri Lanka_LSTM4EachDay_WO_Regions_Unfiltered_Loss_14_7', 'LSTM*-R-Under'),
-    #                ('Sri Lanka_LSTM4EachDay_WO_Regions_Filtered_Loss_14_7', 'LSTM*-F-Under'),]
-    # plot_data = [[{'label_name':model_names[0][1]+'-raw', 'line_size': 4}, {}],
-    #              [{'label_name':model_names[1][1]+'-raw', 'line_size': 4}, {'label_name': model_names[1][1]+'-fil', 'line_size': 3}],
-    #
-    #              ]
-    show_predictions(x_data_scalers, model_names)
->>>>>>> Stashed changes
 
     show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data)
     show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data)
@@ -398,11 +376,7 @@ def get_data(filtered, normalize=False):
         return x.T, y.T
 
 
-<<<<<<< Updated upstream
 def show_predictions(x_data_scalers, model_names, plot_data):
-=======
-def show_predictions(x_data_scalers, model_names):
->>>>>>> Stashed changes
     def get_model_predictions(model, x_data, y_data, scalers):
         WINDOW_LENGTH = model.input.shape[1]
         PREDICT_STEPS = model.output.shape[1]
@@ -455,8 +429,6 @@ def show_predictions(x_data_scalers, model_names):
             method_list.append(method_name)
             styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
 
-<<<<<<< Updated upstream
-
         x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers)
         x_testf, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
         if len(plot[1].keys()) != 0:
@@ -464,20 +436,6 @@ def show_predictions(x_data_scalers, model_names):
             method_name = plot[1]['label_name']
             method_list.append(method_name)
             styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
-=======
-        Ys.append(yhat)
-        method_name = model_label + '-unf'
-        method_list.append(method_name)
-        styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': 4}
-
-        x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers)
-        x_testf, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
-
-        Ys.append(yhatf)
-        method_name = model_label + '-f'
-        method_list.append(method_name)
-        styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': 4}
->>>>>>> Stashed changes
 
     #########################################################################
 
