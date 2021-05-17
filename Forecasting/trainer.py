@@ -138,7 +138,7 @@ def train(model, train_data, X_train, Y_train, X_test, Y_test):
             print(f" Best test metric {best_test_value:.5f}. Saving model...")
             model.save("temp.h5")
         if PLOT:
-            test1(model, x_data_scalers, "Final")
+            test1(model, x_data_scalers, str(epoch))
     if PLOT:
         plt.figure(figsize=(10, 3))
         plt.subplot(121)
@@ -193,7 +193,7 @@ def main():
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
 
-    PLOT = True
+    PLOT = False
 
     # ===================================================================================================== Loading data
     global daily_cases, daily_filtered, population, region_names
