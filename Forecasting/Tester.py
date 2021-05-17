@@ -292,13 +292,12 @@ def main():
 
     arr = np.array(arr)
 
-    X = np.arange(len(arr[0]))
-    fig = plt.figure()
-    ax = fig.add_axes([0, 0, 1, 1])
-
-    w = 1 / len(arr)
-    for i in range(len(arr)):
-        ax.bar(X + w * i, arr[i, :], width=w)
+    # X = np.arange(len(arr[0]))
+    # fig = plt.figure()
+    # ax = fig.add_axes([0, 0, 1, 1])
+    # w = 1 / len(arr)
+    # for i in range(len(arr)):
+    #     ax.bar(X + w * i, arr[i, :], width=w)
 
     plt.figure(figsize=(15, 8))
     arr = []
@@ -360,7 +359,6 @@ def get_data(filtered, normalize=False):
 
 
 def show_predictions(x_data_scalers, model_names):
-    n_regions = len(x_data_scalers)
 
     def get_model_predictions(model, x_data, y_data, scalers):
         WINDOW_LENGTH = model.input.shape[1]
@@ -408,7 +406,7 @@ def show_predictions(x_data_scalers, model_names):
         x_test, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
 
         Ys.append(yhat)
-        method_name = model_label
+        method_name = model_label+'-unf'
         method_list.append(method_name)
         styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': 4}
 
@@ -416,7 +414,7 @@ def show_predictions(x_data_scalers, model_names):
         x_testf, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
 
         Ys.append(yhatf)
-        method_name = model_label
+        method_name = model_label+'-f'
         method_list.append(method_name)
         styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': 4}
 
@@ -446,7 +444,7 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
                 otherwise dict should contain; label_name, line_size
     """
 
-    n_regions = len(x_data_scalers)
+    n_regions = len(x_data_scalers.data_max_)
 
     def window_data(X, Y, window=7):
         '''
@@ -542,7 +540,7 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
 
 # #### Model prediction evolution from given only last 14 days of data.
 def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data):
-    n_regions = len(x_data_scalers)
+
 
     def get_model_predictions(model, x_data, y_data, scalers):
         WINDOW_LENGTH = model.input.shape[1]
