@@ -231,47 +231,48 @@ def main():
     # resultsDict['AutoSARIMAX'] = evaluate(df_test.values, autosarimax)
     # predictionsDict['AutoSARIMAX'] = autosarimax
 
-    br = BaysianRegression(df, df_training, df_test)
-    resultsDict['BayesianRidge'] = evaluate(df_test.values, br)
-    predictionsDict['BayesianRidge'] = br
-
-    lasso = Lasso(df, df_training, df_test)
-    resultsDict['Lasso'] = evaluate(df_test.values, lasso)
-    predictionsDict['Lasso'] = lasso
-
-    rf = Randomforest(df, df_training, df_test)
-    resultsDict['Randomforest'] = evaluate(df_test.values, rf)
-    predictionsDict['Randomforest'] = rf
-
-    xg = XGBoost(df, df_training, df_test)
-    resultsDict['XGBoost'] = evaluate(df_test.values, xg)
-    predictionsDict['XGBoost'] = xg
-
-    lgbm = Lightgbm(df, df_training, df_test)
-    resultsDict['Lightgbm'] = evaluate(df_test.values, lgbm)
-    predictionsDict['Lightgbm'] = lgbm
-
-    svmrbf = SVM_RBF(df, df_training, df_test)
-    resultsDict['SVM RBF'] = evaluate(df_test.values, svmrbf)
-    predictionsDict['SVM RBF'] = svmrbf
-
-    kn = Kneighbors(df, df_training, df_test)
-    resultsDict['Kneighbors'] = evaluate(df_test.values, kn)
-    predictionsDict['Kneighbors'] = kn
-
-    for method in predictionsDict.keys():
-        gtDict[method] = df_test.values
+    # br = BaysianRegression(df, df_training, df_test)
+    # resultsDict['BayesianRidge'] = evaluate(df_test.values, br)
+    # predictionsDict['BayesianRidge'] = br
+    #
+    # lasso = Lasso(df, df_training, df_test)
+    # resultsDict['Lasso'] = evaluate(df_test.values, lasso)
+    # predictionsDict['Lasso'] = lasso
+    #
+    # rf = Randomforest(df, df_training, df_test)
+    # resultsDict['Randomforest'] = evaluate(df_test.values, rf)
+    # predictionsDict['Randomforest'] = rf
+    #
+    # xg = XGBoost(df, df_training, df_test)
+    # resultsDict['XGBoost'] = evaluate(df_test.values, xg)
+    # predictionsDict['XGBoost'] = xg
+    #
+    # lgbm = Lightgbm(df, df_training, df_test)
+    # resultsDict['Lightgbm'] = evaluate(df_test.values, lgbm)
+    # predictionsDict['Lightgbm'] = lgbm
+    #
+    # svmrbf = SVM_RBF(df, df_training, df_test)
+    # resultsDict['SVM RBF'] = evaluate(df_test.values, svmrbf)
+    # predictionsDict['SVM RBF'] = svmrbf
+    #
+    # kn = Kneighbors(df, df_training, df_test)
+    # resultsDict['Kneighbors'] = evaluate(df_test.values, kn)
+    # predictionsDict['Kneighbors'] = kn
 
     for method in predictionsDict.keys():
-        plt.figure(figsize=(15, len(to_plot)))
-        plt.title(method)
-        yhat = predictionsDict[method]
-        for i, tp in enumerate(to_plot):
-            plt.subplot(1 + len(to_plot) // 3, 3, i + 1)
-            plt.plot(df_test[tp].values, label='Original ' + tp)
-            plt.plot(yhat[:, list(df_test.columns).index(tp)], color='red', label=method + ' ' + tp)
-            plt.legend()
-        plt.show()
+        if method not in gtDict.keys():
+            gtDict[method] = df_test.values
+    if PLOT:
+        for method in predictionsDict.keys():
+            plt.figure(figsize=(15, len(to_plot)))
+            plt.title(method)
+            yhat = predictionsDict[method]
+            for i, tp in enumerate(to_plot):
+                plt.subplot(1 + len(to_plot) // 3, 3, i + 1)
+                plt.plot(df_test[tp].values, label='Original ' + tp)
+                plt.plot(yhat[:, list(df_test.columns).index(tp)], color='red', label=method + ' ' + tp)
+                plt.legend()
+            plt.show()
 
     # ================================================================================================### Deep learning
     x_data, y_data, x_data_scalers = get_data(False, normalize=True)
@@ -286,11 +287,10 @@ def main():
         ('Sri Lanka_LSTM4EachDay_WO_Regions_Unfiltered_Loss_14_7', 'LSTM*-R-Under'),
         ('Sri Lanka_LSTM4EachDay_WO_Regions_Filtered_Loss_14_7', 'LSTM*-F-Under'), ]
     plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4}, {}],
-                 [{'label_name': model_names[1][1] + '-raw', 'line_size': 4},
-                  {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
+                 [{'label_name': model_names[1][1] + '-raw', 'line_size': 4}, {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
 
                  ]
-    show_predictions(x_data_scalers, model_names)
+    show_predictions(x_data_scalers, model_names, plot_data)
 
     show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data)
     show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data)
@@ -373,7 +373,7 @@ def get_data(filtered, normalize=False):
         return x.T, y.T
 
 
-def show_predictions(x_data_scalers, model_names):
+def show_predictions(x_data_scalers, model_names, plot_data):
     def get_model_predictions(model, x_data, y_data, scalers):
         WINDOW_LENGTH = model.input.shape[1]
         PREDICT_STEPS = model.output.shape[1]
@@ -413,24 +413,27 @@ def show_predictions(x_data_scalers, model_names):
 
     #########################################################################
     for i in range(len(model_names)):
+        plot = plot_data[i]
+
         model_filename, model_label = model_names[i]
         model = tf.keras.models.load_model(f"models/{model_filename}.h5")
 
         x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
         x_test, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
+        if len(plot[0].keys()) != 0:
+            Ys.append(yhat)
+            method_name = plot[0]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
 
-        Ys.append(yhat)
-        method_name = model_label + '-unf'
-        method_list.append(method_name)
-        styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': 4}
 
         x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers)
         x_testf, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
-
-        Ys.append(yhatf)
-        method_name = model_label + '-f'
-        method_list.append(method_name)
-        styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': 4}
+        if len(plot[1].keys()) != 0:
+            Ys.append(yhatf)
+            method_name = plot[1]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
 
     #########################################################################
 
