@@ -74,7 +74,7 @@ def LSTM_Simple_WO_Regions(input_seq_size, output_seq_size):
     x = inp_seq
     #     x = tf.keras.layers.LSTM(32, activation='relu', return_sequences=True)(x)
     x = tf.keras.layers.LSTM(output_seq_size)(x)
-    # x = tf.keras.layers.Activation('sigmoid')(x)
+    x = tf.keras.layers.Activation('relu')(x)
     x = tf.keras.layers.Reshape((output_seq_size, 1))(x)
     model = tf.keras.models.Model(inp_seq, x, name="LSTM_Simple_WO_Regions")
 
