@@ -22,8 +22,8 @@ def get_model(modeltype, input_days, output_days, n_features, n_regions):
         model = LSTM4EachDay_WO_Regions(input_days, output_days)
     else:
         raise TypeError("Model type not defined")
-    model.summary()
-    tf.keras.utils.plot_model(model, show_shapes=True, rankdir='LR')
+    # model.summary()
+    # tf.keras.utils.plot_model(model, show_shapes=True, rankdir='LR')
     return model, reduce_regions2batch
 
 
@@ -74,7 +74,7 @@ def LSTM_Simple_WO_Regions(input_seq_size, output_seq_size):
     x = inp_seq
     #     x = tf.keras.layers.LSTM(32, activation='relu', return_sequences=True)(x)
     x = tf.keras.layers.LSTM(output_seq_size)(x)
-    # x = tf.keras.layers.Activation('sigmoid')(x)
+    x = tf.keras.layers.Activation('relu')(x)
     x = tf.keras.layers.Reshape((output_seq_size, 1))(x)
     model = tf.keras.models.Model(inp_seq, x, name="LSTM_Simple_WO_Regions")
 
@@ -106,7 +106,7 @@ def LSTM4EachDay_W_Regions(input_seq_size, output_seq_size, n_regions):
     lstm_input = inp_seq
     for i in range(output_seq_size):
         xx = tf.keras.layers.LSTM(n_regions, activation='relu')(lstm_input)
-        out = xx if i == 0 else tf.keras.layers.concatenate([out, xx])
+        out = xx if i == 0 else tf.keras.layers.concatenate([out, xx],1)
 
         xx = tf.reshape(xx, (-1, 1, n_regions))
 
@@ -123,15 +123,16 @@ def LSTM4EachDay_WO_Regions(input_seq_size, output_seq_size):
 
     lstm_input = inp_seq
     for i in range(output_seq_size):
-        xx = tf.keras.layers.LSTM(output_seq_size-i, activation='relu')(lstm_input)
+        pre_cells = output_seq_size - i
+        xx = tf.keras.layers.LSTM(pre_cells)(lstm_input)
         xx = xx[:, 0:1]
-        out = xx if i == 0 else tf.keras.layers.concatenate([out, xx], axis=1)
-
         xx = tf.reshape(xx, (-1, 1, 1))
+
+        out = xx if i == 0 else tf.keras.layers.concatenate([out, xx], axis=1)
 
         lstm_input = tf.keras.layers.concatenate([lstm_input[:, 1:, :], xx], axis=1)
 
     out = tf.reshape(out, (-1, output_seq_size, 1))
-    #     out = tf.keras.layers.Activation('sigmoid')(out)
+    # out = tf.keras.layers.Activation('sigmoid')(out)
     model = tf.keras.models.Model(inp_seq, out, name="LSTM4EachDay_WO_Regions")
     return model

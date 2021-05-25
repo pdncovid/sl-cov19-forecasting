@@ -88,7 +88,7 @@ def Lasso(df, df_training, df_test):
         yhat.append(reg.predict(df_test.iloc[:, col:col + 1]))
 
     yhat = np.squeeze(np.array(yhat)).T
-
+    return yhat
 # ### Tree models
 
 def Randomforest(df, df_training, df_test):

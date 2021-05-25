@@ -177,6 +177,7 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
 
         START_DATE = "14/01/2020"  # TODO FIND
 
+
     if DATASET == "NG":
         dataset_path = os.path.join(path, "NG")
         df_daily = pd.read_excel(os.path.join(dataset_path, "nga_subnational_covid19_hera.xls"))
@@ -207,5 +208,64 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
         "n_regions": n_regions,
     }
 
-if __name__ == "__main__":
-    load_data("NG","../../Datasets")
+
+
+def load_data_eu(country='Germany', provinces=True,
+                 path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COVID-AI (PG)/spatio_temporal/Datasets"):
+
+    dataset_path = os.path.join(path, "EU")
+
+    if country != 'Italy':
+        _df = pd.read_csv(os.path.join(dataset_path, "jrc-covid-19-all-days-by-regions.csv"))
+        region_idx = _df.index[_df['CountryName'].str.contains(country)].tolist()
+        column_name = 'Region'
+        date_name = 'Date'
+        covid_name = 'CumulativePositive'
+    else:
+        _df = pd.read_csv(os.path.join(dataset_path, "dpc-covid19-ita-province.csv"))
+        region_idx = _df.index.tolist()
+        if provinces:
+            column_name = 'denominazione_provincia'
+        else:
+            column_name = 'denominazione_regione'
+        date_name = 'data'
+        covid_name = 'totale_casi'
+
+    df_new = _df.iloc[region_idx, :][[date_name, column_name, covid_name]]
+
+    region_list = _df[column_name].unique().tolist()
+    dates = df_new[date_name].unique().tolist()
+
+    df_time = pd.DataFrame(index=region_list, columns=dates)
+
+    for _date in dates:
+        _df = df_new.loc[df_new[date_name] == _date][[column_name, covid_name]]
+        _df = _df.set_index(column_name)
+        df_time.loc[_df.index, _date] = _df.values.reshape(-1)
+        df_time[df_time.isnull().values] = 0
+
+    # removing nan rows
+    df_time = df_time[df_time.index.notnull()]
+    # remove unspecified rows
+    remove_rows = ['', ' ', 'nan', 'Nan', 'NOT SPECIFIED']
+    for word in remove_rows:
+        if word in df_time.index:
+            df_time = df_time.drop(index=word)
+
+    confirmed_cases = df_time.values.astype(np.float64)
+
+    for i in range(confirmed_cases.shape[0]):
+        for j in range(confirmed_cases.shape[1] - 1):
+            if confirmed_cases[i, j + 1] < confirmed_cases[i, j]:
+                confirmed_cases[i, j + 1] = confirmed_cases[i, j]
+    daily_cases = np.diff(confirmed_cases, axis=1).astype(np.float64)
+    daily_cases[daily_cases < 0] = 0
+    start_date = df_time.columns[0]
+
+    return {
+        "region_names": df_time.index,
+        "confirmed_cases": confirmed_cases,
+        "daily_cases": daily_cases,
+        "START_DATE": start_date,
+        "n_regions": len(df_time.index),
+    }

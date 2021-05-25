@@ -4,7 +4,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-
+from sklearn.preprocessing import MinMaxScaler
 
 # Mean squared error with boosting low frequency samples
 def bs(arr, v):
@@ -25,16 +25,22 @@ def normalize_for_nn(data, given_scalers=None):
     data = np.copy(data)
     print(f"NORMALIZING; Data: {data.shape} expected (regions, days)")
 #     data = np.log(data.astype('float32')+1)
-    scalers = []
-    scale = float(np.max(data[:,:]))
-    for i in range(data.shape[0]):
-        if given_scalers is not None:
-            scale = given_scalers[i]
-        else:
-            scale = float(np.max(data[i,:]))
-        scalers.append(scale)
-        data[i,:] /= scale
-#     print("NAN",np.isnan(data).sum())
+    if given_scalers is None:
+        scalers = MinMaxScaler()
+        scalers.fit(data.T)
+    else:
+        scalers = given_scalers
+    data = scalers.transform(data.T).T
+
+    # scalers = []
+    # scale = float(np.max(data[:,:]))
+    # for i in range(data.shape[0]):
+    #     if given_scalers is not None:
+    #         scale = given_scalers[i]
+    #     else:
+    #         scale = float(np.max(data[i,:]))
+    #     scalers.append(scale)
+    #     data[i,:] /= scale
     
     return data, scalers
 
@@ -44,11 +50,15 @@ def undo_normalization(normalized_data, scalers):
         normalized_data = np.expand_dims(normalized_data,0)
     
     print(f"DENORMALIZING; Norm Data: {normalized_data.shape} expected (samples, windowsize, region)")
-    for i in range(len(scalers)):
-        normalized_data[:,:,i] *= scalers[i]
-#     normalized_data[normalized_data>10] = np.nan
-#     normalized_data = np.exp(normalized_data)-1
-#     print("NAN",np.isnan(normalized_data).sum())
+    samples, windowsize,regions = normalized_data.shape
+
+    normalized_data = scalers.inverse_transform(normalized_data.reshape((-1,regions)))
+    normalized_data = normalized_data.reshape((samples, windowsize,regions))
+#     for i in range(len(scalers)):
+#         normalized_data[:,:,i] *= scalers[i]
+# #     normalized_data[normalized_data>10] = np.nan
+# #     normalized_data = np.exp(normalized_data)-1
+# #     print("NAN",np.isnan(normalized_data).sum())
     return normalized_data
 
 
