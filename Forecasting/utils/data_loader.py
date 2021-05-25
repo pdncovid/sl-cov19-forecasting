@@ -176,6 +176,31 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
         features = pd.concat([population, popden, health, income, povert], axis=1)
 
         START_DATE = "14/01/2020"  # TODO FIND
+
+
+    if DATASET == "NG":
+        dataset_path = os.path.join(path, "NG")
+        df_daily = pd.read_excel(os.path.join(dataset_path, "nga_subnational_covid19_hera.xls"))
+        df_daily = df_daily[['DATE','REGION','CONTAMINES']]
+        dates = df_daily['DATE'].unique()
+        region_names = df_daily['REGION'].unique()
+        daily_cases = pd.DataFrame(columns=dates, index=region_names)
+
+        for date in dates:
+        	df_date = df_daily.loc[df_daily['DATE']==date]
+        	df_date = df_date[['REGION','CONTAMINES']]
+        	df_date = df_date.set_index('REGION')
+        	daily_cases.loc[df_date.index, date] = df_date.values.reshape(-1) 
+        
+        daily_cases = np.array(np.float64(daily_cases.values))
+        confirmed_cases = np.cumsum(daily_cases, axis=1)
+        
+        # population = df_population.iloc[:-1, 2]
+        # features = pd.concat([population], axis=1, join="inner").rename(columns={'cqr_census_2010_count': 'Population'})
+        features = pd.DataFrame(columns=['Population'], index='region_names')
+
+        START_DATE = '2/27/2020'
+        n_regions = len(region_names)
     if DATASET == "Global":
         dataset_path = os.path.join(path, "Global")
     return {
@@ -186,6 +211,7 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
         "START_DATE": START_DATE,
         "n_regions": n_regions,
     }
+
 
 
 def load_data_eu(country='Germany', provinces=True,
@@ -247,5 +273,3 @@ def load_data_eu(country='Germany', provinces=True,
         "START_DATE": start_date,
         "n_regions": len(df_time.index),
     }
-
-
