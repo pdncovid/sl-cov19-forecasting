@@ -26,8 +26,8 @@ from utils.data_splitter import split_on_region_dimension, split_on_time_dimensi
 
 from eval_methods.naive import naive_mean, naive_yesterday
 
-# from eval_methods.utsf import SES, HWES, mAR, MA, ARIMA, SARIMA, AutoSARIMA
-# from eval_methods.mtsf import BaysianRegression, Lasso, Randomforest, XGBoost, Lightgbm, SVM_RBF, Kneighbors
+# from eval_methods.utsf2 import SES, HWES, mAR, MA, ARIMA, SARIMA, AutoSARIMA
+# from eval_methods.mtsf2 import BaysianRegression, Lasso, Randomforest, XGBoost, Lightgbm, SVM_RBF, Kneighbors
 
 
 # Extra settings
@@ -286,12 +286,11 @@ def main():
     #              [{'label_name': 'Method C', 'line_size': 4}, {'label_name': 'Method B', 'line_size': 3}],]
 
     model_names = [
-        ('Sri Lanka_LSTM4EachDay_WO_Regions_Unfiltered_Loss_14_7', 'LSTM*-R-Under'),
-        ('Sri Lanka_LSTM4EachDay_WO_Regions_Filtered_Loss_14_7', 'LSTM*-F-Under'), ]
+        ('Texas_LSTM_Simple_WO_Regions_Unfiltered_Loss_14_7', 'LSTM*-R-Under'),
+        ('Texas_LSTM_Simple_WO_Regions_Filtered_Loss_14_7', 'LSTM*-F-Under'),
+        ]
     plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4}, {}],
-                 [{'label_name': model_names[1][1] + '-raw', 'line_size': 4},
-                  {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
-
+                 [{'label_name': model_names[1][1] + '-raw', 'line_size': 4}, {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
                  ]
     show_predictions(x_data_scalers, model_names, plot_data)
 
