@@ -194,7 +194,11 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
         
         daily_cases = np.array(np.float64(daily_cases.values))
         confirmed_cases = np.cumsum(daily_cases, axis=1)
-        np.save('ng',daily_cases)
+        
+        # population = df_population.iloc[:-1, 2]
+        # features = pd.concat([population], axis=1, join="inner").rename(columns={'cqr_census_2010_count': 'Population'})
+        features = pd.DataFrame(columns=['Population'], index='region_names')
+
         START_DATE = '2/27/2020'
         n_regions = len(region_names)
     if DATASET == "Global":
