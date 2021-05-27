@@ -177,46 +177,52 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
 
         START_DATE = "14/01/2020"  # TODO FIND
 
-
     if DATASET == "NG":
         dataset_path = os.path.join(path, "NG")
         df_daily = pd.read_excel(os.path.join(dataset_path, "nga_subnational_covid19_hera.xls"))
-        df_daily = df_daily[['DATE','REGION','CONTAMINES']]
+        df_daily = df_daily[['DATE', 'REGION', 'CONTAMINES']]
         dates = df_daily['DATE'].unique()
         region_names = df_daily['REGION'].unique()
-        daily_cases = pd.DataFrame(columns=dates, index=region_names)
+        df_time = pd.DataFrame(columns=dates, index=region_names)
 
         for date in dates:
-        	df_date = df_daily.loc[df_daily['DATE']==date]
-        	df_date = df_date[['REGION','CONTAMINES']]
-        	df_date = df_date.set_index('REGION')
-        	daily_cases.loc[df_date.index, date] = df_date.values.reshape(-1) 
-        
-        daily_cases = np.array(np.float64(daily_cases.values))
+            df_date = df_daily.loc[df_daily['DATE'] == date]
+            df_date = df_date[['REGION', 'CONTAMINES']]
+            df_date = df_date.set_index('REGION')
+            df_time.loc[df_date.index, date] = df_date.values.reshape(-1)
+
+        # removing nan rows
+        df_time = df_time[df_time.index.notnull()]
+
+        # remove unspecified rows
+        remove_rows = ['', ' ', 'nan', 'Nan', 'NOT SPECIFIED', 'Non spécifié']
+        for word in remove_rows:
+            if word in df_time.index:
+                df_time = df_time.drop(index=word)
+        # fill nan values
+        df_time = df_time.fillna(value=0)
+        daily_cases = np.array(np.float64(df_time.values))
         confirmed_cases = np.cumsum(daily_cases, axis=1)
-        
         # population = df_population.iloc[:-1, 2]
         # features = pd.concat([population], axis=1, join="inner").rename(columns={'cqr_census_2010_count': 'Population'})
-        features = pd.DataFrame(columns=['Population'], index='region_names')
+        features = pd.DataFrame(columns=['Population'], index=region_names)
 
-        START_DATE = '2/27/2020'
-        n_regions = len(region_names)
+        START_DATE = df_time.columns[0]
+
     if DATASET == "Global":
         dataset_path = os.path.join(path, "Global")
     return {
-        "region_names": region_names,
+        "region_names": df_time.index,
         "confirmed_cases": confirmed_cases,
         "daily_cases": daily_cases,
         "features": features,
         "START_DATE": START_DATE,
-        "n_regions": n_regions,
+        "n_regions": len(df_time.index),
     }
-
 
 
 def load_data_eu(country='Germany', provinces=True,
                  path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COVID-AI (PG)/spatio_temporal/Datasets"):
-
     dataset_path = os.path.join(path, "EU")
 
     if country != 'Italy':
@@ -251,10 +257,12 @@ def load_data_eu(country='Germany', provinces=True,
     # removing nan rows
     df_time = df_time[df_time.index.notnull()]
     # remove unspecified rows
-    remove_rows = ['', ' ', 'nan', 'Nan', 'NOT SPECIFIED']
+    remove_rows = ['', ' ', 'nan', 'Nan', 'NOT SPECIFIED', 'Non spécifié']
     for word in remove_rows:
         if word in df_time.index:
             df_time = df_time.drop(index=word)
+    # fill nan values
+    df_time = df_time.fillna(value=0)
 
     confirmed_cases = df_time.values.astype(np.float64)
 
