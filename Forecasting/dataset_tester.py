@@ -9,10 +9,12 @@ from Forecasting.utils.data_loader import load_data_eu, load_data
 from Forecasting.utils.smoothing_functions import O_LPF, NO_LPF
 
 dataset_path = 'F:\GitHub\sl-cov19-forecasting\Datasets'
-
-country = 'Italy'
-d = load_data_eu(country=country, path=dataset_path, provinces=True)
-# d = load_data("NG", path=dataset_path)
+is_eu = False
+country = 'NG'
+if is_eu:
+    d = load_data_eu(country=country, path=dataset_path, provinces=True)
+else:
+    d = load_data(country, path=dataset_path)
 
 region_names = d["region_names"]
 confirmed_cases = d["confirmed_cases"]
@@ -32,7 +34,16 @@ daily_cases[daily_cases < 0] = 0
 # daily_filtered = NO_LPF(daily_cases, datatype='daily', order=10, cutoff=0.015, region_names=region_names)
 
 # %% OPTIMAL FILTERING
-daily_filtered = O_LPF(daily_cases, datatype='daily', order=4, R_weight=1, EIG_weight=1, midpoint=False, corr=True,
+midpoint = False
+
+if midpoint:
+    R_weight = 2
+    EIG_weight = 2
+else:
+    R_weight = 1
+    EIG_weight = 2
+
+daily_filtered, cutoff_freqs = O_LPF(daily_cases[:, 250:-1], datatype='daily', order=3, R_weight=R_weight, EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
                        region_names=region_names, plot_freq=1, view=True)
 
 # %%

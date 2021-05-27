@@ -22,7 +22,7 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
 
     data = np.copy(data.T)
     n_regions = data.shape[1]
-
+    cutoff_freqs = []  # to return the optimal cutoff frequencies
     # FILTERING:
     # Filter requirements.
     T = data.shape[0]
@@ -40,9 +40,9 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
         return y.astype(np.float32)
 
     # DETERMINE THE RIGHT CUTOFF FREQUENCY
-    step = 0.005
+    step = 0.01
     cutoff_list = range(int(round(1 / step)))
-    cutoff_list = 0.1 * (np.array(list(cutoff_list)) + 5) / 100
+    cutoff_list = 0.1 * (np.array(list(cutoff_list)) + 2) / 100
     # print('cutoff_list=',cutoff_list)
 
     sections = 7
@@ -70,7 +70,7 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
             if corr:
                 J_R.append(np.mean(np.corrcoef(X, Y)))  # obtaining correlations
             else:
-                J_R.append(np.mean(np.square(X - Y)))  # obtaining error
+                J_R.append(1 / np.mean(np.square(X - Y)))  # obtaining error
 
             # obtaining power spectral densities
             X_freqs, X_psd = signal.welch(X)
@@ -78,14 +78,7 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
 
             X_psd, Y_psd = np.log10(np.abs(X_psd)), np.log10(np.abs(Y_psd))
 
-            # plt.figure()
-            # plt.plot(X_psd),plt.plot(Y_psd)
-
             J0 = []
-
-            # PSD_diff = np.abs(X_psd-Y_psd)
-            # inc_fn = np.array(list(range(len(PSD_diff))))**0.5
-            # J_eig.append(np.sum(inc_fn*PSD_diff))
 
             sec_len = int(X_psd.shape[0] / sections)
             for k in range(sections):
@@ -94,9 +87,11 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
                 J0.append((k + 1) * np.abs(
                     X_avg - Y_avg))  # eigenvalue spread should increase as k increases for an ideal solution
             J_eig.append(np.sum(J0))
-
-        J_EIG = J_eig / np.amax(J_eig)
-        J_Err = J_R / np.amax(J_R)
+        # few assignments to get rid of errors
+        J_eig = np.around(J_eig).astype(int)
+        J_eig[J_eig < 0] = 0
+        J_EIG = J_eig / np.amax(J_eig) if np.amax(J_eig) != 0 else 0
+        J_Err = J_R / np.amax(J_R) if np.amax(J_R) != 0 else 0
 
         if midpoint:
             J_tot = 1 - np.abs(R_cons * (J_Err) - EIG_cons * (J_EIG))
@@ -115,6 +110,8 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
                     Y[n + 1] = Y[n]
             Y = np.amax(X) * Y / np.amax(Y)
         data_filtered[:, i] = Y
+
+        cutoff_freqs.append(cutoff_list[idx])
 
         if view:
             if i % plot_freq == 0:
@@ -138,7 +135,7 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
                 plt.legend(['original', 'filtered']), plt.xlabel('days')
                 plt.show()
 
-    return data_filtered.T
+    return data_filtered.T, cutoff_freqs
 
 
 # ============================== Non-Optimised LPF ====================================
