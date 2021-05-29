@@ -95,7 +95,8 @@ def train(model, train_data, X_train, Y_train, X_test, Y_test):
     print("Model Input shape", model.input.shape)
     print("Model Output shape", model.output.shape)
 
-    fmodel_name = DATASET + "_" + model.name + "_" + TRAINING_DATA_TYPE+'_'+UNDERSAMPLING+'_'+str(model.input.shape[1])+'_'+str(model.output.shape[1])
+    fmodel_name = DATASET + "_" + model.name + "_" + TRAINING_DATA_TYPE + '_' + UNDERSAMPLING + '_' + str(
+        model.input.shape[1]) + '_' + str(model.output.shape[1])
 
     print(fmodel_name)
 
@@ -176,7 +177,6 @@ def main():
 
     parser.add_argument('--path', help='default dataset path', type=str, default="../Datasets")
 
-
     args = parser.parse_args()
 
     global daily_data, DATASET, split_date, EPOCHS, BATCH_SIZE, BUFFER_SIZE, WINDOW_LENGTH, PREDICT_STEPS, lr, TRAINING_DATA_TYPE, UNDERSAMPLING, PLOT
@@ -192,6 +192,15 @@ def main():
     lr = args.lr
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
+
+    midpoint = False
+
+    if midpoint:
+        R_weight = 2
+        EIG_weight = 2
+    else:
+        R_weight = 1
+        EIG_weight = 2
 
     PLOT = False
 
@@ -228,24 +237,22 @@ def main():
     days = confirmed_cases.shape[1]
     n_features = features.shape[1]
 
-    print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
+    global split_days, x_data_scalers
+    split_days = (pd.to_datetime(split_date) - pd.to_datetime(START_DATE)).days
 
-    daily_filtered = O_LPF(daily_cases, datatype='daily', order=3, R_weight=1.0, EIG_weight=1, corr=True,
-                           region_names=region_names)
+    print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
 
     df = pd.DataFrame(daily_cases.T, columns=features.index)
     df.index = pd.to_datetime(pd.to_datetime(START_DATE).value + df.index * 24 * 3600 * 1000000000)
-
     df_training = df.loc[df.index <= split_date]
     df_test = df.loc[df.index > split_date]
+    features = features.values
+
     print(f"{len(df_training)} days of training data \n {len(df_test)} days of testing data ")
 
-    df_training.to_csv('../Datasets/training.csv')
-    df_test.to_csv('../Datasets/test.csv')
-
-    features = features.values
-    global split_days, x_data_scalers
-    split_days = (pd.to_datetime(split_date) - pd.to_datetime(START_DATE)).days
+    daily_filtered = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
+                                     EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
+                                     region_names=region_names, plot_freq=1, view=False)
 
     # ================================================================================================= Initialize Model
 
@@ -256,6 +263,11 @@ def main():
                                             n_regions=n_regions)
 
     # ===================================================================================== Preparing data for training
+
+    SMOOTH_WINDOW = 100
+    _x_to_smooth, _ = split_into_pieces_inorder(daily_cases, daily_cases, SMOOTH_WINDOW, 0, 10, reduce_last_dim=False)
+    _x_samples_filtered = O_LPF(_x_to_smooth, datatype='daily', order=3, R_weight=1.0, EIG_weight=1, corr=True,
+                                region_names=[i for i in range(len(_x_to_smooth))])
 
     x_data, y_data, x_data_scalers = get_data(False, normalize=True)
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True)
@@ -332,7 +344,7 @@ def main():
     # ================================================================================================= Few Evaluations
 
     if PLOT:
-        test1(model, x_data_scalers,"Final")
+        test1(model, x_data_scalers, "Final")
         test2(model, x_data_scalers)
         test_evolution(model)
 

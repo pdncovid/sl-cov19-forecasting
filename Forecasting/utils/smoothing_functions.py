@@ -47,6 +47,11 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
 
     sections = 7
 
+    if view:
+        cols = 5
+        rows = np.ceil(n_regions/5)
+        plt.figure(figsize=(12*cols, 3.5*rows))
+
     data_filtered = np.zeros_like(data)
     for i in range(n_regions):
         J_R = []
@@ -89,9 +94,10 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
             J_eig.append(np.sum(J0))
         # few assignments to get rid of errors
         J_eig = np.around(J_eig).astype(int)
+        J_R = np.array(J_R)
         J_eig[J_eig < 0] = 0
-        J_EIG = J_eig / np.amax(J_eig) if np.amax(J_eig) != 0 else 0
-        J_Err = J_R / np.amax(J_R) if np.amax(J_R) != 0 else 0
+        J_EIG = J_eig / (np.amax(J_eig) if np.amax(J_eig) != 0 else 0)
+        J_Err = J_R / (np.amax(J_R) if np.amax(J_R) != 0 else 0)
 
         if midpoint:
             J_tot = 1 - np.abs(R_cons * (J_Err) - EIG_cons * (J_EIG))
@@ -115,9 +121,8 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
 
         if view:
             if i % plot_freq == 0:
-                plt.figure(figsize=(12, 3.5))
 
-                plt.subplot(1, 2, 1), plt.title('fitness functions of each component')
+                plt.subplot(rows, cols, i+1), plt.title('fitness functions of each component')
                 plt.plot(cutoff_list, J_Err, linewidth=2)
                 plt.plot(cutoff_list, J_EIG, linewidth=2)
                 plt.plot(cutoff_list, J_tot, linewidth=2)
@@ -127,7 +132,8 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
                             'total fitness function'], loc='lower left')
                 plt.xlabel('normalized cutoff frequency')
 
-                plt.subplot(1, 2, 2), plt.title(
+                plt.subplot(1, 2, 2)
+                plt.title(
                     'cumulative cases in ' + str(region_names[i]) + '\noptimum normalized cutoff frequency: ' + str(
                         round(cutoff_list[idx], 4)))
                 plt.plot(X / np.amax(Y), linewidth=2)

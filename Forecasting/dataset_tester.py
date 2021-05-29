@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from Forecasting.utils.data_loader import load_data_eu, load_data
 from Forecasting.utils.smoothing_functions import O_LPF, NO_LPF
 
-dataset_path = 'F:\GitHub\sl-cov19-forecasting\Datasets'
+dataset_path = '../Datasets'
 _df = pd.read_csv(os.path.join(dataset_path, "EU\jrc-covid-19-all-days-by-regions.csv"))
 _eu = _df['CountryName'].unique().tolist()
 
@@ -30,7 +30,7 @@ n_regions = d["n_regions"]
 daily_cases[daily_cases < 0] = 0
 
 # %% breaking time series into segments
-seg_len = 200
+seg_len = 100
 time_total = daily_cases.shape[1]
 seg_num = math.floor(time_total / seg_len)
 
@@ -59,7 +59,7 @@ else:
 
 daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
                                      EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
-                                     region_names=region_names, plot_freq=1, view=True)
+                                     region_names=region_names, plot_freq=1, view=False)
 
 if midpoint:
     R_weight = 2
@@ -82,10 +82,10 @@ daily_seg_filtered = np.reshape(daily_seg_filtered, [n_regions, -1])
 daily_seg = np.reshape(daily_seg, [n_regions, -1])
 
 
-# plt.figure()
-# plt.plot(daily_seg[5,:])
-# plt.plot(daily_seg_filtered[5,:])
-# plt.show()
+plt.figure()
+plt.plot(daily_seg[5,:])
+plt.plot(daily_seg_filtered[5,:])
+plt.show()
 # %% check FFT of each region
 # for i in range(len(region_names)):
 #     plt.figure(figsize=(12, 3.5))

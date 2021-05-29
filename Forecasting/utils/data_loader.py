@@ -97,12 +97,7 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
                      "Percentage of persons using internet": "Internet usage(%)",
                      "Median years spent in education": "Education(Median years)"})
 
-        n_regions = confirmed_cases.shape[0]
-
         START_DATE = "14/11/2020"
-        print(confirmed_cases.shape)
-        print(region_names)
-        print(region_codes)
 
     if DATASET == "Texas":
         START_DATE = "03/04/2020"
@@ -203,8 +198,8 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
         df_time = df_time.fillna(value=0)
         daily_cases = np.array(np.float64(df_time.values))
         confirmed_cases = np.cumsum(daily_cases, axis=1)
-        # population = df_population.iloc[:-1, 2]
-        # features = pd.concat([population], axis=1, join="inner").rename(columns={'cqr_census_2010_count': 'Population'})
+
+        region_names = df_time.index
         features = pd.DataFrame(columns=['Population'], index=region_names)
 
         START_DATE = df_time.columns[0]
@@ -212,12 +207,12 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
     if DATASET == "Global":
         dataset_path = os.path.join(path, "Global")
     return {
-        "region_names": df_time.index,
+        "region_names": region_names,
         "confirmed_cases": confirmed_cases,
         "daily_cases": daily_cases,
         "features": features,
         "START_DATE": START_DATE,
-        "n_regions": len(df_time.index),
+        "n_regions": len(region_names),
     }
 
 
