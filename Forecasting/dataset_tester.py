@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from Forecasting.utils.data_loader import load_data_eu, load_data
 from Forecasting.utils.smoothing_functions import O_LPF, NO_LPF
 
-dataset_path = 'F:\GitHub\sl-cov19-forecasting\Datasets'
+dataset_path = '../Datasets'
 _df = pd.read_csv(os.path.join(dataset_path, "EU\jrc-covid-19-all-days-by-regions.csv"))
 _eu = _df['CountryName'].unique().tolist()
 
@@ -30,7 +30,7 @@ n_regions = d["n_regions"]
 daily_cases[daily_cases < 0] = 0
 
 # %% breaking time series into segments
-seg_len = 200
+seg_len = 100
 time_total = daily_cases.shape[1]
 seg_num = math.floor(time_total / seg_len)
 
@@ -59,29 +59,33 @@ else:
 
 daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
                                      EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
-                                     region_names=region_names, plot_freq=1, view=True)
-
-if midpoint:
-    R_weight = 2
-    EIG_weight = 2
-else:
-    R_weight = 3
-    EIG_weight = 2
-
-for i in range(seg_num):
-    daily_seg_filtered[:, i, :], cutoff_freqs_seg = O_LPF(daily_seg[:, i, :], datatype='daily', order=3,
-                                                          R_weight=R_weight,
-                                                          EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
-                                                          region_names=region_names, plot_freq=1, view=False)
-
-daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
-                                     EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
                                      region_names=region_names, plot_freq=1, view=False)
 
-daily_seg_filtered = np.reshape(daily_seg_filtered, [n_regions, -1])
-daily_seg = np.reshape(daily_seg, [n_regions, -1])
 
+from utils.data_splitter import split_and_smooth
+_x = split_and_smooth(daily_cases, look_back_window=100, window_slide=10,R_weight=1, EIG_weight=2, midpoint=False, reduce_last_dim=False)
 
+# if midpoint:
+#     R_weight = 2
+#     EIG_weight = 2
+# else:
+#     R_weight = 3
+#     EIG_weight = 2
+#
+# for i in range(seg_num):
+#     daily_seg_filtered[:, i, :], cutoff_freqs_seg = O_LPF(daily_seg[:, i, :], datatype='daily', order=3,
+#                                                           R_weight=R_weight,
+#                                                           EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
+#                                                           region_names=region_names, plot_freq=1, view=False)
+#
+# daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
+#                                      EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
+#                                      region_names=region_names, plot_freq=1, view=False)
+#
+# daily_seg_filtered = np.reshape(daily_seg_filtered, [n_regions, -1])
+# daily_seg = np.reshape(daily_seg, [n_regions, -1])
+#
+#
 # plt.figure()
 # plt.plot(daily_seg[5,:])
 # plt.plot(daily_seg_filtered[5,:])

@@ -172,8 +172,6 @@ def main():
     df_test = df.loc[df.index > split_date]
     print(f"{len(df_training)} days of training data \n {len(df_test)} days of testing data ")
 
-    df_training.to_csv('../Datasets/training.csv')
-    df_test.to_csv('../Datasets/test.csv')
 
     features = features.values
     global split_days
