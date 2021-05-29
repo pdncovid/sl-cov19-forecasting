@@ -33,7 +33,7 @@ from utils.plots import bar_metrics, plot_prediction
 from utils.functions import distance, normalize_for_nn, undo_normalization, bs
 from utils.data_loader import load_data, per_million, get_daily
 from utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
-from utils.data_splitter import split_on_region_dimension, split_on_time_dimension, split_into_pieces_inorder
+from utils.data_splitter import split_on_region_dimension, split_on_time_dimension, split_into_pieces_inorder, split_and_smooth
 from undersampling import undersample
 from models import get_model
 
@@ -99,7 +99,7 @@ def train(model, train_data, X_train, Y_train, X_test, Y_test):
         model.input.shape[1]) + '_' + str(model.output.shape[1])
 
     print(fmodel_name)
-
+    global folder
     folder = time.strftime('%Y.%m.%d-%H.%M.%S', time.localtime()) + "_" + fmodel_name
     os.makedirs('./logs/' + folder)
     tensorboard = TensorBoard(log_dir='./logs/' + folder, write_graph=True, histogram_freq=1, write_images=True)
@@ -141,7 +141,7 @@ def train(model, train_data, X_train, Y_train, X_test, Y_test):
         if PLOT:
             test1(model, x_data_scalers, str(epoch))
     if PLOT:
-        plt.figure(figsize=(10, 3))
+        plt.figure(16, figsize=(10, 3))
         plt.subplot(121)
         plt.ion()
         plt.plot(train_metric, label='Train')
@@ -150,7 +150,8 @@ def train(model, train_data, X_train, Y_train, X_test, Y_test):
         plt.ylabel("Metric")
         plt.legend()
         plt.ioff()
-        plt.show()
+        plt.pause(0.1)
+        plt.savefig(f"./logs/{folder}/images/Train_metric.png", bbox_inches='tight')
 
     model = tf.keras.models.load_model("temp.h5")
     model.save("models/" + fmodel_name + ".h5")
@@ -250,9 +251,9 @@ def main():
 
     print(f"{len(df_training)} days of training data \n {len(df_test)} days of testing data ")
 
-    daily_filtered = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
-                                     EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
-                                     region_names=region_names, plot_freq=1, view=False)
+    daily_filtered,cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
+                           EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
+                           region_names=region_names, plot_freq=1, view=False)
 
     # ================================================================================================= Initialize Model
 
@@ -264,10 +265,7 @@ def main():
 
     # ===================================================================================== Preparing data for training
 
-    SMOOTH_WINDOW = 100
-    _x_to_smooth, _ = split_into_pieces_inorder(daily_cases, daily_cases, SMOOTH_WINDOW, 0, 10, reduce_last_dim=False)
-    _x_samples_filtered = O_LPF(_x_to_smooth, datatype='daily', order=3, R_weight=1.0, EIG_weight=1, corr=True,
-                                region_names=[i for i in range(len(_x_to_smooth))])
+    _x = split_and_smooth(daily_cases, look_back_window=100, window_slide=10,R_weight=1, EIG_weight=2, midpoint=False, reduce_last_dim=False)
 
     x_data, y_data, x_data_scalers = get_data(False, normalize=True)
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True)
@@ -301,7 +299,8 @@ def main():
     # ==================================================================================================== Undersampling
 
     if UNDERSAMPLING == "Reduce" and reduce_regions2batch:  # Currently optimal undersampling supports independatly on regions.
-        x_train_opt, y_train_opt = undersample(x_data.T, y_data.T, WINDOW_LENGTH, PREDICT_STEPS, region_names, PLOT)
+        x_train_opt, y_train_opt = undersample(x_data.T, y_data.T, WINDOW_LENGTH, PREDICT_STEPS, region_names, PLOT,
+                                               savepath=f'images/under_{DATASET}.png' if PLOT else None)
         X_train = x_train_opt
         Y_train = y_train_opt
 
@@ -335,7 +334,7 @@ def main():
         axs[1, 1].hist(np.concatenate(X_train, -1).mean(0), bins=100)
         axs[1, 1].set_title("Histogram of mean of training samples")
 
-        plt.show()
+        plt.savefig('./logs/' + folder + "/images/Train_data.png", bbox_inches='tight')
 
     # =================================================================================================  Train
 
@@ -350,7 +349,7 @@ def main():
 
 
 def test1(model, x_data_scalers, epoch):
-    n_regions = len(x_data_scalers)
+    n_regions = len(x_data_scalers.data_max_)
 
     def get_model_predictions(model, x_data, y_data, scalers):
         print(f"Predicting from model. X={x_data.shape} Y={y_data.shape}")
@@ -402,13 +401,12 @@ def test1(model, x_data_scalers, epoch):
     plt.figure(figsize=(20, 10))
     plot_prediction(x_test, x_testf, Ys, method_list, styles, region_names, region_mask)
     plt.title(str(epoch))
-    plt.savefig(f"images/{DATASET}_{TRAINING_DATA_TYPE}_{epoch}.eps")
-    plt.savefig(f"images/{DATASET}_{TRAINING_DATA_TYPE}_{epoch}.jpg")
-    plt.show()
+    plt.savefig(f"./logs/{folder}/images/test1_{epoch}.eps")
+    plt.savefig(f"./logs/{folder}/images/test1_{epoch}.png")
 
 
 def test2(model, x_data_scalers):
-    n_regions = len(x_data_scalers)
+    n_regions = len(x_data_scalers.data_max_)
 
     def get_model_predictions(model, x_data, y_data, scalers):
         print(f"Predicting from model. X={x_data.shape} Y={y_data.shape}")
@@ -479,9 +477,8 @@ def test2(model, x_data_scalers):
 
     plot_prediction(X, Xf, Ys, method_list, styles, region_names, region_mask)
 
-    plt.savefig(f"images/{DATASET}_DayByDay.eps")
-    plt.savefig(f"images/{DATASET}_DayByDay.jpg")
-    plt.show()
+    plt.savefig(f"./logs/{folder}/images/test2.eps")
+    plt.savefig(f"./logs/{folder}/images/test2.png")
 
 
 def test_evolution(model):
@@ -511,7 +508,7 @@ def test_evolution(model):
         predictions.append(np.concatenate(predict_seq, 0))
 
     plt.semilogy(1 + np.array(predictions)[:, :30, 0].T)
-    plt.show()
+    plt.savefig(f"./logs/{folder}/images/test_future.png", bbox_inches='tight')
 
 
 if __name__ == "__main__":

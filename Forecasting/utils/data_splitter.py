@@ -1,4 +1,21 @@
 import numpy as np
+from smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
+
+
+def split_and_smooth(daily_cases, look_back_window=100, window_slide=10, R_weight=1, EIG_weight=2, midpoint=False, reduce_last_dim=False):
+    _x_to_smooth, _ = split_into_pieces_inorder(daily_cases, daily_cases, look_back_window, 0, window_slide, reduce_last_dim=False)
+    _x = []
+    for i in range(_x_to_smooth.shape[-1]):
+        _x_samples_filtered, cutoff_freqs = O_LPF(_x_to_smooth[:, :, i], datatype='daily', order=3, R_weight=R_weight,
+                                                  EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
+                                                  plot_freq=1, view=False,
+                                                  region_names=[i for i in range(len(_x_to_smooth))])
+        _x.append(_x_samples_filtered)
+    _x = np.array(_x)
+    _x = _x.transpose([1, 2, 0])
+    if reduce_last_dim:
+        _x = np.concatenate(_x, -1).T
+    return _x
 
 
 def split_on_time_dimension(x_data, y_data, features, x_size, y_size, k_fold, test_fold, reduce_last_dim=False,
