@@ -1,6 +1,7 @@
 import os
 import sys
 import math
+import random
 import numpy as np
 import pandas as pd
 import scipy.signal as signal
@@ -9,6 +10,7 @@ import matplotlib.pyplot as plt
 
 from Forecasting.utils.data_loader import load_data_eu, load_data
 from Forecasting.utils.smoothing_functions import O_LPF, NO_LPF
+from Forecasting.utils.data_splitter import split_and_smooth
 
 dataset_path = '../Datasets'
 _df = pd.read_csv(os.path.join(dataset_path, "EU\jrc-covid-19-all-days-by-regions.csv"))
@@ -47,7 +49,7 @@ daily_seg_filtered = np.zeros_like(daily_seg)
 # daily_filtered_na = NO_LPF(daily_cases, datatype='daily', order=10, cutoff=0.088, region_names=region_names)
 # daily_filtered = NO_LPF(daily_cases, datatype='daily', order=10, cutoff=0.015, region_names=region_names)
 
-##%% OPTIMAL FILTERING
+# %% OPTIMAL FILTERING
 midpoint = False
 
 if midpoint:
@@ -61,23 +63,11 @@ daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_w
                                      EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
                                      region_names=region_names, plot_freq=1, view=False)
 
+daily_split_filtered, daily_split = split_and_smooth(daily_cases, look_back_window=seg_len, window_slide=10, R_weight=5,
+                                                     EIG_weight=2, midpoint=False,
+                                                     reduce_last_dim=False)
 
-from utils.data_splitter import split_and_smooth
-_x = split_and_smooth(daily_cases, look_back_window=100, window_slide=10,R_weight=1, EIG_weight=2, midpoint=False, reduce_last_dim=False)
 
-# if midpoint:
-#     R_weight = 2
-#     EIG_weight = 2
-# else:
-#     R_weight = 3
-#     EIG_weight = 2
-#
-# for i in range(seg_num):
-#     daily_seg_filtered[:, i, :], cutoff_freqs_seg = O_LPF(daily_seg[:, i, :], datatype='daily', order=3,
-#                                                           R_weight=R_weight,
-#                                                           EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
-#                                                           region_names=region_names, plot_freq=1, view=False)
-#
 # daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
 #                                      EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
 #                                      region_names=region_names, plot_freq=1, view=False)
@@ -107,6 +97,7 @@ _x = split_and_smooth(daily_cases, look_back_window=100, window_slide=10,R_weigh
 
 # %% STFT of each region
 
+
 # for i in range(len(region_names)):
 #     plt.figure(figsize=(12, 7))
 #     plt.subplot(221)
@@ -114,15 +105,45 @@ _x = split_and_smooth(daily_cases, look_back_window=100, window_slide=10,R_weigh
 #     plt.plot(daily_filtered[i, :], linewidth=2)
 #     plt.title('filtered and unfiltered: ' + str(region_names[i]))
 #     plt.subplot(222)
-#     f, t, Zxx = signal.stft(daily_cases[i, :], nperseg=50, noverlap=None, nfft=None, detrend=False, return_onesided=True, boundary='zeros', padded=True)
+#     f, t, Zxx = signal.stft(daily_cases[i, :], nperseg=50, noverlap=None, nfft=None, detrend=False,
+#                             return_onesided=True, boundary='zeros', padded=True)
 #     plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=np.amax(np.abs(Zxx)), shading='gouraud')
 #     plt.title('STFT Magnitude')
 #     plt.ylabel('Frequency [1/day]')
 #     plt.xlabel('Time [day]')
 #     plt.subplot(224)
-#     f, t, Zxx = signal.stft(daily_filtered[i, :], nperseg=50, noverlap=None, nfft=None, detrend=False, return_onesided=True, boundary='zeros', padded=True)
+#     f, t, Zxx = signal.stft(daily_filtered[i, :], nperseg=50, noverlap=None, nfft=None, detrend=False,
+#                             return_onesided=True, boundary='zeros', padded=True)
 #     plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=np.amax(np.abs(Zxx)), shading='gouraud')
 #     plt.title('STFT Magnitude')
 #     plt.ylabel('Frequency [1/day]')
 #     plt.xlabel('Time [day]')
 #     plt.show()
+
+# %% STFT of each region with splitting
+
+for i in range(len(region_names)):
+    # Generate 5 random numbers between 10 and 30
+    randomlist = random.sample(range(0, daily_split.shape[0]), 3)
+    # print(randomlist)
+    for k in randomlist:
+        plt.figure(figsize=(12, 7))
+        plt.subplot(221)
+        plt.plot(daily_split[k, :, i], linewidth=2)
+        plt.plot(daily_split_filtered[k, :, i], linewidth=2)
+        plt.title('filtered and unfiltered: ' + str(region_names[i]))
+        plt.subplot(222)
+        f, t, Zxx = signal.stft(daily_split[k, :, i], nperseg=20, noverlap=None, nfft=None, detrend=False,
+                                return_onesided=True, boundary='zeros', padded=True)
+        plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=np.amax(np.abs(Zxx)), shading='gouraud')
+        plt.title('STFT Magnitude')
+        plt.ylabel('Frequency [1/day]')
+        plt.xlabel('Time [day]')
+        plt.subplot(224)
+        f, t, Zxx = signal.stft(daily_split_filtered[k, :, i], nperseg=20, noverlap=None, nfft=None, detrend=False,
+                                return_onesided=True, boundary='zeros', padded=True)
+        plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=np.amax(np.abs(Zxx)), shading='gouraud')
+        plt.title('STFT Magnitude')
+        plt.ylabel('Frequency [1/day]')
+        plt.xlabel('Time [day]')
+        plt.show()
