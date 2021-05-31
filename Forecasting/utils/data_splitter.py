@@ -1,5 +1,5 @@
 import numpy as np
-from smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
+from utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
 
 
 def split_and_smooth(daily_cases, look_back_window=100, window_slide=10, R_weight=1, EIG_weight=2, midpoint=False, reduce_last_dim=False):
