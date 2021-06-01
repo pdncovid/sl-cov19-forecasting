@@ -33,8 +33,9 @@ from utils.plots import bar_metrics, plot_prediction
 from utils.functions import distance, normalize_for_nn, undo_normalization, bs
 from utils.data_loader import load_data, per_million, get_daily
 from utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
-from utils.data_splitter import split_on_region_dimension, split_on_time_dimension, split_into_pieces_inorder, split_and_smooth
-from undersampling import undersample
+from utils.data_splitter import split_on_region_dimension, split_on_time_dimension, split_into_pieces_inorder, \
+    split_and_smooth
+from utils.undersampling import undersample, undersample2
 from models import get_model
 
 # Extra settings
@@ -95,13 +96,6 @@ def train(model, train_data, X_train, Y_train, X_test, Y_test):
     print("Model Input shape", model.input.shape)
     print("Model Output shape", model.output.shape)
 
-    fmodel_name = DATASET + "_" + model.name + "_" + TRAINING_DATA_TYPE + '_' + UNDERSAMPLING + '_' + str(
-        model.input.shape[1]) + '_' + str(model.output.shape[1])
-
-    print(fmodel_name)
-    global folder
-    folder = time.strftime('%Y.%m.%d-%H.%M.%S', time.localtime()) + "_" + fmodel_name
-    os.makedirs('./logs/' + folder)
     tensorboard = TensorBoard(log_dir='./logs/' + folder, write_graph=True, histogram_freq=1, write_images=True)
     tensorboard.set_model(model)
 
@@ -174,13 +168,16 @@ def main():
     parser.add_argument('--lr', help='Learning rate', type=float, default=0.002)
     parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
                         default="Filtered")
-    parser.add_argument('--undersampling', help='under-sampling method (None, Loss, Reduce)', type=str, default="Loss")
+    parser.add_argument('--undersampling', help='under-sampling method (None, Loss, Reduce)', type=str,
+                        default="Reduce")
 
     parser.add_argument('--path', help='default dataset path', type=str, default="../Datasets")
 
     args = parser.parse_args()
 
-    global daily_data, DATASET, split_date, EPOCHS, BATCH_SIZE, BUFFER_SIZE, WINDOW_LENGTH, PREDICT_STEPS, lr, TRAINING_DATA_TYPE, UNDERSAMPLING, PLOT
+    global daily_data, DATASET, split_date, EPOCHS, BATCH_SIZE, BUFFER_SIZE, WINDOW_LENGTH, PREDICT_STEPS, lr, \
+        TRAINING_DATA_TYPE, UNDERSAMPLING, PLOT, daily_cases, daily_filtered, population, region_names, split_days, \
+        x_data_scalers, folder, fmodel_name
     daily_data = args.daily
     DATASET = args.dataset
     split_date = args.split_date
@@ -195,18 +192,16 @@ def main():
     UNDERSAMPLING = args.undersampling
 
     midpoint = False
-
     if midpoint:
         R_weight = 2
         EIG_weight = 2
     else:
         R_weight = 1
         EIG_weight = 2
-
-    PLOT = False
+    look_back_window, window_slide = 50, 1
+    PLOT = True
 
     # ===================================================================================================== Loading data
-    global daily_cases, daily_filtered, population, region_names
 
     """Required variables:
 
@@ -238,7 +233,6 @@ def main():
     days = confirmed_cases.shape[1]
     n_features = features.shape[1]
 
-    global split_days, x_data_scalers
     split_days = (pd.to_datetime(split_date) - pd.to_datetime(START_DATE)).days
 
     print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
@@ -251,9 +245,9 @@ def main():
 
     print(f"{len(df_training)} days of training data \n {len(df_test)} days of testing data ")
 
-    daily_filtered,cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
-                           EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
-                           region_names=region_names, plot_freq=1, view=False)
+    daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
+                                         EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
+                                         region_names=region_names, plot_freq=1, view=False)
 
     # ================================================================================================= Initialize Model
 
@@ -263,19 +257,61 @@ def main():
                                             n_features=n_features,
                                             n_regions=n_regions)
 
-    # ===================================================================================== Preparing data for training
+    fmodel_name = DATASET + "_" + model.name + "_" + TRAINING_DATA_TYPE + '_' + UNDERSAMPLING + '_' + str(
+        model.input.shape[1]) + '_' + str(model.output.shape[1])
 
-    _x = split_and_smooth(daily_cases, look_back_window=100, window_slide=10,R_weight=1, EIG_weight=2, midpoint=False, reduce_last_dim=False)
+    print(fmodel_name)
+    folder = time.strftime('%Y.%m.%d-%H.%M.%S', time.localtime()) + "_" + fmodel_name
+    os.makedirs('./logs/' + folder + '/images')
+    # ===================================================================================== Preparing data for training
 
     x_data, y_data, x_data_scalers = get_data(False, normalize=True)
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True)
-    print(f"Using {TRAINING_DATA_TYPE} data")
-    x_data, y_data, _ = get_data(TRAINING_DATA_TYPE == "Filtered", normalize=x_data_scalers)
 
-    X_train, X_train_feat, Y_train, X_val, X_val_feat, Y_val, X_test, X_test_feat, Y_test = split_on_time_dimension(
-        x_data.T, y_data.T, features, WINDOW_LENGTH, PREDICT_STEPS,
-        k_fold=3, test_fold=2, reduce_last_dim=reduce_regions2batch,
-        only_train_test=True, debug=True)
+    print(f"Using {TRAINING_DATA_TYPE} data")
+    if TRAINING_DATA_TYPE == "Filtered":
+        x_data, y_data, _ = get_data(False, normalize=x_data_scalers)  # get raw data
+
+        # smooth data
+        _x = split_and_smooth(x_data.T, look_back_window=look_back_window, window_slide=window_slide, R_weight=R_weight,
+                              EIG_weight=EIG_weight, midpoint=midpoint,
+                              reduce_last_dim=False)
+        X = _x[:, -WINDOW_LENGTH - PREDICT_STEPS:-PREDICT_STEPS, :]
+        Y = _x[:, -PREDICT_STEPS:, :]
+        idx = np.arange(X.shape[0])
+        np.random.shuffle(idx)
+        X_train_idx = np.ceil(len(idx) * 0.66).astype(int)
+        X_train = X[:X_train_idx]
+        Y_train = Y[:X_train_idx]
+        X_test = X[X_train_idx:]
+        Y_test = Y[X_train_idx:]
+        X_train_feat = np.expand_dims(features.T, 0).repeat(X_train.shape[0], 0)
+        X_test_feat = np.expand_dims(features.T, 0).repeat(X_test.shape[0], 0)
+        if reduce_regions2batch:
+            X_train = np.concatenate(X_train, -1).T
+            Y_train = np.concatenate(Y_train, -1).T
+            X_test = np.concatenate(X_test, -1).T
+            Y_test = np.concatenate(Y_test, -1).T
+            X_train_feat = np.concatenate(X_train_feat, -1).T
+            X_test_feat = np.concatenate(X_test_feat, -1).T
+
+        X_val = np.zeros((0, *X_train.shape[1:]))
+        Y_val = np.zeros((0, *Y_train.shape[1:]))
+        X_val_feat = np.zeros((0, *X_train_feat.shape[1:]))
+
+
+    else:
+        x_data, y_data, _ = get_data(False, normalize=x_data_scalers)  # get raw data
+        X_train, X_train_feat, Y_train, X_val, X_val_feat, Y_val, X_test, X_test_feat, Y_test = split_on_time_dimension(
+            x_data.T, y_data.T, features, WINDOW_LENGTH, PREDICT_STEPS,
+            k_fold=3, test_fold=2, reduce_last_dim=reduce_regions2batch,
+            only_train_test=True, debug=True)
+
+    # x_data, y_data, _ = get_data(TRAINING_DATA_TYPE == "Filtered", normalize=x_data_scalers)  # get raw data
+    # X_train, X_train_feat, Y_train, X_val, X_val_feat, Y_val, X_test, X_test_feat, Y_test = split_on_time_dimension(
+    #     x_data.T, y_data.T, features, WINDOW_LENGTH, PREDICT_STEPS,
+    #     k_fold=3, test_fold=2, reduce_last_dim=reduce_regions2batch,
+    #     only_train_test=True, debug=True)
 
     if len(X_train.shape) == 2:
         X_train, X_train_feat, Y_train = np.expand_dims(X_train, -1), np.expand_dims(X_train_feat, -1), np.expand_dims(
@@ -283,7 +319,7 @@ def main():
         X_val, X_val_feat, Y_val = np.expand_dims(X_val, -1), np.expand_dims(X_val_feat, -1), np.expand_dims(Y_val, -1)
         X_test, X_test_feat, Y_test = np.expand_dims(X_test, -1), np.expand_dims(X_test_feat, -1), np.expand_dims(
             Y_test, -1)
-
+    print("Original Training data")
     print("Train", X_train.shape, Y_train.shape, X_train_feat.shape)
     print("Val", X_val.shape, Y_val.shape, X_val_feat.shape)
     print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
@@ -292,17 +328,19 @@ def main():
     X_train_feat = np.concatenate([X_train_feat, X_val_feat], 0)
     Y_train = np.concatenate([Y_train, Y_val], 0)
 
+    print("Training data after joining Train and Val")
     print("Train", X_train.shape, Y_train.shape, X_train_feat.shape)
     print("Val", X_val.shape, Y_val.shape, X_val_feat.shape)
     print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
 
     # ==================================================================================================== Undersampling
 
-    if UNDERSAMPLING == "Reduce" and reduce_regions2batch:  # Currently optimal undersampling supports independatly on regions.
-        x_train_opt, y_train_opt = undersample(x_data.T, y_data.T, WINDOW_LENGTH, PREDICT_STEPS, region_names, PLOT,
-                                               savepath=f'images/under_{DATASET}.png' if PLOT else None)
-        X_train = x_train_opt
-        Y_train = y_train_opt
+    if UNDERSAMPLING == "Reduce":
+        if reduce_regions2batch:
+            X_train = np.expand_dims(X_train, -1)
+            Y_train = np.expand_dims(Y_train, -1)
+        X_train, Y_train = undersample2(X_train, Y_train, region_names, PLOT,
+                                            savepath=f'images/under_{DATASET}.png' if PLOT else None)
 
     # ============================================================================================== Creating Dataset
     train_data = tf.data.Dataset.from_tensor_slices((X_train, Y_train))
@@ -314,6 +352,7 @@ def main():
     global freq, xcheck
     freq, xcheck = np.histogram(np.concatenate(X_train, -1).mean(0))
 
+    print("Training data after undersampling")
     print("Train", X_train.shape, Y_train.shape, X_train_feat.shape)
     print("Val", X_val.shape, Y_val.shape, X_val_feat.shape)
     print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
