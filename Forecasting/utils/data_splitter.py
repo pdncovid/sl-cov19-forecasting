@@ -1,5 +1,5 @@
 import numpy as np
-from utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
+from Forecasting.utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
 
 
 def split_and_smooth(daily_cases, look_back_window=100, window_slide=10, R_weight=1, EIG_weight=2, midpoint=False, reduce_last_dim=False):
@@ -15,7 +15,7 @@ def split_and_smooth(daily_cases, look_back_window=100, window_slide=10, R_weigh
     _x = _x.transpose([1, 2, 0])
     if reduce_last_dim:
         _x = np.concatenate(_x, -1).T
-    return _x
+    return _x, _x_to_smooth
 
 
 def split_on_time_dimension(x_data, y_data, features, x_size, y_size, k_fold, test_fold, reduce_last_dim=False,

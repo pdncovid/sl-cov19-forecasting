@@ -93,7 +93,7 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
             J_eig.append(np.sum(J0))
         # few assignments to get rid of errors
         J_eig = np.around(J_eig).astype(int)
-        J_R = np.array(J_R)
+        J_R = np.array(J_R)**1.5
         J_eig[J_eig < 0] = 0
         J_EIG = J_eig / (np.amax(J_eig) if np.amax(J_eig) != 0 else 0)
         J_Err = J_R / (np.amax(J_R) if np.amax(J_R) != 0 else 0)
