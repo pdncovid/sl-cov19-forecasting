@@ -61,9 +61,8 @@ def undersample2(x_train, y_train, region_names, PLOT, savepath=None):
                 segment_array[np.argmax(count_score)]) + '  samples: ' + str(all_counts[np.argmax(count_score)]))
 
     segment_dist = np.array(segment_dist).astype(int)
-
-    if PLOT:
-        plt.show()
+    if savepath is not None:
+        plt.savefig(savepath+'logic.png')
 
     print('segments per district= ', segment_dist)
 
@@ -90,7 +89,7 @@ def undersample2(x_train, y_train, region_names, PLOT, savepath=None):
         for j, idx in enumerate(idx_rand):
             x_train_opt.append(x_train[i, idx, :])
             y_train_opt.append(y_train[i, idx, :])
-    if PLOT and savepath is not None:
+    if savepath is not None:
         plt.savefig(savepath)
 
     x_train_opt = np.array(x_train_opt)

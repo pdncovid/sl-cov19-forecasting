@@ -169,7 +169,7 @@ def main():
     parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
                         default="Filtered")
     parser.add_argument('--undersampling', help='under-sampling method (None, Loss, Reduce)', type=str,
-                        default="Reduce")
+                        default="Loss")
 
     parser.add_argument('--path', help='default dataset path', type=str, default="../Datasets")
 
@@ -191,13 +191,14 @@ def main():
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
 
-    midpoint = False
+    midpoint = True
     if midpoint:
         R_weight = 2
         EIG_weight = 2
     else:
         R_weight = 1
         EIG_weight = 2
+    look_back_filter = True
     look_back_window, window_slide = 50, 1
     PLOT = True
 
@@ -239,11 +240,8 @@ def main():
 
     df = pd.DataFrame(daily_cases.T, columns=features.index)
     df.index = pd.to_datetime(pd.to_datetime(START_DATE).value + df.index * 24 * 3600 * 1000000000)
-    df_training = df.loc[df.index <= split_date]
-    df_test = df.loc[df.index > split_date]
-    features = features.values
 
-    print(f"{len(df_training)} days of training data \n {len(df_test)} days of testing data ")
+    features = features.values
 
     daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
                                          EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
@@ -264,54 +262,59 @@ def main():
     folder = time.strftime('%Y.%m.%d-%H.%M.%S', time.localtime()) + "_" + fmodel_name
     os.makedirs('./logs/' + folder + '/images')
     # ===================================================================================== Preparing data for training
+    if PLOT:
+        plt.plot(daily_cases.T)
+        plt.savefig('./logs/' + folder + "/images/raw_data.png", bbox_inches='tight')
+        plt.plot(daily_filtered.T)
+        plt.savefig('./logs/' + folder + "/images/filtered_data.png", bbox_inches='tight')
 
     x_data, y_data, x_data_scalers = get_data(False, normalize=True)
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True)
 
     print(f"Using {TRAINING_DATA_TYPE} data")
-    if TRAINING_DATA_TYPE == "Filtered":
-        x_data, y_data, _ = get_data(False, normalize=x_data_scalers)  # get raw data
+    if look_back_filter:
+        if TRAINING_DATA_TYPE == "Filtered":
+            x_data, y_data, _ = get_data(False, normalize=x_data_scalers)  # get raw data
 
-        # smooth data
-        _x = split_and_smooth(x_data.T, look_back_window=look_back_window, window_slide=window_slide, R_weight=R_weight,
-                              EIG_weight=EIG_weight, midpoint=midpoint,
-                              reduce_last_dim=False)
-        X = _x[:, -WINDOW_LENGTH - PREDICT_STEPS:-PREDICT_STEPS, :]
-        Y = _x[:, -PREDICT_STEPS:, :]
-        idx = np.arange(X.shape[0])
-        np.random.shuffle(idx)
-        X_train_idx = np.ceil(len(idx) * 0.66).astype(int)
-        X_train = X[:X_train_idx]
-        Y_train = Y[:X_train_idx]
-        X_test = X[X_train_idx:]
-        Y_test = Y[X_train_idx:]
-        X_train_feat = np.expand_dims(features.T, 0).repeat(X_train.shape[0], 0)
-        X_test_feat = np.expand_dims(features.T, 0).repeat(X_test.shape[0], 0)
-        if reduce_regions2batch:
-            X_train = np.concatenate(X_train, -1).T
-            Y_train = np.concatenate(Y_train, -1).T
-            X_test = np.concatenate(X_test, -1).T
-            Y_test = np.concatenate(Y_test, -1).T
-            X_train_feat = np.concatenate(X_train_feat, -1).T
-            X_test_feat = np.concatenate(X_test_feat, -1).T
+            # smooth data
+            _x = split_and_smooth(x_data.T, look_back_window=look_back_window, window_slide=window_slide, R_weight=R_weight,
+                                  EIG_weight=EIG_weight, midpoint=midpoint,
+                                  reduce_last_dim=False)
+            X = _x[:, -WINDOW_LENGTH - PREDICT_STEPS:-PREDICT_STEPS, :]
+            Y = _x[:, -PREDICT_STEPS:, :]
+            idx = np.arange(X.shape[0])
+            np.random.shuffle(idx)
+            X_train_idx = np.ceil(len(idx) * 0.66).astype(int)
+            X_train = X[:X_train_idx]
+            Y_train = Y[:X_train_idx]
+            X_test = X[X_train_idx:]
+            Y_test = Y[X_train_idx:]
+            X_train_feat = np.expand_dims(features.T, 0).repeat(X_train.shape[0], 0)
+            X_test_feat = np.expand_dims(features.T, 0).repeat(X_test.shape[0], 0)
+            if reduce_regions2batch:
+                X_train = np.concatenate(X_train, -1).T
+                Y_train = np.concatenate(Y_train, -1).T
+                X_test = np.concatenate(X_test, -1).T
+                Y_test = np.concatenate(Y_test, -1).T
+                X_train_feat = np.concatenate(X_train_feat, -1).T
+                X_test_feat = np.concatenate(X_test_feat, -1).T
 
-        X_val = np.zeros((0, *X_train.shape[1:]))
-        Y_val = np.zeros((0, *Y_train.shape[1:]))
-        X_val_feat = np.zeros((0, *X_train_feat.shape[1:]))
+            X_val = np.zeros((0, *X_train.shape[1:]))
+            Y_val = np.zeros((0, *Y_train.shape[1:]))
+            X_val_feat = np.zeros((0, *X_train_feat.shape[1:]))
 
-
+        else:
+            x_data, y_data, _ = get_data(False, normalize=x_data_scalers)  # get raw data
+            X_train, X_train_feat, Y_train, X_val, X_val_feat, Y_val, X_test, X_test_feat, Y_test = split_on_time_dimension(
+                x_data.T, y_data.T, features, WINDOW_LENGTH, PREDICT_STEPS,
+                k_fold=3, test_fold=2, reduce_last_dim=reduce_regions2batch,
+                only_train_test=True, debug=True)
     else:
-        x_data, y_data, _ = get_data(False, normalize=x_data_scalers)  # get raw data
+        x_data, y_data, _ = get_data(TRAINING_DATA_TYPE == "Filtered", normalize=x_data_scalers)  # get raw data
         X_train, X_train_feat, Y_train, X_val, X_val_feat, Y_val, X_test, X_test_feat, Y_test = split_on_time_dimension(
             x_data.T, y_data.T, features, WINDOW_LENGTH, PREDICT_STEPS,
             k_fold=3, test_fold=2, reduce_last_dim=reduce_regions2batch,
             only_train_test=True, debug=True)
-
-    # x_data, y_data, _ = get_data(TRAINING_DATA_TYPE == "Filtered", normalize=x_data_scalers)  # get raw data
-    # X_train, X_train_feat, Y_train, X_val, X_val_feat, Y_val, X_test, X_test_feat, Y_test = split_on_time_dimension(
-    #     x_data.T, y_data.T, features, WINDOW_LENGTH, PREDICT_STEPS,
-    #     k_fold=3, test_fold=2, reduce_last_dim=reduce_regions2batch,
-    #     only_train_test=True, debug=True)
 
     if len(X_train.shape) == 2:
         X_train, X_train_feat, Y_train = np.expand_dims(X_train, -1), np.expand_dims(X_train_feat, -1), np.expand_dims(
@@ -336,11 +339,8 @@ def main():
     # ==================================================================================================== Undersampling
 
     if UNDERSAMPLING == "Reduce":
-        if reduce_regions2batch:
-            X_train = np.expand_dims(X_train, -1)
-            Y_train = np.expand_dims(Y_train, -1)
         X_train, Y_train = undersample2(X_train, Y_train, region_names, PLOT,
-                                            savepath=f'images/under_{DATASET}.png' if PLOT else None)
+                                            savepath=f'./logs/{folder}/images/under_{DATASET}.png' if PLOT else None)
 
     # ============================================================================================== Creating Dataset
     train_data = tf.data.Dataset.from_tensor_slices((X_train, Y_train))
@@ -373,7 +373,7 @@ def main():
         axs[1, 1].hist(np.concatenate(X_train, -1).mean(0), bins=100)
         axs[1, 1].set_title("Histogram of mean of training samples")
 
-        plt.savefig('./logs/' + folder + "/images/Train_data.png", bbox_inches='tight')
+        plt.savefig('./logs/' + folder + f"/images/Train_data.png", bbox_inches='tight')
 
     # =================================================================================================  Train
 

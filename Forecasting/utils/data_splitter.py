@@ -6,7 +6,6 @@ def split_and_smooth(x, look_back_window=100, window_slide=10, R_weight=1, EIG_w
     print(f"Split and smooth. Expected (nregions, days) Got {x.shape}. Look back window {look_back_window}")
     _x_to_smooth, _ = split_into_pieces_inorder(x, x, look_back_window, 0, window_slide, reduce_last_dim=False)
     _x = []
-    print(f"Smoothing {_x_to_smooth.shape}")
     for i in range(_x_to_smooth.shape[-1]):
         _x_samples_filtered, cutoff_freqs = O_LPF(_x_to_smooth[:, :, i], datatype='daily', order=3, R_weight=R_weight,
                                                   EIG_weight=EIG_weight, midpoint=midpoint, corr=True,

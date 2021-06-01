@@ -8,6 +8,7 @@ from scipy import signal
 # ============================== Optimised LPF ========================================
 
 def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_names, plot_freq, view, savepath=None):
+    print(f"Smoothing {data.shape}")
     if datatype == 'daily':
         data_sums = np.zeros(data.shape[0], )
         for i in range(data.shape[0]):
@@ -42,7 +43,7 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
     # DETERMINE THE RIGHT CUTOFF FREQUENCY
     step = 0.01
     cutoff_list = range(int(round(1 / step)))
-    cutoff_list = 0.1 * (np.array(list(cutoff_list)) + 2) / 100
+    cutoff_list = 0.1 * (np.array(list(cutoff_list)) + 5) / 100
     # print('cutoff_list=',cutoff_list)
 
     sections = 7
@@ -138,10 +139,8 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
                 plt.plot(X / np.amax(Y), linewidth=2)
                 plt.plot(Y / np.amax(Y), linewidth=2, color='r')
                 plt.legend(['original', 'filtered']), plt.xlabel('days')
-    if savepath is not None:
+    if view and savepath is not None:
         plt.savefig(savepath, bbox_inches='tight')
-    else:
-        plt.show()
 
     return data_filtered.T, cutoff_freqs
 

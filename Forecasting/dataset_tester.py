@@ -15,7 +15,7 @@ _df = pd.read_csv(os.path.join(dataset_path, "EU\jrc-covid-19-all-days-by-region
 _eu = _df['CountryName'].unique().tolist()
 
 # %%
-country = 'NG'
+country = 'Sri Lanka'
 if country in _eu:
     d = load_data_eu(country=country, path=dataset_path, provinces=True)
 else:
@@ -62,8 +62,8 @@ daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_w
                                      region_names=region_names, plot_freq=1, view=False)
 
 
-from Forecasting.utils.data_splitter import split_and_smooth
-_x = split_and_smooth(daily_cases, look_back_window=100, window_slide=10,R_weight=1, EIG_weight=2, midpoint=False, reduce_last_dim=False)
+# from Forecasting.utils.data_splitter import split_and_smooth
+# _x = split_and_smooth(daily_cases, look_back_window=100, window_slide=10,R_weight=1, EIG_weight=2, midpoint=False, reduce_last_dim=False)
 
 # if midpoint:
 #     R_weight = 2
@@ -107,22 +107,22 @@ _x = split_and_smooth(daily_cases, look_back_window=100, window_slide=10,R_weigh
 
 # %% STFT of each region
 
-# for i in range(len(region_names)):
-#     plt.figure(figsize=(12, 7))
-#     plt.subplot(221)
-#     plt.plot(daily_cases[i, :], linewidth=2)
-#     plt.plot(daily_filtered[i, :], linewidth=2)
-#     plt.title('filtered and unfiltered: ' + str(region_names[i]))
-#     plt.subplot(222)
-#     f, t, Zxx = signal.stft(daily_cases[i, :], nperseg=50, noverlap=None, nfft=None, detrend=False, return_onesided=True, boundary='zeros', padded=True)
-#     plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=np.amax(np.abs(Zxx)), shading='gouraud')
-#     plt.title('STFT Magnitude')
-#     plt.ylabel('Frequency [1/day]')
-#     plt.xlabel('Time [day]')
-#     plt.subplot(224)
-#     f, t, Zxx = signal.stft(daily_filtered[i, :], nperseg=50, noverlap=None, nfft=None, detrend=False, return_onesided=True, boundary='zeros', padded=True)
-#     plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=np.amax(np.abs(Zxx)), shading='gouraud')
-#     plt.title('STFT Magnitude')
-#     plt.ylabel('Frequency [1/day]')
-#     plt.xlabel('Time [day]')
-#     plt.show()
+for i in range(len(region_names)):
+    plt.figure(figsize=(12, 7))
+    plt.subplot(221)
+    plt.plot(daily_cases[i, :], linewidth=2)
+    plt.plot(daily_filtered[i, :], linewidth=2)
+    plt.title('filtered and unfiltered: ' + str(region_names[i]))
+    plt.subplot(222)
+    f, t, Zxx = signal.stft(daily_cases[i, :], nperseg=50, noverlap=None, nfft=None, detrend=False, return_onesided=True, boundary='zeros', padded=True)
+    plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=np.amax(np.abs(Zxx)), shading='gouraud')
+    plt.title('STFT Magnitude')
+    plt.ylabel('Frequency [1/day]')
+    plt.xlabel('Time [day]')
+    plt.subplot(224)
+    f, t, Zxx = signal.stft(daily_filtered[i, :], nperseg=50, noverlap=None, nfft=None, detrend=False, return_onesided=True, boundary='zeros', padded=True)
+    plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=np.amax(np.abs(Zxx)), shading='gouraud')
+    plt.title('STFT Magnitude')
+    plt.ylabel('Frequency [1/day]')
+    plt.xlabel('Time [day]')
+    plt.show()
