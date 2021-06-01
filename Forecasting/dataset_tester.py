@@ -56,12 +56,13 @@ if midpoint:
     R_weight = 2
     EIG_weight = 2
 else:
-    R_weight = 1
+    R_weight = 3
     EIG_weight = 2
+
 
 daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
                                      EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
-                                     region_names=region_names, plot_freq=1, view=False)
+                                     region_names=region_names, plot_freq=1, view=True)
 
 daily_split_filtered, daily_split = split_and_smooth(daily_cases, look_back_window=seg_len, window_slide=10, R_weight=5,
                                                      EIG_weight=2, midpoint=False,
@@ -122,28 +123,28 @@ daily_split_filtered, daily_split = split_and_smooth(daily_cases, look_back_wind
 
 # %% STFT of each region with splitting
 
-for i in range(len(region_names)):
-    # Generate 5 random numbers between 10 and 30
-    randomlist = random.sample(range(0, daily_split.shape[0]), 3)
-    # print(randomlist)
-    for k in randomlist:
-        plt.figure(figsize=(12, 7))
-        plt.subplot(221)
-        plt.plot(daily_split[k, :, i], linewidth=2)
-        plt.plot(daily_split_filtered[k, :, i], linewidth=2)
-        plt.title('filtered and unfiltered: ' + str(region_names[i]))
-        plt.subplot(222)
-        f, t, Zxx = signal.stft(daily_split[k, :, i], nperseg=20, noverlap=None, nfft=None, detrend=False,
-                                return_onesided=True, boundary='zeros', padded=True)
-        plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=np.amax(np.abs(Zxx)), shading='gouraud')
-        plt.title('STFT Magnitude')
-        plt.ylabel('Frequency [1/day]')
-        plt.xlabel('Time [day]')
-        plt.subplot(224)
-        f, t, Zxx = signal.stft(daily_split_filtered[k, :, i], nperseg=20, noverlap=None, nfft=None, detrend=False,
-                                return_onesided=True, boundary='zeros', padded=True)
-        plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=np.amax(np.abs(Zxx)), shading='gouraud')
-        plt.title('STFT Magnitude')
-        plt.ylabel('Frequency [1/day]')
-        plt.xlabel('Time [day]')
-        plt.show()
+# for i in range(len(region_names)):
+#     # Generate 5 random numbers between 10 and 30
+#     randomlist = random.sample(range(0, daily_split.shape[0]), 3)
+#     # print(randomlist)
+#     for k in randomlist:
+#         plt.figure(figsize=(12, 7))
+#         plt.subplot(221)
+#         plt.plot(daily_split[k, :, i], linewidth=2)
+#         plt.plot(daily_split_filtered[k, :, i], linewidth=2)
+#         plt.title('filtered and unfiltered: ' + str(region_names[i]))
+#         plt.subplot(222)
+#         f, t, Zxx = signal.stft(daily_split[k, :, i], nperseg=20, noverlap=None, nfft=None, detrend=False,
+#                                 return_onesided=True, boundary='zeros', padded=True)
+#         plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=np.amax(np.abs(Zxx)), shading='gouraud')
+#         plt.title('STFT Magnitude')
+#         plt.ylabel('Frequency [1/day]')
+#         plt.xlabel('Time [day]')
+#         plt.subplot(224)
+#         f, t, Zxx = signal.stft(daily_split_filtered[k, :, i], nperseg=20, noverlap=None, nfft=None, detrend=False,
+#                                 return_onesided=True, boundary='zeros', padded=True)
+#         plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=np.amax(np.abs(Zxx)), shading='gouraud')
+#         plt.title('STFT Magnitude')
+#         plt.ylabel('Frequency [1/day]')
+#         plt.xlabel('Time [day]')
+#         plt.show()

@@ -42,7 +42,7 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
     # DETERMINE THE RIGHT CUTOFF FREQUENCY
     step = 0.01
     cutoff_list = range(int(round(1 / step)))
-    cutoff_list = 0.1 * (np.array(list(cutoff_list)) + 2) / 100
+    cutoff_list = 0.1 * (np.array(list(cutoff_list)) + 5) / 100
     # print('cutoff_list=',cutoff_list)
 
     sections = 7
@@ -132,12 +132,14 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
                             'total fitness function'], loc='lower left')
                 plt.xlabel('normalized cutoff frequency')
 
-                plt.subplot(rows, 2*cols, 2*i+2), plt.title(
-                    'cumulative cases in ' + str(region_names[i]) + '\noptimum normalized cutoff frequency: ' + str(
-                        round(cutoff_list[idx], 4)))
+                plt.subplot(rows, 2*cols, 2*i+2)
+                # plt.title('cumulative cases in ' + str(region_names[i]) + '\noptimum normalized cutoff frequency: ' + str(
+                #         round(cutoff_list[idx], 4)))
+                plt.title(str(region_names[i]) + '  frequency: ' + str(round(cutoff_list[idx], 4)))
                 plt.plot(X / np.amax(Y), linewidth=2)
                 plt.plot(Y / np.amax(Y), linewidth=2, color='r')
-                plt.legend(['original', 'filtered']), plt.xlabel('days')
+                plt.legend(['original', 'filtered'])
+                # plt.xlabel('days')
     if savepath is not None:
         plt.savefig(savepath, bbox_inches='tight')
     else:
