@@ -17,7 +17,7 @@ _df = pd.read_csv(os.path.join(dataset_path, "EU\jrc-covid-19-all-days-by-region
 _eu = _df['CountryName'].unique().tolist()
 
 # %%
-country = 'NG'
+country = 'Sri Lanka'
 if country in _eu:
     d = load_data_eu(country=country, path=dataset_path, provinces=True)
 else:
