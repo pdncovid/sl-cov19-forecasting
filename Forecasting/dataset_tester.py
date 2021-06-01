@@ -69,6 +69,10 @@ daily_split_filtered, daily_split = split_and_smooth(daily_cases, look_back_wind
                                                      reduce_last_dim=False)
 
 
+from Forecasting.utils.data_splitter import split_and_smooth
+_x = split_and_smooth(daily_cases, look_back_window=100, window_slide=10,R_weight=1, EIG_weight=2, midpoint=False, reduce_last_dim=False)
+
+
 # daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
 #                                      EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
 #                                      region_names=region_names, plot_freq=1, view=False)
