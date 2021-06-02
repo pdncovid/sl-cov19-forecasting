@@ -201,6 +201,7 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
 
         region_names = df_time.index
         features = pd.DataFrame(columns=['Population'], index=region_names)
+        features['Population'] = 1e6
 
         START_DATE = df_time.columns[0]
 
