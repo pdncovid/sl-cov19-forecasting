@@ -94,7 +94,7 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
             J_eig.append(np.sum(J0))
         # few assignments to get rid of errors
         J_eig = np.around(J_eig).astype(int)
-        J_R = np.array(J_R)
+        J_R = np.array(J_R)**1.5
         J_eig[J_eig < 0] = 0
         J_EIG = J_eig / (np.amax(J_eig) if np.amax(J_eig) != 0 else 0)
         J_Err = J_R / (np.amax(J_R) if np.amax(J_R) != 0 else 0)
@@ -133,13 +133,15 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
                             'total fitness function'], loc='lower left')
                 plt.xlabel('normalized cutoff frequency')
 
-                plt.subplot(rows, 2*cols, 2*i+2), plt.title(
-                    'cumulative cases in ' + str(region_names[i]) + '\noptimum normalized cutoff frequency: ' + str(
-                        round(cutoff_list[idx], 4)))
+                plt.subplot(rows, 2*cols, 2*i+2)
+                # plt.title('cumulative cases in ' + str(region_names[i]) + '\noptimum normalized cutoff frequency: ' + str(
+                #         round(cutoff_list[idx], 4)))
+                plt.title(str(region_names[i]) + '  frequency: ' + str(round(cutoff_list[idx], 4)))
                 plt.plot(X / np.amax(Y), linewidth=2)
                 plt.plot(Y / np.amax(Y), linewidth=2, color='r')
-                plt.legend(['original', 'filtered']), plt.xlabel('days')
-    if view and savepath is not None:
+                plt.legend(['original', 'filtered'])
+                # plt.xlabel('days')
+    if savepath is not None:
         plt.savefig(savepath, bbox_inches='tight')
 
     return data_filtered.T, cutoff_freqs
