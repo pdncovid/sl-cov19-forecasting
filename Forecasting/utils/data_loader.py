@@ -22,7 +22,7 @@ def get_daily(data):
 
 
 def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COVID-AI (PG)/spatio_temporal/Datasets"):
-    if DATASET == "Sri Lanka":
+    if DATASET == "SL":
         dataset_path = os.path.join(path, "SL")
 
         df_confirmed = pd.read_csv(os.path.join(dataset_path, "SL_covid_all_updated.csv"))

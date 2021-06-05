@@ -243,8 +243,8 @@ def main():
 
     features = features.values
 
-    daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
-                                         EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
+    daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, midpoint=midpoint, corr=True,
+                                         R_EIG_ratio=1,
                                          region_names=region_names, plot_freq=1, view=False)
 
     # ================================================================================================= Initialize Model
@@ -277,8 +277,8 @@ def main():
             x_data, y_data, _ = get_data(False, normalize=x_data_scalers)  # get raw data
 
             # smooth data
-            _x = split_and_smooth(x_data.T, look_back_window=look_back_window, window_slide=window_slide, R_weight=R_weight,
-                                  EIG_weight=EIG_weight, midpoint=midpoint,
+            _x, _ = split_and_smooth(x_data.T, look_back_window=look_back_window, window_slide=window_slide, R_EIG_ratio=1,
+                                  midpoint=midpoint,
                                   reduce_last_dim=False)
             X = _x[:, -WINDOW_LENGTH - PREDICT_STEPS:-PREDICT_STEPS, :]
             Y = _x[:, -PREDICT_STEPS:, :]
