@@ -15,9 +15,11 @@ Original file is located at
 # os.chdir(path)
 # sys.path.insert(0, os.path.join(sys.path[0], '..'))
 import argparse
-import sys
 import os
+import sys
 import time
+
+from Forecasting.utils.data_loader import load_train_data
 
 sys.path.insert(0, os.path.join(sys.path[0], '..'))
 import pandas as pd  # Basic library for all of our dataset operations
@@ -28,14 +30,14 @@ from tensorflow.keras.callbacks import TensorBoard
 # plots
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-
-from utils.plots import bar_metrics, plot_prediction
-from utils.functions import distance, normalize_for_nn, undo_normalization, bs
-from utils.data_loader import load_data, per_million, get_daily
-from utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
-from utils.data_splitter import split_on_region_dimension, split_on_time_dimension, split_into_pieces_inorder, \
+from Forecasting import utils
+from utils.plots import plot_prediction
+from utils.functions import normalize_for_nn, undo_normalization, bs
+from utils.data_loader import load_data, per_million, get_data
+from utils.smoothing_functions import O_LPF
+from utils.data_splitter import split_on_time_dimension, split_into_pieces_inorder, \
     split_and_smooth
-from utils.undersampling import undersample, undersample2
+from utils.undersampling import undersample2
 from models import get_model
 
 # Extra settings
@@ -50,23 +52,6 @@ mpl.rcParams['text.color'] = 'k'
 mpl.rcParams['figure.figsize'] = 18, 8
 
 print(tf.__version__)
-
-
-def get_data(filtered, normalize=False):
-    if filtered == False:
-        x, y = np.copy(daily_cases), np.copy(daily_cases)
-    else:
-        x, y = np.copy(daily_filtered), np.copy(daily_filtered)
-
-    x = per_million(x, population)
-    y = per_million(y, population)
-    if normalize:
-
-        x, xs = normalize_for_nn(x, None if type(normalize) == bool else normalize)
-        y, xs = normalize_for_nn(y, xs)
-        return x.T, y.T, xs
-    else:
-        return x.T, y.T
 
 
 def get_loss_f(undersampling, xcheck, freq):
@@ -156,7 +141,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='Sri Lanka')
+                        default='SL')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-02-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
@@ -192,12 +177,6 @@ def main():
     UNDERSAMPLING = args.undersampling
 
     midpoint = True
-    if midpoint:
-        R_weight = 2
-        EIG_weight = 2
-    else:
-        R_weight = 1
-        EIG_weight = 2
     look_back_filter = True
     look_back_window, window_slide = 50, 1
     PLOT = True
@@ -238,8 +217,8 @@ def main():
 
     print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
 
-    df = pd.DataFrame(daily_cases.T, columns=features.index)
-    df.index = pd.to_datetime(pd.to_datetime(START_DATE).value + df.index * 24 * 3600 * 1000000000)
+    # df = pd.DataFrame(daily_cases.T, columns=features.index)
+    # df.index = pd.to_datetime(pd.to_datetime(START_DATE).value + df.index * 24 * 3600 * 1000000000)
 
     features = features.values
 
@@ -267,80 +246,22 @@ def main():
         plt.savefig('./logs/' + folder + "/images/raw_data.png", bbox_inches='tight')
         plt.plot(daily_filtered.T)
         plt.savefig('./logs/' + folder + "/images/filtered_data.png", bbox_inches='tight')
+        plt.cla()
 
-    x_data, y_data, x_data_scalers = get_data(False, normalize=True)
-    x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True)
+    x_data, y_data, x_data_scalers = get_data(False, normalize=True, data=daily_cases, dataf=daily_filtered,
+                                              population=population)
+    x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=daily_cases, dataf=daily_filtered,
+                                                 population=population)
 
-    print(f"Using {TRAINING_DATA_TYPE} data")
-    if look_back_filter:
-        if TRAINING_DATA_TYPE == "Filtered":
-            x_data, y_data, _ = get_data(False, normalize=x_data_scalers)  # get raw data
-
-            # smooth data
-            _x, _ = split_and_smooth(x_data.T, look_back_window=look_back_window, window_slide=window_slide, R_EIG_ratio=1,
-                                  midpoint=midpoint,
-                                  reduce_last_dim=False)
-            X = _x[:, -WINDOW_LENGTH - PREDICT_STEPS:-PREDICT_STEPS, :]
-            Y = _x[:, -PREDICT_STEPS:, :]
-            idx = np.arange(X.shape[0])
-            np.random.shuffle(idx)
-            X_train_idx = np.ceil(len(idx) * 0.66).astype(int)
-            X_train = X[:X_train_idx]
-            Y_train = Y[:X_train_idx]
-            X_test = X[X_train_idx:]
-            Y_test = Y[X_train_idx:]
-            X_train_feat = np.expand_dims(features.T, 0).repeat(X_train.shape[0], 0)
-            X_test_feat = np.expand_dims(features.T, 0).repeat(X_test.shape[0], 0)
-            if reduce_regions2batch:
-                X_train = np.concatenate(X_train, -1).T
-                Y_train = np.concatenate(Y_train, -1).T
-                X_test = np.concatenate(X_test, -1).T
-                Y_test = np.concatenate(Y_test, -1).T
-                X_train_feat = np.concatenate(X_train_feat, -1).T
-                X_test_feat = np.concatenate(X_test_feat, -1).T
-
-            X_val = np.zeros((0, *X_train.shape[1:]))
-            Y_val = np.zeros((0, *Y_train.shape[1:]))
-            X_val_feat = np.zeros((0, *X_train_feat.shape[1:]))
-
-        else:
-            x_data, y_data, _ = get_data(False, normalize=x_data_scalers)  # get raw data
-            X_train, X_train_feat, Y_train, X_val, X_val_feat, Y_val, X_test, X_test_feat, Y_test = split_on_time_dimension(
-                x_data.T, y_data.T, features, WINDOW_LENGTH, PREDICT_STEPS,
-                k_fold=3, test_fold=2, reduce_last_dim=reduce_regions2batch,
-                only_train_test=True, debug=True)
-    else:
-        x_data, y_data, _ = get_data(TRAINING_DATA_TYPE == "Filtered", normalize=x_data_scalers)  # get raw data
-        X_train, X_train_feat, Y_train, X_val, X_val_feat, Y_val, X_test, X_test_feat, Y_test = split_on_time_dimension(
-            x_data.T, y_data.T, features, WINDOW_LENGTH, PREDICT_STEPS,
-            k_fold=3, test_fold=2, reduce_last_dim=reduce_regions2batch,
-            only_train_test=True, debug=True)
-
-    if len(X_train.shape) == 2:
-        X_train, X_train_feat, Y_train = np.expand_dims(X_train, -1), np.expand_dims(X_train_feat, -1), np.expand_dims(
-            Y_train, -1)
-        X_val, X_val_feat, Y_val = np.expand_dims(X_val, -1), np.expand_dims(X_val_feat, -1), np.expand_dims(Y_val, -1)
-        X_test, X_test_feat, Y_test = np.expand_dims(X_test, -1), np.expand_dims(X_test_feat, -1), np.expand_dims(
-            Y_test, -1)
-    print("Original Training data")
-    print("Train", X_train.shape, Y_train.shape, X_train_feat.shape)
-    print("Val", X_val.shape, Y_val.shape, X_val_feat.shape)
-    print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
-
-    X_train = np.concatenate([X_train, X_val], 0)
-    X_train_feat = np.concatenate([X_train_feat, X_val_feat], 0)
-    Y_train = np.concatenate([Y_train, Y_val], 0)
-
-    print("Training data after joining Train and Val")
-    print("Train", X_train.shape, Y_train.shape, X_train_feat.shape)
-    print("Val", X_val.shape, Y_val.shape, X_val_feat.shape)
-    print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
+    tmp = load_train_data(DATASET, args.path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
+                          look_back_filter, look_back_window, window_slide, reduce_regions2batch)
+    X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat = tmp
 
     # ==================================================================================================== Undersampling
 
     if UNDERSAMPLING == "Reduce":
         X_train, Y_train = undersample2(X_train, Y_train, region_names, PLOT,
-                                            savepath=f'./logs/{folder}/images/under_{DATASET}.png' if PLOT else None)
+                                        savepath=f'./logs/{folder}/images/under_{DATASET}.png' if PLOT else None)
 
     # ============================================================================================== Creating Dataset
     train_data = tf.data.Dataset.from_tensor_slices((X_train, Y_train))
@@ -359,7 +280,8 @@ def main():
 
     if PLOT:
         fig, axs = plt.subplots(2, 2)
-        x_data, y_data, _ = get_data(filtered=False, normalize=True)
+        x_data, y_data, _ = get_data(filtered=False, normalize=True, data=daily_cases, dataf=daily_filtered,
+                                     population=population)
         axs[0, 0].plot(x_data)
         axs[0, 0].set_title("Original data")
 
@@ -413,9 +335,11 @@ def test1(model, x_data_scalers, epoch):
 
         return x_test, y_test, y_pred
 
-    x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
+    x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
+                                 population=population)
     x_test, y_test, y_pred = get_model_predictions(model, x_data, y_data, x_data_scalers)
-    x_data, y_data, _ = get_data(filtered=True, normalize=x_data_scalers)
+    x_data, y_data, _ = get_data(filtered=True, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
+                                 population=population)
     x_testf, y_testf, y_predf = get_model_predictions(model, x_data, y_data, x_data_scalers)
 
     Ys = np.stack([y_test, y_testf, y_pred, y_predf], 1)
@@ -471,13 +395,17 @@ def test2(model, x_data_scalers):
         y_test_w = undo_normalization(y_test_w, scalers)[0]
         return X_test_w, y_test_w, yhat
 
-    x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
+    x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
+                                 population=population)
     _, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
-    x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers)
+    x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
+                                   population=population)
     _, y_test, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
 
-    x_data, y_data = get_data(filtered=False, normalize=False)
-    x_dataf, y_dataf = get_data(filtered=True, normalize=False)
+    x_data, y_data = get_data(filtered=False, normalize=False, data=daily_cases, dataf=daily_filtered,
+                              population=population)
+    x_dataf, y_dataf = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
+                                population=population)
     # X = np.expand_dims(x_data[split_days-WINDOW_LENGTH:split_days,:],0)
     # Xf = np.expand_dims(x_dataf[split_days-WINDOW_LENGTH:split_days,:],0)
     X = np.expand_dims(x_data[:split_days, :], 0)
