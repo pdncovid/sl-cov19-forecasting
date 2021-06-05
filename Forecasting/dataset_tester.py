@@ -21,12 +21,12 @@ _eu = _df['CountryName'].unique().tolist()
 plot_hist = False
 undersampling = False
 filtering = False
-check_spectral = False
+check_spectral = True
 check_stft = False
 check_acf = True
 
 # %%
-# countries = ['Italy']
+# countries = ['Texas']
 
 countries = ['Italy', 'Sri Lanka', 'NG', 'Texas']
 fft_mean = []
@@ -58,20 +58,24 @@ for country in countries:
         midpoint = False
 
         if midpoint:
-            R_weight = 2
-            EIG_weight = 2
+            R_EIG_ratio = 1
         else:
-            R_weight = 3
-            EIG_weight = 2
+            R_EIG_ratio = 2
 
-        daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_weight=R_weight,
-                                             EIG_weight=EIG_weight, midpoint=midpoint, corr=True,
-                                             region_names=region_names, plot_freq=1, view=True)
+        daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=5, R_EIG_ratio=R_EIG_ratio,
+                                             midpoint=midpoint, corr=True,
+                                             region_names=region_names, plot_freq=1, view=False)
 
-        daily_split_filtered, daily_split = split_and_smooth(daily_cases, look_back_window=seg_len, window_slide=10,
-                                                             R_weight=5,
-                                                             EIG_weight=2, midpoint=False,
-                                                             reduce_last_dim=False)
+        # daily_split_filtered, daily_split = split_and_smooth(daily_cases, look_back_window=seg_len, window_slide=10,
+        #                                                      R_weight=5,
+        #                                                      EIG_weight=2, midpoint=False,
+        #                                                      reduce_last_dim=False)
+
+        for i in range(len(region_names)):
+            plt.figure()
+            plt.plot(daily_cases[i, :])
+            plt.plot(daily_filtered[i, :])
+            plt.show()
 
     # %% check FFT of each region
     if check_spectral:
@@ -93,7 +97,7 @@ for country in countries:
         cases_acf = []
         cases_pacf = []
         for i in range(len(region_names)):
-            _acf = stattools.acf(daily_cases[i, :], nlags=window, fft=True)
+            _acf = stattools.acf(daily_cases[i, :], adjusted=True, nlags=window, fft=True, missing="drop")
             _pacf = stattools.pacf(daily_cases[i, :], nlags=window)
             cases_acf.append(_acf)
             cases_pacf.append(_pacf)
@@ -102,22 +106,6 @@ for country in countries:
         acf_all.append(np.mean(cases_acf, axis=0))
         pacf_all.append(np.mean(cases_pacf, axis=0))
 
-        # plt.figure(figsize=(12, 3.5))
-        # plt.subplot(121)
-        # A = stattools.acf(daily_cases[5, :], nlags=40, fft=False)
-        # plt.plot(A), plt.title('fft false')
-        # plt.subplot(122)
-        # A = stattools.acf(daily_cases[5, :], nlags=40, fft=True)
-        # plt.plot(A), plt.title('fft true')
-        # plt.show()
-        # plt.figure(figsize=(12, 3.5))
-        # plt.subplot(121)
-        # A = stattools.pacf(daily_cases[5, :], nlags=40)
-        # plt.plot(A), plt.title('fft false')
-        # plt.subplot(122)
-        # A = stattools.pacf(daily_cases[5, :], nlags=40)
-        # plt.plot(A), plt.title('fft true')
-        # plt.show()
 
     # %% STFT of each region
 
@@ -256,23 +244,36 @@ for country in countries:
 if check_spectral:
     fft_mean = np.array(fft_mean)
     fft_var = np.array(fft_var)
+    plt.figure(figsize=(12, 3.5 * len(countries)))
     for i in range(len(countries)):
-        plt.figure(figsize=(12, 3.5))
-        plt.subplot(121)
-        plt.plot(fft_mean[i, :]), plt.title('mean fft for ' + countries[i])
-        plt.subplot(122)
-        plt.plot(fft_var[i, :]), plt.title('var fft for ' + countries[i])
-        plt.show()
+        plt.subplot(len(countries), 2, 2 * i + 1)
+        plt.plot(fft_mean[i, :])
+        plt.title('mean fft for ' + countries[i])
+        plt.subplot(len(countries), 2, 2 * i + 2)
+        plt.plot(fft_var[i, :])
+        plt.title('var fft for ' + countries[i])
+    plt.suptitle('FFT for countries: '+str(countries), weight='bold')
+    plt.show()
 
 if check_acf:
     acf_all = np.array(acf_all)
     pacf_all = np.array(pacf_all)
-    plt.figure(figsize=(12, 3.5 * len(countries)))
+    acf_diff = np.diff(acf_all)
+    pacf_diff = np.diff(pacf_all)
+    plt.figure(figsize=(12*2, 3.5 * len(countries)))
     for i in range(len(countries)):
-        plt.subplot(len(countries), 2, 2 * i + 1)
-        plt.plot(acf_all[i, 1:-1])
+        plt.subplot(len(countries), 4, 4 * i + 1)
+        plt.stem(acf_all[i, :])
         plt.title('mean acf for ' + countries[i])
-        plt.subplot(len(countries), 2, 2 * i + 2)
-        plt.plot(pacf_all[i, 1:-1])
+        plt.subplot(len(countries), 4, 4 * i + 2)
+        plt.stem(acf_diff[i, :]), plt.ylim([-0.3, 0.3])
+        plt.title('mean acf DIFF for ' + countries[i])
+        plt.subplot(len(countries), 4, 4 * i + 3)
+        plt.stem(pacf_all[i, :])
         plt.title('mean pacf for ' + countries[i])
+        plt.subplot(len(countries), 4, 4 * i + 4)
+        plt.stem(pacf_diff[i, :]), plt.ylim([-0.3, 0.3])
+        plt.title('mean pacf DIFF for ' + countries[i])
+    plt.suptitle('ACF and PACF for countries: '+str(countries), weight='bold')
     plt.show()
+

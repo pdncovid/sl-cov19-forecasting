@@ -7,7 +7,7 @@ from scipy import signal
 
 # ============================== Optimised LPF ========================================
 
-def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_names, plot_freq, view, savepath=None):
+def O_LPF(data, datatype, order, R_EIG_ratio, midpoint, corr, region_names, plot_freq, view, savepath=None):
     print(f"Smoothing {data.shape}")
     if datatype == 'daily':
         data_sums = np.zeros(data.shape[0], )
@@ -15,11 +15,11 @@ def O_LPF(data, datatype, order, R_weight, EIG_weight, midpoint, corr, region_na
             data_sums[i] = np.sum(data[i, :])
 
     if midpoint:
-        EIG_cons = R_weight
-        R_cons = EIG_weight
+        EIG_cons = R_EIG_ratio
+        R_cons = 1
     else:
-        R_cons = R_weight
-        EIG_cons = EIG_weight
+        R_cons = R_EIG_ratio
+        EIG_cons = 1
 
     data = np.copy(data.T)
     n_regions = data.shape[1]
