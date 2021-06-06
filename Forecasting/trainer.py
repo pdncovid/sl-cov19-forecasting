@@ -19,7 +19,7 @@ import os
 import sys
 import time
 
-from Forecasting.utils.data_loader import load_train_data
+from utils.data_loader import load_train_data
 
 sys.path.insert(0, os.path.join(sys.path[0], '..'))
 import pandas as pd  # Basic library for all of our dataset operations
@@ -30,7 +30,6 @@ from tensorflow.keras.callbacks import TensorBoard
 # plots
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from Forecasting import utils
 from utils.plots import plot_prediction
 from utils.functions import normalize_for_nn, undo_normalization, bs
 from utils.data_loader import load_data, per_million, get_data
@@ -77,6 +76,10 @@ def get_loss_f(undersampling, xcheck, freq):
         return loss_f_new
 
 
+def eval_metric(y_true, y_pred):
+    return np.mean((np.squeeze(y_true) - np.squeeze(y_pred)) ** 2) ** 0.5
+
+
 def train(model, train_data, X_train, Y_train, X_test, Y_test):
     print("Model Input shape", model.input.shape)
     print("Model Output shape", model.output.shape)
@@ -86,9 +89,6 @@ def train(model, train_data, X_train, Y_train, X_test, Y_test):
 
     opt = tf.keras.optimizers.Adam(lr=lr)
     loss_f = get_loss_f(UNDERSAMPLING, xcheck, freq)
-
-    def eval_metric(y_true, y_pred):
-        return np.mean((np.squeeze(y_true) - np.squeeze(y_pred)) ** 2) ** 0.5
 
     train_metric = []
     val_metric = []
@@ -119,18 +119,16 @@ def train(model, train_data, X_train, Y_train, X_test, Y_test):
             model.save("temp.h5")
         if PLOT:
             test1(model, x_data_scalers, str(epoch))
-    if PLOT:
-        plt.figure(16, figsize=(10, 3))
-        plt.subplot(121)
-        plt.ion()
-        plt.plot(train_metric, label='Train')
-        plt.plot(test_metric, label='Test')
-        plt.xlabel("Epoch")
-        plt.ylabel("Metric")
-        plt.legend()
-        plt.ioff()
-        plt.pause(0.1)
-        plt.savefig(f"./logs/{folder}/images/Train_metric.png", bbox_inches='tight')
+            plt.clf()
+
+            plt.figure(16, figsize=(10, 3))
+            plt.plot(train_metric, label='Train')
+            plt.plot(test_metric, label='Test')
+            plt.xlabel("Epoch")
+            plt.ylabel("Metric")
+            plt.legend()
+            plt.savefig(f"./logs/{folder}/images/Train_metric.png", bbox_inches='tight')
+            plt.clf()
 
     model = tf.keras.models.load_model("temp.h5")
     model.save("models/" + fmodel_name + ".h5")
@@ -141,7 +139,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='SL')
+                        default='NG')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-02-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
@@ -154,7 +152,7 @@ def main():
     parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
                         default="Filtered")
     parser.add_argument('--undersampling', help='under-sampling method (None, Loss, Reduce)', type=str,
-                        default="Loss")
+                        default="Reduce")
 
     parser.add_argument('--path', help='default dataset path', type=str, default="../Datasets")
 
@@ -246,7 +244,6 @@ def main():
         plt.savefig('./logs/' + folder + "/images/raw_data.png", bbox_inches='tight')
         plt.plot(daily_filtered.T)
         plt.savefig('./logs/' + folder + "/images/filtered_data.png", bbox_inches='tight')
-        plt.cla()
 
     x_data, y_data, x_data_scalers = get_data(False, normalize=True, data=daily_cases, dataf=daily_filtered,
                                               population=population)
@@ -286,7 +283,7 @@ def main():
         axs[0, 0].set_title("Original data")
 
         for i in range(X_train.shape[-1]):
-            axs[0, 1].plot(np.concatenate([X_train[:, :, i], Y_train[:, :, i]], 1).T)
+            axs[0, 1].plot(np.concatenate([X_train[:, :, i], Y_train[:, :, i]], 1).T, linewidth=1)
         axs[0, 1].axvline(X_train.shape[1], color='r', linestyle='--')
 
         axs[1, 0].hist(X_train.reshape(-1), bins=100)
@@ -313,19 +310,19 @@ def test1(model, x_data_scalers, epoch):
     n_regions = len(x_data_scalers.data_max_)
 
     def get_model_predictions(model, x_data, y_data, scalers):
-        print(f"Predicting from model. X={x_data.shape} Y={y_data.shape}")
+        print(f"Predicting from model (in:{model.input.shape} out:{model.output.shape}). X={x_data.shape} Y={y_data.shape}")
         # CREATING TRAIN-TEST SETS FOR CASES
         x_test, y_test = split_into_pieces_inorder(x_data.T, y_data.T, WINDOW_LENGTH, PREDICT_STEPS,
                                                    WINDOW_LENGTH + PREDICT_STEPS,
                                                    reduce_last_dim=False)
-        print("Input data shape", x_test.shape)
+
         if model.input.shape[-1] == 1:
             y_pred = np.zeros_like(y_test)
             for i in range(len(region_names)):
                 y_pred[:, :, i] = model(x_test[:, :, i:i + 1])[:, :, 0]
         else:
             y_pred = model(x_test).numpy()
-        print("Predicted shape", y_pred.shape)
+
         # # NOTE:
         # # max value may change with time. then we have to retrain the model!!!!!!
         # # we can have a predefined max value. 1 for major cities and 1 for smaller districts

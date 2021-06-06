@@ -23,7 +23,7 @@ def bs(arr, v):
 # ==================================== TODO: find a good normalization technique
 def normalize_for_nn(data, given_scalers=None):
     data = np.copy(data)
-    print(f"NORMALIZING; Data: {data.shape} expected (regions, days)")
+    # print(f"NORMALIZING; Data: {data.shape} expected (regions, days)")
 #     data = np.log(data.astype('float32')+1)
     if given_scalers is None:
         scalers = MinMaxScaler()
@@ -49,7 +49,7 @@ def undo_normalization(normalized_data, scalers):
     if len(normalized_data.shape) == 2:
         normalized_data = np.expand_dims(normalized_data,0)
     
-    print(f"DENORMALIZING; Norm Data: {normalized_data.shape} expected (samples, windowsize, region)")
+    # print(f"DENORMALIZING; Norm Data: {normalized_data.shape} expected (samples, windowsize, region)")
     samples, windowsize,regions = normalized_data.shape
 
     normalized_data = scalers.inverse_transform(normalized_data.reshape((-1,regions)))

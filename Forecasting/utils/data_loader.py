@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 import os, sys
 
-from Forecasting.utils.data_splitter import split_and_smooth, split_on_time_dimension
-from Forecasting.utils.functions import normalize_for_nn
-from Forecasting.utils.smoothing_functions import O_LPF
+from utils.data_splitter import split_and_smooth, split_on_time_dimension
+from utils.functions import normalize_for_nn
+from utils.smoothing_functions import O_LPF
 import matplotlib.pyplot as plt
 
 
@@ -116,7 +116,10 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
     X_train = np.concatenate([X_train, X_val], 0)
     X_train_feat = np.concatenate([X_train_feat, X_val_feat], 0)
     Y_train = np.concatenate([Y_train, Y_val], 0)
-    os.makedirs(f'./preprocessed_data/{DATASET}')
+    try:
+        os.makedirs(f'./preprocessed_data/{DATASET}')
+    except FileExistsError as e:
+        pass
     fname = f"{TRAINING_DATA_TYPE}_{WINDOW_LENGTH}_{PREDICT_STEPS}_{reduce_regions2batch}"
     if look_back_filter and TRAINING_DATA_TYPE == "Filtered":
         fname += f"_{midpoint}_{look_back_window}_{window_slide}"
@@ -147,7 +150,7 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
     axs[1, 1].hist(np.concatenate(X_train, -1).mean(0), bins=100)
     axs[1, 1].set_title("Histogram of mean of training samples")
 
-    plt.savefig(f'./preprocessed_data/{DATASET}/Train_data.png', bbox_inches='tight')
+    plt.savefig(f'./preprocessed_data/{DATASET}/Train_data_{fname}.png', bbox_inches='tight')
 
     return X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat
 
@@ -174,9 +177,10 @@ def load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
         X_val_feat = np.load(f'./preprocessed_data/{DATASET}/X_val_feat_{fname}.npy')
     else:
         tmp = save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
-                    look_back_filter, look_back_window, window_slide, reduce_regions2batch)
+                              look_back_filter, look_back_window, window_slide, reduce_regions2batch)
         X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat = tmp
     return X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat
+
 
 def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COVID-AI (PG)/spatio_temporal/Datasets"):
     if DATASET == "SL":

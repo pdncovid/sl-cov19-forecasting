@@ -1,5 +1,5 @@
 import numpy as np
-from Forecasting.utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
+from utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
 
 
 def split_and_smooth(x, look_back_window=100, window_slide=10, R_EIG_ratio=1, midpoint=False, reduce_last_dim=False):

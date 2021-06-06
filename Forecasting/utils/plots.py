@@ -45,7 +45,7 @@ def bar_metrics(resultsDict):
     plt.title("R2 Metric, higher is better")
     plt.tight_layout()
     plt.savefig("results/metrics.png")
-    plt.show()
+
 
 def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
     """
@@ -60,10 +60,10 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
     # plt.close('all')
     # plt.figure(figsize=(20, 10))
     print(X.shape, Xf.shape)
-    for Y in Ys:
-        print(Y.shape)
-    print(region_mask)
-    
+    # for Y in Ys:
+    #     print(Y.shape)
+    # print(region_mask)
+    #
     sns.set(font_scale=1.5)
     dfs=[]
     idx = 0
@@ -137,6 +137,7 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
         ax = sns.lineplot(data=df, x='Days', y='New cases', 
                           style='Preprocessing',
                           hue='Data type', size='Size', linewidth=3,
+                          # estimator=lambda x: x if len(x)==1 else list(x)[1],
                           markers=True, dashes=True,
                           legend=legend)
         
