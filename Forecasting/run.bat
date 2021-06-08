@@ -1,7 +1,7 @@
 set epochs=50
 set input_days=14
 set output_days=7
-set dataset="Texas"
+set dataset="SL"
 
 python trainer.py --daily --dataset %dataset% --epochs %epochs% --input_days %input_days% --output_days %output_days% --modeltype LSTM_Simple_WO_Regions --preprocessing Unfiltered --undersampling None
 python trainer.py --daily --dataset %dataset% --epochs %epochs% --input_days %input_days% --output_days %output_days% --modeltype LSTM_Simple_WO_Regions --preprocessing Filtered --undersampling None

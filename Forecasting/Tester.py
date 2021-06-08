@@ -20,7 +20,7 @@ warnings.filterwarnings(
 from utils.metrics import evaluate
 from utils.plots import bar_metrics, plot_prediction
 from utils.functions import distance, normalize_for_nn, undo_normalization
-from utils.data_loader import load_data, per_million, get_daily
+from utils.data_loader import load_data, per_million, get_daily, get_data
 from utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
 from utils.data_splitter import split_on_region_dimension, split_on_time_dimension, split_into_pieces_inorder
 
@@ -62,26 +62,14 @@ region_mask = (np.arange(25) == 5).astype('int32')
 
 # **Prepare data before modeling**
 
-# Required variables:
-# 
-# *   **region_names** - Names of the unique regions.
-# *   **confirmed_cases** - 2D array. Each row should corresponds to values in 'region_names'. Each column represents a day. Columns should be in ascending order. (Starting day -> Present)
-# *   **daily_cases** - confirmed_cases.diff()
-# *   **population** - Population in 'region'
-# *   **features** - Features of the regions. Each column is a certain feature.
-# *   **START_DATE** - Starting date of the data DD/MM/YYYY
-# *   **n_regions** Number of regions
-# 
-# 
-
 
 def main():
     # ============================================================================================ Initialize parameters
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='Sri Lanka')
-    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-02-01')
+                        default='SL')
+    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-01-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
@@ -159,11 +147,9 @@ def main():
 
     print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
 
-    daily_filtered = O_LPF(daily_cases, datatype='daily', order=3, R_weight=1.0, EIG_weight=1, corr=True,
-                           region_names=region_names)
-
-    daily_per_mio_capita = per_million(daily_cases, population)
-    daily_per_mio_capita_filtered = per_million(daily_filtered, population)
+    daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_EIG_ratio=1, midpoint=True,
+                                         corr=True,
+                                         region_names=region_names, plot_freq=1, view=False)
 
     df = pd.DataFrame(daily_cases.T, columns=features.index)
     df.index = pd.to_datetime(pd.to_datetime(START_DATE).value + df.index * 24 * 3600 * 1000000000)
@@ -171,7 +157,6 @@ def main():
     df_training = df.loc[df.index <= split_date]
     df_test = df.loc[df.index > split_date]
     print(f"{len(df_training)} days of training data \n {len(df_test)} days of testing data ")
-
 
     features = features.values
     global split_days
@@ -275,20 +260,24 @@ def main():
             plt.show()
 
     # ================================================================================================### Deep learning
-    x_data, y_data, x_data_scalers = get_data(False, normalize=True)
-    x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True)
+    x_data, y_data, x_data_scalers = get_data(False, normalize=True, data=daily_cases, dataf=daily_filtered,
+                                              population=population)
+    x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=daily_cases, dataf=daily_filtered,
+                                                 population=population)
 
-    # model_names = [('Sri Lanka_LSTM_Simple_WO_Regions_Unfiltered_Reduce_14_7', 'LSTM-R-Under'),
-    #                ('Sri Lanka_LSTM_Simple_WO_Regions_Filtered_Reduce_14_7', 'LSTM-F-Under'), ]
+    # model_names = [('SL_LSTM_Simple_WO_Regions_Filtered_Reduce_14_7', 'LSTM-F-Under'),
+    #                ('SL_LSTM_Simple_WO_Regions_Unfiltered_Reduce_14_7', 'LSTM-R-Under'), ]
     # plot_data = [[{'label_name': 'Method A', 'line_size': 4}, {}],
     #              [{'label_name': 'Method C', 'line_size': 4}, {'label_name': 'Method B', 'line_size': 3}],]
 
     model_names = [
         ('Texas_LSTM_Simple_WO_Regions_Unfiltered_Loss_14_7', 'LSTM*-R-Under'),
         ('Texas_LSTM_Simple_WO_Regions_Filtered_Loss_14_7', 'LSTM*-F-Under'),
-        ]
-    plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4}, {}],
-                 [{'label_name': model_names[1][1] + '-raw', 'line_size': 4}, {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
+    ]
+    plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4},
+                  {}],
+                 [{'label_name': model_names[1][1] + '-raw', 'line_size': 4},
+                  {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
                  ]
     show_predictions(x_data_scalers, model_names, plot_data)
 
@@ -347,30 +336,13 @@ def main():
     plt.legend(predictionsDict.keys())
     plt.show()
 
-    import pickle
-
-    with open('results/scores.pickle', 'wb') as handle:
-        pickle.dump(resultsDict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    with open('results/predictions.pickle', 'wb') as handle:
-        pickle.dump(predictionsDict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-
-def get_data(filtered, normalize=False):
-    if filtered == False:
-        x, y = np.copy(daily_cases), np.copy(daily_cases)
-    else:
-        x, y = np.copy(daily_filtered), np.copy(daily_filtered)
-
-    x = per_million(x, population)
-    y = per_million(y, population)
-    if normalize:
-
-        x, xs = normalize_for_nn(x, None if type(normalize) == bool else normalize)
-        y, xs = normalize_for_nn(y, xs)
-        return x.T, y.T, xs
-    else:
-        return x.T, y.T
+    # import pickle
+    #
+    # with open('results/scores.pickle', 'wb') as handle:
+    #     pickle.dump(resultsDict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    #
+    # with open('results/predictions.pickle', 'wb') as handle:
+    #     pickle.dump(predictionsDict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def show_predictions(x_data_scalers, model_names, plot_data):
@@ -410,31 +382,40 @@ def show_predictions(x_data_scalers, model_names, plot_data):
         'Observations Raw': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 2},
         'Observations Filtered': {'Preprocessing': 'Filtered', 'Data': 'Training', 'Size': 2},
     }
-
+    err_plot = []
     #########################################################################
     for i in range(len(model_names)):
         plot = plot_data[i]
 
         model_filename, model_label = model_names[i]
         model = tf.keras.models.load_model(f"models/{model_filename}.h5")
-
-        x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
-        x_test, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
-        if len(plot[0].keys()) != 0:
-            Ys.append(yhat)
-            method_name = plot[0]['label_name']
-            method_list.append(method_name)
-            styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
-
-        x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers)
+        x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
+                                       population=population)
         x_testf, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
+        x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
+                                     population=population)
+        x_test, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
+
         if len(plot[1].keys()) != 0:
             Ys.append(yhatf)
             method_name = plot[1]['label_name']
             method_list.append(method_name)
             styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
+            err_plot.append((method_name, y_testf - yhat))
+
+        if len(plot[0].keys()) != 0:
+            Ys.append(yhat)
+            method_name = plot[0]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
+            err_plot.append((method_name, y_testf - yhat))
 
     #########################################################################
+    plt.figure()
+    for m, err in err_plot:
+        plt.plot(abs(err).mean(axis=2).mean(axis=0), label=m)
+    plt.legend()
+    plt.show()
 
     Ys = [y_test, y_testf] + Ys
     Ys = np.stack(Ys, 1)
@@ -448,8 +429,13 @@ def show_predictions(x_data_scalers, model_names, plot_data):
     plt.show()
 
 
-# ### Continuous prediction into future from given sequence of data.
+# ###==================================================== Continuous prediction into future from given sequence of data.
 
+def get_ub_lb(pred, true, n_regions):
+    err = abs(pred - true)
+    ub_err = np.mean(err, axis=1, keepdims=True).repeat(n_regions, axis=1) + pred
+    lb_err = -np.mean(err, axis=1, keepdims=True).repeat(n_regions, axis=1) + pred
+    return ub_err,lb_err
 # #### Prediction of next day from last 14 days for the test period
 def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data):
     """
@@ -493,8 +479,10 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
         y_test_w = undo_normalization(y_test_w, scalers)[0]
         return X_test_w, y_test_w, yhat
 
-    x_data, y_data = get_data(filtered=False, normalize=False)
-    x_dataf, y_dataf = get_data(filtered=True, normalize=False)
+    x_data, y_data = get_data(filtered=False, normalize=False, data=daily_cases, dataf=daily_filtered,
+                              population=population)
+    x_dataf, y_dataf = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
+                                population=population)
     X = np.expand_dims(x_data[split_days - 14:split_days, :], 0)
     Xf = np.expand_dims(x_dataf[split_days - 14:split_days, :], 0)
     # X = np.expand_dims(x_data[:split_days,:],0)
@@ -516,27 +504,57 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
         plot = plot_data[i]
         model = tf.keras.models.load_model(f"models/{model_filename}.h5")
 
-        x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
+        # get raw data and predict the new cases for test period (yhat: (days,regions))
+        x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
+                                     population=population)
         _, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
         resultsDict[f'{model_label} (Raw)'] = evaluate(y_test, yhat)  # raw predictions v raw true values
         predictionsDict[f'{model_label} (Raw)'] = yhat
         gtDict[f'{model_label} (Raw)'] = y_test
+
+        # get filtered data and predict the new cases for test period
+        x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
+                                       population=population)
+        _, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
+        resultsDict[f'{model_label} (Filtered)'] = evaluate(y_test, yhatf)  # filtered prediction v raw true values
+        predictionsDict[f'{model_label} (Filtered)'] = yhatf
+        gtDict[f'{model_label} (Filtered)'] = y_test
+
         if len(plot[0].keys()) != 0:
             Ys.append(yhat)
             method_name = plot[0]['label_name']
             method_list.append(method_name)
             styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
 
-        x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers)
-        _, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
-        resultsDict[f'{model_label} (Filtered)'] = evaluate(y_test, yhatf)  # filtered prediction v raw true values
-        predictionsDict[f'{model_label} (Filtered)'] = yhatf
-        gtDict[f'{model_label} (Filtered)'] = y_test
+            # upper bound and lower bound
+            ub_err, lb_err = get_ub_lb(predictionsDict[f'{model_label} (Raw)'], gtDict[f'{model_label} (Raw)'], n_regions)
+
+            Ys.append(ub_err)
+            method_name = plot[0]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
+
+            Ys.append(lb_err)
+            method_name = plot[0]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
+
         if len(plot[1].keys()) != 0:
             Ys.append(yhatf)
             method_name = plot[1]['label_name']
             method_list.append(method_name)
             styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
+
+            ub_err, lb_err = get_ub_lb(predictionsDict[f'{model_label} (Filtered)'], gtDict[f'{model_label} (Filtered)'], n_regions)
+            Ys.append(ub_err)
+            method_name = plot[1]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
+            Ys.append(lb_err)
+            method_name = plot[1]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
+
     #########################################################################
 
     for i in range(len(Ys)):
@@ -595,8 +613,11 @@ def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, mo
 
         return X_test_w, y_test_w, yhat
 
-    x_data, y_data = get_data(filtered=False, normalize=False)
-    x_dataf, y_dataf = get_data(filtered=True, normalize=False)
+    n_regions = len(x_data_scalers.data_max_)
+    x_data, y_data = get_data(filtered=False, normalize=False, data=daily_cases, dataf=daily_filtered,
+                              population=population)
+    x_dataf, y_dataf = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
+                                population=population)
     X = np.expand_dims(x_data[split_days - 14:split_days, :], 0)
     Xf = np.expand_dims(x_dataf[split_days - 14:split_days, :], 0)
     # X = np.expand_dims(x_data[:split_days,:],0)
@@ -618,7 +639,8 @@ def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, mo
         plot = plot_data[i]
         model = tf.keras.models.load_model(f"models/{model_filename}.h5")
 
-        x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers)
+        x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
+                                     population=population)
         _, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
         resultsDict[f'{model_label} (Raw E)'] = evaluate(y_test, yhat)  # raw predictions v raw true values
         predictionsDict[f'{model_label} (Raw E)'] = yhat
@@ -628,8 +650,19 @@ def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, mo
             method_name = plot[0]['label_name']
             method_list.append(method_name)
             styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
+            # upper bound and lower bound
+            ub_err, lb_err = get_ub_lb(predictionsDict[f'{model_label} (Raw E)'], gtDict[f'{model_label} (Raw E)'], n_regions)
+            Ys.append(ub_err)
+            method_name = plot[0]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
+            Ys.append(lb_err)
+            method_name = plot[0]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
 
-        x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers)
+        x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
+                                       population=population)
         _, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
         resultsDict[f'{model_label} (Filtered E)'] = evaluate(y_test, yhatf)  # filtered prediction v raw true values
         predictionsDict[f'{model_label} (Filtered E)'] = yhatf
@@ -639,7 +672,16 @@ def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, mo
             method_name = plot[1]['label_name']
             method_list.append(method_name)
             styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
-
+            # upper bound and lower bound
+            ub_err, lb_err = get_ub_lb(predictionsDict[f'{model_label} (Filtered E)'], gtDict[f'{model_label} (Filtered E)'], n_regions)
+            Ys.append(ub_err)
+            method_name = plot[0]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
+            Ys.append(lb_err)
+            method_name = plot[0]['label_name']
+            method_list.append(method_name)
+            styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
     #########################################################################
 
     for i in range(len(Ys)):

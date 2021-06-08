@@ -48,6 +48,7 @@ def undersample(x_data, y_data, count_power, WINDOW_LENGTH, PREDICT_STEPS, regio
     segment_dist = []
     if PLOT:
         plt.figure(figsize=(5 * 6, 5 * 4))
+        cols = min(n_regions, 5)
 
     for i in range(n_regions):
         all_counts = []
@@ -62,7 +63,9 @@ def undersample(x_data, y_data, count_power, WINDOW_LENGTH, PREDICT_STEPS, regio
         segment_dist.append(segment_array[np.argmax(count_score)])
 
         if PLOT:
-            plt.subplot(np.ceil(n_regions / 5).astype(int), 5, i + 1)
+
+            plt.subplot(np.ceil(samples_all.shape[0] / cols).astype(int), cols, i + 1)
+
             plt.plot(segment_array, all_counts / np.amax(all_counts), linewidth=2)
             plt.plot(segment_array, count_score / np.amax(count_score), linewidth=2)
             plt.legend(['normalised total counts', 'segment score'])
@@ -91,9 +94,13 @@ def undersample(x_data, y_data, count_power, WINDOW_LENGTH, PREDICT_STEPS, regio
         idx_rand = np.reshape(idx_rand, [-1, ]).astype(int)
 
         if PLOT:
-            plt.subplot(np.ceil(samples_all.shape[0] / 5).astype(int), 5, i + 1)
-            plt.plot(x_data[i, :])
-            ax = plt.gca()
+
+            plt.subplot(np.ceil(samples_all.shape[0] / cols).astype(int), cols, i + 1)
+            bins = np.linspace(0, np.max(samples_mean[i, :]), 20)
+
+            plt.hist(samples_mean[i, :], bins=bins, histtype='step')
+            plt.hist(samples_mean[i, idx_rand], bins=bins, histtype='step')
+
         for j, idx in enumerate(idx_rand):
             x_train_opt.append(x_data[i, idx:idx + WINDOW_LENGTH])
             y_train_opt.append(y_data[i, idx + WINDOW_LENGTH:idx + WINDOW_LENGTH + PREDICT_STEPS])

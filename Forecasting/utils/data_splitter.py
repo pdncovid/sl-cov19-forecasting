@@ -1,15 +1,19 @@
 import numpy as np
-from Forecasting.utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
+from utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
+
 
 
 def split_and_smooth(x, look_back_window=100, window_slide=10, R_EIG_ratio=1, R_power=1, order=2, midpoint=False, reduce_last_dim=False, view=False):
+
     print(f"Split and smooth. Expected (nregions, days) Got {x.shape}. Look back window {look_back_window}")
     _x_to_smooth, _ = split_into_pieces_inorder(x, x, look_back_window, 0, window_slide, reduce_last_dim=False)
     _x = []
     for i in range(_x_to_smooth.shape[-1]):
+
         _x_samples_filtered, cutoff_freqs = O_LPF(_x_to_smooth[:, :, i], datatype='daily', order=order, R_EIG_ratio=R_EIG_ratio,
                                                   R_power=R_power, midpoint=midpoint, corr=True,
                                                   plot_freq=20, view=view,
+
                                                   region_names=[i for i in range(len(_x_to_smooth))])
         _x.append(_x_samples_filtered)
     _x = np.array(_x)
