@@ -7,8 +7,8 @@ from scipy import signal
 
 # ============================== Optimised LPF ========================================
 
-def O_LPF(data, datatype, order, R_EIG_ratio, midpoint, corr, region_names, plot_freq, view, savepath=None):
-    print(f"Smoothing {data.shape}")
+def O_LPF(data, datatype, order, R_EIG_ratio, R_power, midpoint, corr, region_names, plot_freq, view, savepath=None):
+    # print(f"Smoothing {data.shape}")
     if datatype == 'daily':
         data_sums = np.zeros(data.shape[0], )
         for i in range(data.shape[0]):
@@ -26,12 +26,8 @@ def O_LPF(data, datatype, order, R_EIG_ratio, midpoint, corr, region_names, plot
     cutoff_freqs = []  # to return the optimal cutoff frequencies
     # FILTERING:
     # Filter requirements.
-    T = data.shape[0]
     fs = 1
-    cutoff = 0.017
     nyq = 0.5 * fs
-    # order = 1
-    n = int(T * fs)
 
     def lowpass_filter(data, cutoff, fs, order):
         normal_cutoff = cutoff / nyq
@@ -41,16 +37,17 @@ def O_LPF(data, datatype, order, R_EIG_ratio, midpoint, corr, region_names, plot
         return y.astype(np.float32)
 
     # DETERMINE THE RIGHT CUTOFF FREQUENCY
-    step = 0.01
-    cutoff_list = range(int(round(1 / step)))
-    cutoff_list = 0.1 * (np.array(list(cutoff_list)) + 5) / 100
+    # step = 0.01
+    # cutoff_list = range(int(round(1 / step)))
+    # cutoff_list = 0.1 * (np.array(list(cutoff_list)) + 5) / 100
     # print('cutoff_list=',cutoff_list)
+    cutoff_list = np.linspace(0.011, 0.06, 50)
 
-    sections = 7
+    sections = 10
     if view or savepath is not None:
         cols = 5
-        rows = int(np.ceil((n_regions//plot_freq)/5))
-        plt.figure(89,figsize=(12*cols, 3.5*rows))
+        rows = int(np.ceil((n_regions // plot_freq) / 5))
+        plt.figure(89, figsize=(12 * cols, 3.5 * rows))
 
     data_filtered = np.zeros_like(data)
     for i in range(n_regions):
@@ -93,11 +90,11 @@ def O_LPF(data, datatype, order, R_EIG_ratio, midpoint, corr, region_names, plot
                     X_avg - Y_avg))  # eigenvalue spread should increase as k increases for an ideal solution
             J_eig.append(np.sum(J0))
         # few assignments to get rid of errors
-        J_eig = np.around(J_eig).astype(int)
-        J_R = np.array(J_R)**1.5
+        J_eig = np.around(J_eig).astype(int) ** 2
+        J_R = np.array(J_R) ** R_power
         J_eig[J_eig < 0] = 0
-        J_EIG = J_eig / (np.amax(J_eig) if np.amax(J_eig) != 0 else 0)
-        J_Err = J_R / (np.amax(J_R) if np.amax(J_R) != 0 else 0)
+        J_EIG = (J_eig / np.amax(J_eig)) if np.amax(J_eig) != 0 else 0
+        J_Err = (J_R / np.amax(J_R)) if np.amax(J_R) != 0 else 0
 
         if midpoint:
             J_tot = 1 - np.abs(R_cons * (J_Err) - EIG_cons * (J_EIG))
@@ -114,33 +111,48 @@ def O_LPF(data, datatype, order, R_EIG_ratio, midpoint, corr, region_names, plot
             for n in range(len(Y) - 1):
                 if Y[n + 1] - Y[n] < 0:
                     Y[n + 1] = Y[n]
-            Y = np.amax(X) * Y / np.amax(Y)
+            Y = np.rint(np.amax(X) * Y / np.amax(Y))
         data_filtered[:, i] = Y
-
         cutoff_freqs.append(cutoff_list[idx])
 
         if view:
             if i % plot_freq == 0:
-
-
-                plt.subplot(rows, 2*cols, 2*i+1), plt.title('fitness functions of each component')
+                plt.figure(figsize=(12, 4))
+                plt.subplot(1, 2, 1)
+                plt.plot(X / np.amax(Y), linewidth=2)
+                plt.plot(Y / np.amax(Y), linewidth=2, color='r')
+                plt.title('region: ' + str(region_names[i]) + '  frequency: ' + str(round(cutoff_list[idx], 4)))
+                plt.legend(['original', 'filtered'])
+                plt.xlabel('days')
+                plt.subplot(1, 2, 2)
                 plt.plot(cutoff_list, J_Err, linewidth=2)
                 plt.plot(cutoff_list, J_EIG, linewidth=2)
                 plt.plot(cutoff_list, J_tot, linewidth=2)
                 plt.xlim([cutoff_list[0], cutoff_list[-1]])
-                # plt.ylim([0,1.1])
                 plt.legend(['correlation (information retained)', 'eigenvalue spread (noise removed)',
                             'total fitness function'], loc='lower left')
                 plt.xlabel('normalized cutoff frequency')
+                plt.show()
+        # if i % plot_freq == 0:
+        #     plt.subplot(rows, 2 * cols, 2 * i + 1), plt.title('fitness functions of each component')
+        #     plt.plot(cutoff_list, J_Err, linewidth=2)
+        #     plt.plot(cutoff_list, J_EIG, linewidth=2)
+        #     plt.plot(cutoff_list, J_tot, linewidth=2)
+        #     plt.xlim([cutoff_list[0], cutoff_list[-1]])
+        #     # plt.ylim([0,1.1])
+        #     plt.legend(['correlation (information retained)', 'eigenvalue spread (noise removed)',
+        #                 'total fitness function'], loc='lower left')
+        #     plt.xlabel('normalized cutoff frequency')
+        #
+        #     plt.subplot(rows, 2 * cols, 2 * i + 2)
+        #     # plt.title('cumulative cases in ' + str(region_names[i]) + '\noptimum normalized cutoff frequency: ' + str(
+        #     #         round(cutoff_list[idx], 4)))
+        #     plt.title(str(region_names[i]) + '  frequency: ' + str(round(cutoff_list[idx], 4)))
+        #     plt.plot(X / np.amax(Y), linewidth=2)
+        #     plt.plot(Y / np.amax(Y), linewidth=2, color='r')
+        #     plt.legend(['original', 'filtered'])
+        #     # plt.xlabel('days')
 
-                plt.subplot(rows, 2*cols, 2*i+2)
-                # plt.title('cumulative cases in ' + str(region_names[i]) + '\noptimum normalized cutoff frequency: ' + str(
-                #         round(cutoff_list[idx], 4)))
-                plt.title(str(region_names[i]) + '  frequency: ' + str(round(cutoff_list[idx], 4)))
-                plt.plot(X / np.amax(Y), linewidth=2)
-                plt.plot(Y / np.amax(Y), linewidth=2, color='r')
-                plt.legend(['original', 'filtered'])
-                # plt.xlabel('days')
     if savepath is not None:
         plt.savefig(savepath, bbox_inches='tight')
 
