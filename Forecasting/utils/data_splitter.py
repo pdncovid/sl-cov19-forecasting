@@ -8,7 +8,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 
 
 def f(arr, R_EIG_ratio, midpoint):
-    return O_LPF(arr, datatype='daily', order=3, R_EIG_ratio=R_EIG_ratio, R_power=1, midpoint=midpoint, corr=True,
+    return O_LPF(arr, datatype='daily', order=3, R_EIG_ratio=R_EIG_ratio, R_power=1.5, midpoint=midpoint, corr=True,
                  plot_freq=1, view=False, region_names=[i for i in range(len(arr))])
 
 
@@ -21,12 +21,14 @@ def split_and_smooth(x, look_back_window=100, window_slide=10, R_EIG_ratio=1, mi
     # t = time.time()
     pool = Pool(8)
     n = _x_to_smooth.shape[-1]
+
     arrs = [_x_to_smooth[:, :, i] for i in range(n)]
     r_eig = list(itertools.repeat(R_EIG_ratio, n))
     mid = list(itertools.repeat(midpoint, n))
+
     results = pool.starmap(f, zip(arrs, r_eig, mid))
     _x = [results[i][0] for i in range(len(results))]
-    # print(t - time.time())
+
 
     # t = time.time()
     # for i in range(_x_to_smooth.shape[-1]):
@@ -36,7 +38,6 @@ def split_and_smooth(x, look_back_window=100, window_slide=10, R_EIG_ratio=1, mi
     #                                               plot_freq=1, view=False,
     #                                               region_names=[i for i in range(len(_x_to_smooth))])
     #     _x.append(_x_samples_filtered)
-    # print(t - time.time())
 
     _x = np.array(_x)
     if np.isnan(_x).any():

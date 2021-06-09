@@ -26,13 +26,19 @@ check_stft = False
 check_acf = False
 check_size = False
 
-
 countries = ['SL']
 # countries = ['Italy', 'Sri Lanka', 'NG', 'Texas']
 fft_mean = []
 fft_var = []
 acf_all = []
 pacf_all = []
+
+
+def min_max(data):
+    for k in range(data.shape[0]):
+        data[k, :] = (data[k, :] - np.amin(data[k, :])) / (np.amax(data[k, :]) - np.amin(data[k, :]))
+    return data
+
 
 for country in countries:
     print(country)
@@ -181,12 +187,20 @@ for country in countries:
 
         from Forecasting.utils.undersampling import undersample, undersample2, undersample3
 
-        x_train_uf, y_train_uf = undersample3(daily_filtered, daily_filtered, count_power, WINDOW_LENGTH,
-                                              PREDICT_STEPS, region_names,
-                                              True)
+        n_regions, days = daily_filtered.shape
+        alldata_train = min_max(daily_filtered)
+        samples_all = np.zeros([n_regions, days - WINDOW_LENGTH - PREDICT_STEPS, WINDOW_LENGTH + PREDICT_STEPS])
 
-        x_train_u, y_train_u = undersample3(daily_cases, daily_cases, count_power, WINDOW_LENGTH,
-                                            PREDICT_STEPS, region_names, False)
+        for i in range(n_regions):
+            for k in range(samples_all.shape[1]):
+                samples_all[i, k, :] = alldata_train[i, k:k + WINDOW_LENGTH + PREDICT_STEPS]
+        x = samples_all[:, :, :WINDOW_LENGTH].transpose([1, 2, 0])
+        y = samples_all[:, :, WINDOW_LENGTH:].transpose([1, 2, 0])
+        f = np.random.random((x.shape[0], 2, x.shape[2])) # dummy features
+        x_train_uf, y_train_uf,x_train_f = undersample3(x, y, f, count_power, region_names, True)
+
+        # x_train_u, y_train_u, x_train_f = undersample3(daily_cases, daily_cases, count_power, WINDOW_LENGTH,
+        #                                     PREDICT_STEPS, region_names, False)
 
         if plot_hist:
             plt.figure()
@@ -228,8 +242,8 @@ for country in countries:
             k_fold=3, test_fold=2, reduce_last_dim=False,
             only_train_test=True, debug=True)
 
-        x_train_uf, y_train_uf = undersample2(X_trainf, Y_trainf, count_power, region_names, True)
-        x_train_u, y_train_u = undersample2(X_train, Y_train, count_power, region_names, True)
+        x_train_uf, y_train_uf,x_train_f = undersample2(X_trainf, Y_trainf,f, count_power, region_names, True)
+        x_train_u, y_train_u ,x_train_f= undersample2(X_train, Y_train,f, count_power, region_names, True)
 
         if plot_hist:
             plt.figure()

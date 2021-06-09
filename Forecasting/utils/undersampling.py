@@ -121,11 +121,9 @@ def undersample(x_data, y_data, count_power, WINDOW_LENGTH, PREDICT_STEPS, regio
     return x_train_opt, y_train_opt
 
 
-def undersample2(x_train, y_train, x_feats, count_power, scalers, region_names, PLOT, savepath=None):
+def undersample2(x_train, y_train, x_feats, count_power, region_names, PLOT, savepath=None):
     print(f"Undersampling. Expectated data (samples, window, regions). Got {x_train.shape}")
-    for i in x_train.shape[-1]:
-        x_train[:, :, i] /= scalers.data_max_[i]
-        y_train[:, :, i] /= scalers.data_max_[i]
+
     x_train = x_train.transpose([2, 0, 1])
     y_train = y_train.transpose([2, 0, 1])
 
@@ -201,38 +199,33 @@ def undersample2(x_train, y_train, x_feats, count_power, scalers, region_names, 
     return x_train_opt, y_train_opt, feats
 
 
-def undersample3(x_data, y_data, x_feats, count_power, scalers, region_names, PLOT, savepath=None):
+def undersample3(x_data, y_data, x_feats, count_power, region_names, PLOT, savepath=None):
     print(f"Undersampling. Expected data (samples, window, regions). Got {x_data.shape}")
     # input shape is [samples, window, regions]
 
     """ PREVIOUS CODE """
-    n_regions, days = x_data.shape
-    alldata_train = min_max(x_data)
-    samples_all = np.zeros([n_regions, days - WINDOW_LENGTH - PREDICT_STEPS, WINDOW_LENGTH + PREDICT_STEPS])
-
-    for i in range(n_regions):
-        for k in range(samples_all.shape[1]):
-            samples_all[i, k, :] = alldata_train[i, k:k + WINDOW_LENGTH + PREDICT_STEPS]
-
-    samples_all = np.reshape(samples_all, (samples_all.shape[0] * samples_all.shape[1], samples_all.shape[2]))
+    # n_regions, days = x_data.shape
+    # alldata_train = min_max(x_data)
+    # samples_all = np.zeros([n_regions, days - WINDOW_LENGTH - PREDICT_STEPS, WINDOW_LENGTH + PREDICT_STEPS])
+    #
+    # for i in range(n_regions):
+    #     for k in range(samples_all.shape[1]):
+    #         samples_all[i, k, :] = alldata_train[i, k:k + WINDOW_LENGTH + PREDICT_STEPS]
+    #
+    # samples_all = np.reshape(samples_all, (samples_all.shape[0] * samples_all.shape[1], samples_all.shape[2]))
     """ """
     """ NEW CODE """
+    samples_x = np.copy(np.concatenate(x_data, -1).T)
+    samples_y = np.copy(np.concatenate(y_data, -1).T)
+    samples_f = np.copy(np.concatenate(x_feats, -1).T)
+    samples_all = np.copy(samples_x)
+    samples_mean = np.mean(samples_all, axis=-1)
 
     _, window_x, _ = x_data.shape
     _, window_y, _ = y_data.shape
-    # for i in range(x_data.shape[-1]):
-    #     x_data[:, :, i] /= scalers.data_max_[i]
-    #     y_data[:, :, i] /= scalers.data_max_[i]
-
-    # samples_x = x_data.reshape([-1, window_x])
-    # samples_y = y_data.reshape([-1, window_y])
-    samples_x = np.concatenate(x_data, -1).T
-    samples_y = np.concatenate(y_data, -1).T
-    samples_f = np.concatenate(x_feats, -1).T
-    samples_all = np.copy(samples_x)
-    """ """
-    samples_mean = np.mean(samples_all, axis=-1)
-
+    for i in range(x_data.shape[-1]):
+        x_data[:, :, i] /= x_data[:, :, i].max()
+        y_data[:, :, i] /= x_data[:, :, i].max()
 
     # evaluating optimal number of segments for each district
     segment_array = np.rint(np.linspace(2, 20, 10)).astype(int)
@@ -280,8 +273,8 @@ def undersample3(x_data, y_data, x_feats, count_power, scalers, region_names, PL
     # print('idx_rand.shape=', idx_rand.shape)
 
     """ PREVIOUS CODE """
-    x_train_opt = samples_all[idx_rand, 0:WINDOW_LENGTH]
-    y_train_opt = samples_all[idx_rand, WINDOW_LENGTH:WINDOW_LENGTH + PREDICT_STEPS]
+    # x_train_opt = samples_all[idx_rand, 0:WINDOW_LENGTH]
+    # y_train_opt = samples_all[idx_rand, WINDOW_LENGTH:WINDOW_LENGTH + PREDICT_STEPS]
     """ """
     """ NEW CODE """
     x_train_opt = samples_x[idx_rand, :]

@@ -45,7 +45,7 @@ print(tf.__version__)
 
 # x_data, y_data = get_data(filtered=False, normalize=False)
 # region_mask = (np.mean(x_data,0) > 140).astype('int32')
-region_mask = (np.arange(25) == 5).astype('int32')
+
 
 
 # # Methods for time series forecasting
@@ -68,7 +68,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='SL')
+                        default='Texas')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-01-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
@@ -145,6 +145,9 @@ def main():
     days = confirmed_cases.shape[1]
     n_features = features.shape[1]
 
+    global region_mask
+    region_mask = (np.arange(n_regions) == 5).astype('int32')
+
     print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
 
     daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_EIG_ratio=1, R_power=1,
@@ -163,8 +166,10 @@ def main():
     global split_days
     split_days = (pd.to_datetime(split_date) - pd.to_datetime(START_DATE)).days
 
-    to_plot = ['KAL', 'GAL', 'GAM', 'HAM', 'JAF', 'KAN', 'MTL', 'MTR', 'TRI']
-    # to_plot = [1,2,3,20]
+    # to_plot = ['KAL', 'GAL', 'GAM', 'HAM', 'JAF', 'KAN', 'MTL', 'MTR', 'TRI']
+    to_plot = np.array(df_training.columns)
+    np.random.shuffle(to_plot)
+    to_plot = to_plot[:4]
     # to_plot =features.index
     if PLOT:
         plt.figure(figsize=(15, len(to_plot)))
@@ -255,8 +260,8 @@ def main():
             yhat = predictionsDict[method]
             for i, tp in enumerate(to_plot):
                 plt.subplot(1 + len(to_plot) // 3, 3, i + 1)
-                plt.plot(df_test[tp].values, label='Original ' + tp)
-                plt.plot(yhat[:, list(df_test.columns).index(tp)], color='red', label=method + ' ' + tp)
+                plt.plot(df_test[tp].values, label='Original ' + str(tp))
+                plt.plot(yhat[:, list(df_test.columns).index(tp)], color='red', label=method + ' ' + str(tp))
                 plt.legend()
             plt.show()
 
@@ -280,20 +285,21 @@ def main():
     #              [{'label_name': model_names[1][1] + '-raw', 'line_size': 4},
     #               {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
     #              ]
+    country="Texas"
     model_names = [
-        ('SL_LSTM_Simple_WO_Regions_Unfiltered_None_14_7', 'LSTM-R-None'),
-        ('SL_LSTM_Simple_WO_Regions_Filtered_None_14_7', 'LSTM-F-None'),
-        ('SL_LSTM_Simple_WO_Regions_Unfiltered_Loss_14_7', 'LSTM-R-Loss'),
-        ('SL_LSTM_Simple_WO_Regions_Filtered_Loss_14_7', 'LSTM-F-Loss'),
-        ('SL_LSTM_Simple_WO_Regions_Unfiltered_Reduce_14_7', 'LSTM-R-Reduce'),
-        ('SL_LSTM_Simple_WO_Regions_Filtered_Reduce_14_7', 'LSTM-F-Reduce'),
+        (f'{country}_LSTM_Simple_WO_Regions_Unfiltered_None_14_7', 'LSTM-R-None'),
+        (f'{country}_LSTM_Simple_WO_Regions_Filtered_None_14_7', 'LSTM-F-None'),
+        # ('SL_LSTM_Simple_WO_Regions_Unfiltered_Loss_14_7', 'LSTM-R-Loss'),
+        # ('SL_LSTM_Simple_WO_Regions_Filtered_Loss_14_7', 'LSTM-F-Loss'),
+        (f'{country}_LSTM_Simple_WO_Regions_Unfiltered_Reduce_14_7', 'LSTM-R-Reduce'),
+        (f'{country}_LSTM_Simple_WO_Regions_Filtered_Reduce_14_7', 'LSTM-F-Reduce'),
     ]
     plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4},{}],
                  [{},{'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
                  [{'label_name': model_names[2][1] + '-raw', 'line_size': 4}, {}],
                  [{}, {'label_name': model_names[3][1] + '-fil', 'line_size': 3}],
-                 [{'label_name': model_names[4][1] + '-raw', 'line_size': 4}, {}],
-                 [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
+                 # [{'label_name': model_names[4][1] + '-raw', 'line_size': 4}, {}],
+                 # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
 
                  ]
     show_predictions(x_data_scalers, model_names, plot_data)
@@ -526,19 +532,22 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
         x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
                                        population=population)
         _, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
-        resultsDict[f'{model_label} (Filtered)'] = evaluate(y_testf, yhatf)  # filtered prediction v raw true values
-        predictionsDict[f'{model_label} (Filtered)'] = yhatf
-        gtDict[f'{model_label} (Filtered)'] = y_testf
 
         # get raw data and predict the new cases for test period (yhat: (days,regions))
         x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
                                      population=population)
         _, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
-        resultsDict[f'{model_label} (Raw)'] = evaluate(y_testf, yhat)  # raw predictions v raw true values
-        predictionsDict[f'{model_label} (Raw)'] = yhat
-        gtDict[f'{model_label} (Raw)'] = y_testf
+
+
+
+
+
 
         if len(plot[0].keys()) != 0:
+            resultsDict[f'{model_label} (Raw)'] = evaluate(y_testf, yhat)  # raw predictions v raw true values
+            predictionsDict[f'{model_label} (Raw)'] = yhat
+            gtDict[f'{model_label} (Raw)'] = y_testf
+
             Ys.append(yhat)
             method_name = plot[0]['label_name']
             method_list.append(method_name)
@@ -559,6 +568,10 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
             styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
 
         if len(plot[1].keys()) != 0:
+            resultsDict[f'{model_label} (Filtered)'] = evaluate(y_testf, yhatf)  # filtered prediction v raw true values
+            predictionsDict[f'{model_label} (Filtered)'] = yhatf
+            gtDict[f'{model_label} (Filtered)'] = y_testf
+
             Ys.append(yhatf)
             method_name = plot[1]['label_name']
             method_list.append(method_name)
@@ -661,17 +674,21 @@ def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, mo
         x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
                                        population=population)
         _, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
-        resultsDict[f'{model_label} (Filtered E)'] = evaluate(y_testf, yhatf)  # filtered prediction v raw true values
-        predictionsDict[f'{model_label} (Filtered E)'] = yhatf
-        gtDict[f'{model_label} (Filtered E)'] = y_testf
 
         x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
                                      population=population)
         _, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
-        resultsDict[f'{model_label} (Raw E)'] = evaluate(y_testf, yhat)  # raw predictions v raw true values
-        predictionsDict[f'{model_label} (Raw E)'] = yhat
-        gtDict[f'{model_label} (Raw E)'] = y_testf
+
+
+
+
+
+
         if len(plot[0].keys()) != 0:
+            resultsDict[f'{model_label} (Raw E)'] = evaluate(y_testf, yhat)  # raw predictions v raw true values
+            predictionsDict[f'{model_label} (Raw E)'] = yhat
+            gtDict[f'{model_label} (Raw E)'] = y_testf
+
             Ys.append(yhat)
             method_name = plot[0]['label_name']
             method_list.append(method_name)
@@ -689,6 +706,10 @@ def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, mo
             styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
 
         if len(plot[1].keys()) != 0:
+            resultsDict[f'{model_label} (Filtered E)'] = evaluate(y_testf, yhatf)  # filtered prediction v raw true values
+            predictionsDict[f'{model_label} (Filtered E)'] = yhatf
+            gtDict[f'{model_label} (Filtered E)'] = y_testf
+
             Ys.append(yhatf)
             method_name = plot[1]['label_name']
             method_list.append(method_name)

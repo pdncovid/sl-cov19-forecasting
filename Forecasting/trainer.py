@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from utils.plots import plot_prediction
 from utils.functions import normalize_for_nn, undo_normalization, bs
-from utils.data_loader import load_data, per_million, get_data
+from utils.data_loader import load_data, per_million, get_data,reduce_regions_to_batch,expand_dims
 from utils.smoothing_functions import O_LPF
 from utils.data_splitter import split_on_time_dimension, split_into_pieces_inorder, \
     split_and_smooth
@@ -134,30 +134,14 @@ def train(model, train_data, X_train, Y_train, X_test, Y_test):
     model.save("models/" + fmodel_name + ".h5")
 
 
-def reduce_regions_to_batch(arrs):
-    ret = []
-    for arr in arrs:
-        if arr.shape[-1] != 1:
-            ret.append(np.concatenate(arr, -1).T)
-        else:
-            ret.append(arr)
-    return ret
 
-def expand_dims(arrs, to):
-    ret = []
-    for arr in arrs:
-        if len(arr.shape) != to:
-            ret.append(np.expand_dims(arr, -1))
-        else:
-            ret.append(arr)
-    return ret
 
 def main():
     # ============================================================================================ Initialize parameters
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='SL')
+                        default='Texas')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-02-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
@@ -279,11 +263,16 @@ def main():
     print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
     if UNDERSAMPLING == "Reduce":
         dataset_size = daily_cases.shape[0] * daily_cases.shape[1]
-        a = (2 - 0.1) / (1000 - 100000)
+        a = (2 - 0.1) / (1000 - 25000)
         b = 2 - (a / 1000)
-        count_power = np.around(dataset_size * a + b, 3)
 
-        X_train, Y_train,X_train_feat  = undersample3(X_train, Y_train, X_train_feat, count_power,x_data_scalersf, region_names, PLOT,
+        count_power = np.around(dataset_size * a + b, 3)
+        if count_power > 2:
+            count_power = 2
+        # elif count_power < 0.1:
+        #     count_power = 0.1
+
+        X_train, Y_train,X_train_feat  = undersample3(X_train, Y_train, X_train_feat, count_power, region_names, PLOT,
                                         savepath=f'./logs/{folder}/images/under_{DATASET}.png' if PLOT else None)
         # here Xtrain have been reduced by regions
 

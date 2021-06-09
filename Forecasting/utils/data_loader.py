@@ -7,6 +7,23 @@ from utils.functions import normalize_for_nn
 from utils.smoothing_functions import O_LPF
 import matplotlib.pyplot as plt
 
+def reduce_regions_to_batch(arrs):
+    ret = []
+    for arr in arrs:
+        if arr.shape[-1] != 1:
+            ret.append(np.concatenate(arr, -1).T)
+        else:
+            ret.append(arr)
+    return ret
+
+def expand_dims(arrs, to):
+    ret = []
+    for arr in arrs:
+        if len(arr.shape) != to:
+            ret.append(np.expand_dims(arr, -1))
+        else:
+            ret.append(arr)
+    return ret
 
 def per_million(data, population):
     # divide by population
@@ -148,6 +165,23 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
 
     return X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat
 
+def load_multiple_train_data(DATASETS, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
+                    look_back_filter, look_back_window, window_slide):
+    ret = []
+    for DATASET in DATASETS:
+        tmp = load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
+                        look_back_filter, look_back_window, window_slide)
+
+        if len(DATASETS) > 1:
+            tmp = reduce_regions_to_batch(tmp) # can't load multiple datasets if we keep regions in separate dim
+            tmp = expand_dims(tmp, 3)
+
+        if len(ret) == 0:
+            ret = tmp
+        else:
+            for i in range(len(ret)):
+                ret[i] = np.concatenate([ret[i], tmp[i]], 0)
+    return ret
 
 def load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
                     look_back_filter, look_back_window, window_slide):
