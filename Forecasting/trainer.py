@@ -36,7 +36,7 @@ from utils.data_loader import load_data, per_million, get_data
 from utils.smoothing_functions import O_LPF
 from utils.data_splitter import split_on_time_dimension, split_into_pieces_inorder, \
     split_and_smooth
-from utils.undersampling import undersample2
+from utils.undersampling import undersample3
 from models import get_model
 
 # Extra settings
@@ -157,7 +157,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='NG')
+                        default='SL')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-02-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
@@ -283,7 +283,7 @@ def main():
         b = 2 - (a / 1000)
         count_power = np.around(dataset_size * a + b, 3)
 
-        X_train, Y_train,X_train_feat  = undersample2(X_train, Y_train, X_train_feat, count_power, region_names, PLOT,
+        X_train, Y_train,X_train_feat  = undersample3(X_train, Y_train, X_train_feat, count_power,x_data_scalersf, region_names, PLOT,
                                         savepath=f'./logs/{folder}/images/under_{DATASET}.png' if PLOT else None)
         # here Xtrain have been reduced by regions
 
@@ -442,9 +442,9 @@ def test2(model, x_data_scalers):
                                    population=population)
     _, y_test, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
 
-    x_data, y_data = get_data(filtered=False, normalize=False, data=daily_cases, dataf=daily_filtered,
+    x_data, y_data, _ = get_data(filtered=False, normalize=False, data=daily_cases, dataf=daily_filtered,
                               population=population)
-    x_dataf, y_dataf = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
+    x_dataf, y_dataf, _ = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
                                 population=population)
     # X = np.expand_dims(x_data[split_days-WINDOW_LENGTH:split_days,:],0)
     # Xf = np.expand_dims(x_dataf[split_days-WINDOW_LENGTH:split_days,:],0)

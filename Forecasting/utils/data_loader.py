@@ -40,7 +40,7 @@ def get_data(filtered, normalize, data, dataf, population):
         y, xs = normalize_for_nn(y, xs)
         return x.T, y.T, xs
     else:
-        return x.T, y.T
+        return x.T, y.T, None
 
 
 def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
@@ -58,7 +58,7 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
     features = features.values
 
     daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, midpoint=midpoint, corr=True,
-                                         R_EIG_ratio=1, region_names=region_names, plot_freq=1, view=False)
+                                         R_EIG_ratio=1, R_power=1, region_names=region_names, plot_freq=1, view=False)
     x_data, y_data, x_data_scalers = get_data(False, normalize=True, data=daily_cases, dataf=daily_filtered,
                                               population=population)
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=daily_cases, dataf=daily_filtered,
@@ -71,7 +71,7 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
 
         # smooth data
         _x, _ = split_and_smooth(x_data.T, look_back_window=look_back_window, window_slide=window_slide,
-                                 R_EIG_ratio=1, R_power=1,
+                                 R_EIG_ratio=1,
                                  midpoint=midpoint,
                                  reduce_last_dim=False)
         X = _x[:, -WINDOW_LENGTH - PREDICT_STEPS:-PREDICT_STEPS, :]
