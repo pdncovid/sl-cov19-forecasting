@@ -18,7 +18,7 @@ dataset_path = '../Datasets'
 _df = pd.read_csv(os.path.join(dataset_path, "EU\jrc-covid-19-all-days-by-regions.csv"))
 _eu = _df['CountryName'].unique().tolist()
 
-plot_hist = False
+plot_hist = True
 undersampling = True
 filtering = True
 check_spectral = False
@@ -26,7 +26,7 @@ check_stft = False
 check_acf = False
 check_size = False
 
-countries = ['Sri Lanka']
+countries = ['SL']
 # countries = ['Italy', 'Sri Lanka', 'NG', 'Texas']
 fft_mean = []
 fft_var = []
@@ -226,35 +226,35 @@ for country in countries:
         x_train_uf, y_train_uf = undersample2(X_trainf, Y_trainf, count_power, region_names, True)
         x_train_u, y_train_u = undersample2(X_train, Y_train, count_power, region_names, True)
 
-        # if plot_hist:
-        #     plt.figure()
-        #     # plt.yscale('log')
-        #
-        #     cum = True
-        #     ht = 'step'
-        #     alpha = 1
-        #     s = 100
-        #     _max = np.max([X_train.max(), X_trainf.max(), x_train_u.max(), x_train_uf.max()])
-        #     bins = np.linspace(0, _max.max(), s)
-        #
-        #
-        #     def f(x):
-        #         return x.reshape(-1)
-        #
-        #
-        #     plt.hist(f(X_train), bins=bins, alpha=alpha, cumulative=cum, histtype=ht, label='Raw data', density=True)
-        #     plt.hist(f(X_trainf), bins=bins, alpha=alpha, cumulative=cum, histtype=ht, label='Smoothed data',
-        #              density=True)
-        #     plt.hist(f(x_train_u), bins=bins, alpha=alpha, cumulative=cum, histtype=ht, label='Raw data (Undersampled)',
-        #              density=True)
-        #     plt.hist(f(x_train_uf), bins=bins, alpha=alpha, cumulative=cum, histtype=ht,
-        #              label='Smoothed data (Undersampled)',
-        #              density=True)
-        #     plt.legend()
-        #     plt.xlabel("Number of daily cases")
-        #     plt.ylabel("Probability density in the dataset")
-        #
-        #     plt.show()
+        if plot_hist:
+            plt.figure()
+            # plt.yscale('log')
+
+            cum = True
+            ht = 'step'
+            alpha = 1
+            s = 100
+            _max = np.max([X_train.max(), X_trainf.max(), x_train_u.max(), x_train_uf.max()])
+            bins = np.linspace(0, _max.max(), s)
+
+
+            def f(x):
+                return x.reshape(-1)
+
+
+            plt.hist(f(X_train), bins=bins, alpha=alpha, cumulative=cum, histtype=ht, label='Raw data', density=True)
+            plt.hist(f(X_trainf), bins=bins, alpha=alpha, cumulative=cum, histtype=ht, label='Smoothed data',
+                     density=True)
+            plt.hist(f(x_train_u), bins=bins, alpha=alpha, cumulative=cum, histtype=ht, label='Raw data (Undersampled)',
+                     density=True)
+            plt.hist(f(x_train_uf), bins=bins, alpha=alpha, cumulative=cum, histtype=ht,
+                     label='Smoothed data (Undersampled)',
+                     density=True)
+            plt.legend()
+            plt.xlabel("Number of daily cases")
+            plt.ylabel("Probability density in the dataset")
+
+            plt.show()
 
 if check_spectral:
     fft_mean = np.array(fft_mean)

@@ -134,6 +134,24 @@ def train(model, train_data, X_train, Y_train, X_test, Y_test):
     model.save("models/" + fmodel_name + ".h5")
 
 
+def reduce_regions_to_batch(arrs):
+    ret = []
+    for arr in arrs:
+        if arr.shape[-1] != 1:
+            ret.append(np.concatenate(arr, -1).T)
+        else:
+            ret.append(arr)
+    return ret
+
+def expand_dims(arrs, to):
+    ret = []
+    for arr in arrs:
+        if len(arr.shape) != to:
+            ret.append(np.expand_dims(arr, -1))
+        else:
+            ret.append(arr)
+    return ret
+
 def main():
     # ============================================================================================ Initialize parameters
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
@@ -146,7 +164,7 @@ def main():
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
     parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=14)
     parser.add_argument('--output_days', help='Number of days predicted by the model', type=int, default=7)
-    parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM4EachDay_WO_Regions')
+    parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM_Simple_WO_Regions')
 
     parser.add_argument('--lr', help='Learning rate', type=float, default=0.002)
     parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
@@ -221,7 +239,7 @@ def main():
     features = features.values
 
     daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, midpoint=midpoint, corr=True,
-                                         R_EIG_ratio=1,
+                                         R_EIG_ratio=1, R_power=1.5,
                                          region_names=region_names, plot_freq=1, view=False)
 
     # ================================================================================================= Initialize Model
@@ -251,26 +269,50 @@ def main():
                                                  population=population)
 
     tmp = load_train_data(DATASET, args.path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
-                          look_back_filter, look_back_window, window_slide, reduce_regions2batch)
+                          look_back_filter, look_back_window, window_slide)
     X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat = tmp
 
     # ==================================================================================================== Undersampling
-
+    print("================================================== Training data before undersampling")
+    print("Train", X_train.shape, Y_train.shape, X_train_feat.shape)
+    print("Val", X_val.shape, Y_val.shape, X_val_feat.shape)
+    print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
     if UNDERSAMPLING == "Reduce":
-        X_train, Y_train = undersample2(X_train, Y_train, region_names, PLOT,
-                                        savepath=f'./logs/{folder}/images/under_{DATASET}.png' if PLOT else None)
+        dataset_size = daily_cases.shape[0] * daily_cases.shape[1]
+        a = (2 - 0.1) / (1000 - 100000)
+        b = 2 - (a / 1000)
+        count_power = np.around(dataset_size * a + b, 3)
 
+        X_train, Y_train,X_train_feat  = undersample2(X_train, Y_train, X_train_feat, count_power, region_names, PLOT,
+                                        savepath=f'./logs/{folder}/images/under_{DATASET}.png' if PLOT else None)
+        # here Xtrain have been reduced by regions
+
+
+    print("================================================== Training data after undersampling")
+    print("Train", X_train.shape, Y_train.shape, X_train_feat.shape)
+    print("Val", X_val.shape, Y_val.shape, X_val_feat.shape)
+    print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
+    if reduce_regions2batch:
+        X_train, Y_train,  X_train_feat = reduce_regions_to_batch([X_train, Y_train,  X_train_feat])
+        X_test,Y_test,X_test_feat = reduce_regions_to_batch([X_test,Y_test,X_test_feat])
+        if X_val.shape[0] == 0:
+            X_val = np.zeros((0, X_val.shape[1]))
+            Y_val = np.zeros((0, Y_val.shape[1]))
+            X_val_feat = np.zeros((0, X_val_feat.shape[1]))
+        else:
+            X_val, Y_val,X_val_feat=reduce_regions_to_batch([X_val, Y_val,X_val_feat])
+
+        X_train, X_train_feat, Y_train = expand_dims([X_train,X_train_feat,Y_train], 3)
+        X_val, X_val_feat, Y_val = expand_dims([X_val, X_val_feat, Y_val], 3)
+        X_test, X_test_feat, Y_test = expand_dims([X_test, X_test_feat, Y_test], 3)
     # ============================================================================================== Creating Dataset
     train_data = tf.data.Dataset.from_tensor_slices((X_train, Y_train))
     train_data = train_data.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
 
-    test_data = tf.data.Dataset.from_tensor_slices((X_test, Y_test))
-    test_data = test_data.batch(BATCH_SIZE)
-
     global freq, xcheck
     freq, xcheck = np.histogram(np.concatenate(X_train, -1).mean(0))
 
-    print("Training data after undersampling")
+    print("================================================== Training data after reducing shapes")
     print("Train", X_train.shape, Y_train.shape, X_train_feat.shape)
     print("Val", X_val.shape, Y_val.shape, X_val_feat.shape)
     print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
@@ -310,7 +352,8 @@ def test1(model, x_data_scalers, epoch):
     n_regions = len(x_data_scalers.data_max_)
 
     def get_model_predictions(model, x_data, y_data, scalers):
-        print(f"Predicting from model (in:{model.input.shape} out:{model.output.shape}). X={x_data.shape} Y={y_data.shape}")
+        print(
+            f"Predicting from model (in:{model.input.shape} out:{model.output.shape}). X={x_data.shape} Y={y_data.shape}")
         # CREATING TRAIN-TEST SETS FOR CASES
         x_test, y_test = split_into_pieces_inorder(x_data.T, y_data.T, WINDOW_LENGTH, PREDICT_STEPS,
                                                    WINDOW_LENGTH + PREDICT_STEPS,
@@ -361,7 +404,7 @@ def test1(model, x_data_scalers, epoch):
     plt.figure(figsize=(20, 10))
     plot_prediction(x_test, x_testf, Ys, method_list, styles, region_names, region_mask)
     plt.title(str(epoch))
-    plt.savefig(f"./logs/{folder}/images/test1_{epoch}.eps")
+    # plt.savefig(f"./logs/{folder}/images/test1_{epoch}.eps")
     plt.savefig(f"./logs/{folder}/images/test1_{epoch}.png")
 
 
@@ -441,7 +484,7 @@ def test2(model, x_data_scalers):
 
     plot_prediction(X, Xf, Ys, method_list, styles, region_names, region_mask)
 
-    plt.savefig(f"./logs/{folder}/images/test2.eps")
+    # plt.savefig(f"./logs/{folder}/images/test2.eps")
     plt.savefig(f"./logs/{folder}/images/test2.png")
 
 
@@ -470,7 +513,7 @@ def test_evolution(model):
             predict_seq.append(output[0])
             input_seq = np.concatenate([input_seq, output], 1)
         predictions.append(np.concatenate(predict_seq, 0))
-
+    plt.figure()
     plt.semilogy(1 + np.array(predictions)[:, :30, 0].T)
     plt.savefig(f"./logs/{folder}/images/test_future.png", bbox_inches='tight')
 

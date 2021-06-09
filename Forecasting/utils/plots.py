@@ -59,7 +59,7 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
     """
     # plt.close('all')
     # plt.figure(figsize=(20, 10))
-    print(X.shape, Xf.shape)
+    # print(X.shape, Xf.shape)
     # for Y in Ys:
     #     print(Y.shape)
     # print(region_mask)

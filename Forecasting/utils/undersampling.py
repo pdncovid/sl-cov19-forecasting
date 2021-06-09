@@ -123,7 +123,7 @@ def undersample(x_data, y_data, count_power, WINDOW_LENGTH, PREDICT_STEPS, regio
     return x_train_opt, y_train_opt
 
 
-def undersample2(x_train, y_train, count_power, region_names, PLOT, savepath=None):
+def undersample2(x_train, y_train, x_feats, count_power, region_names, PLOT, savepath=None):
     print(f"Undersampling. Expectated data (samples, window, regions). Got {x_train.shape}")
     x_train = x_train.transpose([2, 0, 1])
     y_train = y_train.transpose([2, 0, 1])
@@ -165,6 +165,7 @@ def undersample2(x_train, y_train, count_power, region_names, PLOT, savepath=Non
     # print('segments per district= ', segment_dist)
 
     x_train_opt, y_train_opt = [], []
+    feats = []
     plt.figure(figsize=(5 * 6, 5 * 4))
     # undersampling using optimal number of segments
     for i in range(n_regions):
@@ -187,15 +188,18 @@ def undersample2(x_train, y_train, count_power, region_names, PLOT, savepath=Non
         for j, idx in enumerate(idx_rand):
             x_train_opt.append(x_train[i, idx, :])
             y_train_opt.append(y_train[i, idx, :])
+            feats.append(x_feats[0,:,i])
     if savepath is not None:
         plt.savefig(savepath)
 
     x_train_opt = np.array(x_train_opt)
     y_train_opt = np.array(y_train_opt)
-
+    feats = np.array(feats)
     x_train_opt = np.expand_dims(x_train_opt, -1)
     y_train_opt = np.expand_dims(y_train_opt, -1)
-    return x_train_opt, y_train_opt
+    feats = np.expand_dims(feats, -1)
+    print(f"Undersmapled shape {x_train_opt.shape} {y_train_opt.shape} {feats.shape}")
+    return x_train_opt, y_train_opt, feats
 
 
 def undersample3(x_data, y_data, count_power, WINDOW_LENGTH, PREDICT_STEPS, region_names, PLOT, savepath=None):
