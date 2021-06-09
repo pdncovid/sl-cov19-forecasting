@@ -199,28 +199,24 @@ def undersample3(x_data, y_data, count_power, WINDOW_LENGTH, PREDICT_STEPS, regi
     # input shape is [samples, window, regions]
 
     """ PREVIOUS CODE """
-    # n_regions, days = x_data.shape
-    # alldata_train = min_max(x_data)
-    # samples_all = np.zeros([n_regions, days - WINDOW_LENGTH - PREDICT_STEPS, WINDOW_LENGTH + PREDICT_STEPS])
-    #
-    # for i in range(n_regions):
-    #     for k in range(samples_all.shape[1]):
-    #         samples_all[i, k, :] = alldata_train[i, k:k + WINDOW_LENGTH + PREDICT_STEPS]
-    #
-    # samples_all = np.reshape(samples_all, (samples_all.shape[0] * samples_all.shape[1], samples_all.shape[2]))
+    n_regions, days = x_data.shape
+    alldata_train = min_max(x_data)
+    samples_all = np.zeros([n_regions, days - WINDOW_LENGTH - PREDICT_STEPS, WINDOW_LENGTH + PREDICT_STEPS])
+
+    for i in range(n_regions):
+        for k in range(samples_all.shape[1]):
+            samples_all[i, k, :] = alldata_train[i, k:k + WINDOW_LENGTH + PREDICT_STEPS]
+
+    samples_all = np.reshape(samples_all, (samples_all.shape[0] * samples_all.shape[1], samples_all.shape[2]))
     """ """
     """ NEW CODE """
-    _, window_x, _ = x_data.shape
-    _, window_y, _ = y_data.shape
-    samples_x = x_data.reshape([-1, window_x])
-    samples_y = y_data.reshape([-1, window_y])
-    samples_all = np.copy(samples_x)
+    # _, window_x, _ = x_data.shape
+    # _, window_y, _ = y_data.shape
+    # samples_x = x_data.reshape([-1, window_x])
+    # samples_y = y_data.reshape([-1, window_y])
+    # samples_all = np.copy(samples_x)
     """ """
     samples_mean = np.mean(samples_all, axis=-1)
-    if PLOT:
-        plt.figure()
-        plt.hist(samples_mean)
-        plt.show()
     # evaluating optimal number of segments for each district
     segment_array = np.rint(np.linspace(2, 20, 10)).astype(int)
 
@@ -267,12 +263,12 @@ def undersample3(x_data, y_data, count_power, WINDOW_LENGTH, PREDICT_STEPS, regi
     # print('idx_rand.shape=', idx_rand.shape)
 
     """ PREVIOUS CODE """
-    # x_train_opt = samples_all[idx_rand, 0:WINDOW_LENGTH]
-    # y_train_opt = samples_all[idx_rand, WINDOW_LENGTH:WINDOW_LENGTH + PREDICT_STEPS]
+    x_train_opt = samples_all[idx_rand, 0:WINDOW_LENGTH]
+    y_train_opt = samples_all[idx_rand, WINDOW_LENGTH:WINDOW_LENGTH + PREDICT_STEPS]
     """ """
     """ NEW CODE """
-    x_train_opt = samples_x[idx_rand, :]
-    y_train_opt = samples_y[idx_rand, :]
+    # x_train_opt = samples_x[idx_rand, :]
+    # y_train_opt = samples_y[idx_rand, :]
     """ """
 
     if PLOT:

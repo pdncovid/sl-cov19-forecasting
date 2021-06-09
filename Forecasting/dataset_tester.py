@@ -26,7 +26,7 @@ check_stft = False
 check_acf = False
 check_size = False
 
-countries = ['Sri Lanka']
+countries = ['NG']
 # countries = ['Italy', 'Sri Lanka', 'NG', 'Texas']
 fft_mean = []
 fft_var = []
@@ -168,10 +168,14 @@ for country in countries:
         count_powers = np.around(np.linspace(0.2, 2, 20), 3)
         dataset_size = daily_cases.shape[0] * daily_cases.shape[1]
         print('dataset_size = ' + str(dataset_size))
-        a = (2 - 0.1) / (1000 - 100000)
+        a = (2 - 0.1) / (1000 - 25000)
         b = 2 - (a / 1000)
 
         count_power = np.around(dataset_size * a + b, 3)
+        if count_power > 2:
+            count_power = 2
+        elif count_power < 0.1:
+            count_power = 0.1
         print('count_power = ' + str(count_power))
 
         from Forecasting.utils.undersampling import undersample, undersample2, undersample3
