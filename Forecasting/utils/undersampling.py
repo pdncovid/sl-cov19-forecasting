@@ -206,17 +206,18 @@ def undersample3(x_data, y_data, x_feats, count_power, scalers, region_names, PL
     # input shape is [samples, window, regions]
 
     """ PREVIOUS CODE """
-    # n_regions, days = x_data.shape
-    # alldata_train = min_max(x_data)
-    # samples_all = np.zeros([n_regions, days - WINDOW_LENGTH - PREDICT_STEPS, WINDOW_LENGTH + PREDICT_STEPS])
-    #
-    # for i in range(n_regions):
-    #     for k in range(samples_all.shape[1]):
-    #         samples_all[i, k, :] = alldata_train[i, k:k + WINDOW_LENGTH + PREDICT_STEPS]
-    #
-    # samples_all = np.reshape(samples_all, (samples_all.shape[0] * samples_all.shape[1], samples_all.shape[2]))
+    n_regions, days = x_data.shape
+    alldata_train = min_max(x_data)
+    samples_all = np.zeros([n_regions, days - WINDOW_LENGTH - PREDICT_STEPS, WINDOW_LENGTH + PREDICT_STEPS])
+
+    for i in range(n_regions):
+        for k in range(samples_all.shape[1]):
+            samples_all[i, k, :] = alldata_train[i, k:k + WINDOW_LENGTH + PREDICT_STEPS]
+
+    samples_all = np.reshape(samples_all, (samples_all.shape[0] * samples_all.shape[1], samples_all.shape[2]))
     """ """
     """ NEW CODE """
+
     _, window_x, _ = x_data.shape
     _, window_y, _ = y_data.shape
     # for i in range(x_data.shape[-1]):
@@ -231,6 +232,7 @@ def undersample3(x_data, y_data, x_feats, count_power, scalers, region_names, PL
     samples_all = np.copy(samples_x)
     """ """
     samples_mean = np.mean(samples_all, axis=-1)
+
 
     # evaluating optimal number of segments for each district
     segment_array = np.rint(np.linspace(2, 20, 10)).astype(int)
@@ -278,13 +280,14 @@ def undersample3(x_data, y_data, x_feats, count_power, scalers, region_names, PL
     # print('idx_rand.shape=', idx_rand.shape)
 
     """ PREVIOUS CODE """
-    # x_train_opt = samples_all[idx_rand, 0:WINDOW_LENGTH]
-    # y_train_opt = samples_all[idx_rand, WINDOW_LENGTH:WINDOW_LENGTH + PREDICT_STEPS]
+    x_train_opt = samples_all[idx_rand, 0:WINDOW_LENGTH]
+    y_train_opt = samples_all[idx_rand, WINDOW_LENGTH:WINDOW_LENGTH + PREDICT_STEPS]
     """ """
     """ NEW CODE """
     x_train_opt = samples_x[idx_rand, :]
     y_train_opt = samples_y[idx_rand, :]
     x_train_fea = samples_f[idx_rand, :]
+
     """ """
 
     if PLOT:
