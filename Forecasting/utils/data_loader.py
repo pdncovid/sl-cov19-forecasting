@@ -40,11 +40,11 @@ def get_data(filtered, normalize, data, dataf, population):
         y, xs = normalize_for_nn(y, xs)
         return x.T, y.T, xs
     else:
-        return x.T, y.T
+        return x.T, y.T, None
 
 
 def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
-                    look_back_filter, look_back_window, window_slide, reduce_regions2batch):
+                    look_back_filter, look_back_window, window_slide):
     d = load_data(DATASET, path=data_path)
     region_names = d["region_names"]
     confirmed_cases = d["confirmed_cases"]
@@ -58,7 +58,7 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
     features = features.values
 
     daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, midpoint=midpoint, corr=True,
-                                         R_EIG_ratio=1, region_names=region_names, plot_freq=1, view=False)
+                                         R_EIG_ratio=1, R_power=1, region_names=region_names, plot_freq=1, view=False)
     x_data, y_data, x_data_scalers = get_data(False, normalize=True, data=daily_cases, dataf=daily_filtered,
                                               population=population)
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=daily_cases, dataf=daily_filtered,
@@ -85,13 +85,7 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
         Y_test = Y[X_train_idx:]
         X_train_feat = np.expand_dims(features.T, 0).repeat(X_train.shape[0], 0)
         X_test_feat = np.expand_dims(features.T, 0).repeat(X_test.shape[0], 0)
-        if reduce_regions2batch:
-            X_train = np.concatenate(X_train, -1).T
-            Y_train = np.concatenate(Y_train, -1).T
-            X_test = np.concatenate(X_test, -1).T
-            Y_test = np.concatenate(Y_test, -1).T
-            X_train_feat = np.concatenate(X_train_feat, -1).T
-            X_test_feat = np.concatenate(X_test_feat, -1).T
+
 
         X_val = np.zeros((0, *X_train.shape[1:]))
         Y_val = np.zeros((0, *Y_train.shape[1:]))
@@ -103,7 +97,7 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
                                      dataf=daily_filtered, population=population)
         X_train, X_train_feat, Y_train, X_val, X_val_feat, Y_val, X_test, X_test_feat, Y_test = split_on_time_dimension(
             x_data.T, y_data.T, features, WINDOW_LENGTH, PREDICT_STEPS,
-            k_fold=3, test_fold=2, reduce_last_dim=reduce_regions2batch,
+            k_fold=3, test_fold=2, reduce_last_dim=False,
             only_train_test=True, debug=True)
 
     if len(X_train.shape) == 2:
@@ -120,7 +114,7 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
         os.makedirs(f'./preprocessed_data/{DATASET}')
     except FileExistsError as e:
         pass
-    fname = f"{TRAINING_DATA_TYPE}_{WINDOW_LENGTH}_{PREDICT_STEPS}_{reduce_regions2batch}"
+    fname = f"{TRAINING_DATA_TYPE}_{WINDOW_LENGTH}_{PREDICT_STEPS}"
     if look_back_filter and TRAINING_DATA_TYPE == "Filtered":
         fname += f"_{midpoint}_{look_back_window}_{window_slide}"
 
@@ -156,8 +150,8 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
 
 
 def load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
-                    look_back_filter, look_back_window, window_slide, reduce_regions2batch):
-    fname = f"{TRAINING_DATA_TYPE}_{WINDOW_LENGTH}_{PREDICT_STEPS}_{reduce_regions2batch}"
+                    look_back_filter, look_back_window, window_slide):
+    fname = f"{TRAINING_DATA_TYPE}_{WINDOW_LENGTH}_{PREDICT_STEPS}"
     if look_back_filter and TRAINING_DATA_TYPE == "Filtered":
         fname += f"_{midpoint}_{look_back_window}_{window_slide}"
 
@@ -177,7 +171,7 @@ def load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
         X_val_feat = np.load(f'./preprocessed_data/{DATASET}/X_val_feat_{fname}.npy')
     else:
         tmp = save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
-                              look_back_filter, look_back_window, window_slide, reduce_regions2batch)
+                              look_back_filter, look_back_window, window_slide)
         X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat = tmp
     return X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat
 
@@ -318,8 +312,8 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
         state_names.columns = ['State Name', 'State Code']
 
         df_daily = pd.read_csv(os.path.join(dataset_path, "cases_new.csv"), header=None)
-
-        region_names = [state_names.iloc[i, 0] for i in range(N)]
+        n_regions = len(state_names)
+        region_names = [state_names.iloc[i, 0] for i in range(n_regions)]
         daily_cases = np.array(np.float64(df_daily.iloc[:, :].values))
         confirmed_cases = np.cumsum(daily_cases, axis=1)
 

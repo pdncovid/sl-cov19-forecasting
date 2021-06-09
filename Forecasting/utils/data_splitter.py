@@ -1,22 +1,46 @@
+import itertools
+import time
+
 import numpy as np
 from utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
+from multiprocessing import Pool
+from multiprocessing.dummy import Pool as ThreadPool
 
 
+def f(arr, R_EIG_ratio, midpoint):
+    return O_LPF(arr, datatype='daily', order=3, R_EIG_ratio=R_EIG_ratio, R_power=1, midpoint=midpoint, corr=True,
+                 plot_freq=1, view=False, region_names=[i for i in range(len(arr))])
 
-def split_and_smooth(x, look_back_window=100, window_slide=10, R_EIG_ratio=1, R_power=1, order=2, midpoint=False, reduce_last_dim=False, view=False):
 
+def split_and_smooth(x, look_back_window=100, window_slide=10, R_EIG_ratio=1, midpoint=False,
+                     reduce_last_dim=False):
     print(f"Split and smooth. Expected (nregions, days) Got {x.shape}. Look back window {look_back_window}")
     _x_to_smooth, _ = split_into_pieces_inorder(x, x, look_back_window, 0, window_slide, reduce_last_dim=False)
     _x = []
-    for i in range(_x_to_smooth.shape[-1]):
 
-        _x_samples_filtered, cutoff_freqs = O_LPF(_x_to_smooth[:, :, i], datatype='daily', order=order, R_EIG_ratio=R_EIG_ratio,
-                                                  R_power=R_power, midpoint=midpoint, corr=True,
-                                                  plot_freq=20, view=view,
+    # t = time.time()
+    pool = Pool(8)
+    n = _x_to_smooth.shape[-1]
+    arrs = [_x_to_smooth[:, :, i] for i in range(n)]
+    r_eig = list(itertools.repeat(R_EIG_ratio, n))
+    mid = list(itertools.repeat(midpoint, n))
+    results = pool.starmap(f, zip(arrs, r_eig, mid))
+    _x = [results[i][0] for i in range(len(results))]
+    # print(t - time.time())
 
-                                                  region_names=[i for i in range(len(_x_to_smooth))])
-        _x.append(_x_samples_filtered)
+    # t = time.time()
+    # for i in range(_x_to_smooth.shape[-1]):
+    #     _x_samples_filtered, cutoff_freqs = O_LPF(_x_to_smooth[:, :, i], datatype='daily', order=3,
+    #                                               R_EIG_ratio=R_EIG_ratio,
+    #                                               midpoint=midpoint, corr=True,
+    #                                               plot_freq=1, view=False,
+    #                                               region_names=[i for i in range(len(_x_to_smooth))])
+    #     _x.append(_x_samples_filtered)
+    # print(t - time.time())
+
     _x = np.array(_x)
+    if np.isnan(_x).any():
+        raise Exception("Smoothed data contains NaN values. Please make sure no NaN values exist after smoothing.")
     _x = _x.transpose([1, 2, 0])
     if reduce_last_dim:
         _x = np.concatenate(_x, -1).T

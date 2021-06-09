@@ -121,8 +121,11 @@ def undersample(x_data, y_data, count_power, WINDOW_LENGTH, PREDICT_STEPS, regio
     return x_train_opt, y_train_opt
 
 
-def undersample2(x_train, y_train, count_power, region_names, PLOT, savepath=None):
+def undersample2(x_train, y_train, x_feats, count_power, scalers, region_names, PLOT, savepath=None):
     print(f"Undersampling. Expectated data (samples, window, regions). Got {x_train.shape}")
+    for i in x_train.shape[-1]:
+        x_train[:, :, i] /= scalers.data_max_[i]
+        y_train[:, :, i] /= scalers.data_max_[i]
     x_train = x_train.transpose([2, 0, 1])
     y_train = y_train.transpose([2, 0, 1])
 
@@ -161,6 +164,7 @@ def undersample2(x_train, y_train, count_power, region_names, PLOT, savepath=Non
         plt.savefig(savepath + 'logic.png')
 
     x_train_opt, y_train_opt = [], []
+    feats = []
     plt.figure(figsize=(5 * 6, 5 * 4))
     # under-sampling using optimal number of segments
     for i in range(n_regions):
@@ -183,19 +187,22 @@ def undersample2(x_train, y_train, count_power, region_names, PLOT, savepath=Non
         for j, idx in enumerate(idx_rand):
             x_train_opt.append(x_train[i, idx, :])
             y_train_opt.append(y_train[i, idx, :])
+            feats.append(x_feats[0,:,i])
     if savepath is not None:
         plt.savefig(savepath)
 
     x_train_opt = np.array(x_train_opt)
     y_train_opt = np.array(y_train_opt)
-
+    feats = np.array(feats)
     x_train_opt = np.expand_dims(x_train_opt, -1)
     y_train_opt = np.expand_dims(y_train_opt, -1)
-    return x_train_opt, y_train_opt
+    feats = np.expand_dims(feats, -1)
+    print(f"Undersmapled shape {x_train_opt.shape} {y_train_opt.shape} {feats.shape}")
+    return x_train_opt, y_train_opt, feats
 
 
-def undersample3(x_data, y_data, count_power, WINDOW_LENGTH, PREDICT_STEPS, region_names, PLOT, savepath=None):
-    print(f"Undersampling. Expected data (regions, days). Got {x_data.shape}")
+def undersample3(x_data, y_data, x_feats, count_power, scalers, region_names, PLOT, savepath=None):
+    print(f"Undersampling. Expected data (samples, window, regions). Got {x_data.shape}")
     # input shape is [samples, window, regions]
 
     """ PREVIOUS CODE """
@@ -210,13 +217,23 @@ def undersample3(x_data, y_data, count_power, WINDOW_LENGTH, PREDICT_STEPS, regi
     samples_all = np.reshape(samples_all, (samples_all.shape[0] * samples_all.shape[1], samples_all.shape[2]))
     """ """
     """ NEW CODE """
-    # _, window_x, _ = x_data.shape
-    # _, window_y, _ = y_data.shape
+
+    _, window_x, _ = x_data.shape
+    _, window_y, _ = y_data.shape
+    # for i in range(x_data.shape[-1]):
+    #     x_data[:, :, i] /= scalers.data_max_[i]
+    #     y_data[:, :, i] /= scalers.data_max_[i]
+
     # samples_x = x_data.reshape([-1, window_x])
     # samples_y = y_data.reshape([-1, window_y])
-    # samples_all = np.copy(samples_x)
+    samples_x = np.concatenate(x_data, -1).T
+    samples_y = np.concatenate(y_data, -1).T
+    samples_f = np.concatenate(x_feats, -1).T
+    samples_all = np.copy(samples_x)
     """ """
     samples_mean = np.mean(samples_all, axis=-1)
+
+
     # evaluating optimal number of segments for each district
     segment_array = np.rint(np.linspace(2, 20, 10)).astype(int)
 
@@ -267,8 +284,10 @@ def undersample3(x_data, y_data, count_power, WINDOW_LENGTH, PREDICT_STEPS, regi
     y_train_opt = samples_all[idx_rand, WINDOW_LENGTH:WINDOW_LENGTH + PREDICT_STEPS]
     """ """
     """ NEW CODE """
-    # x_train_opt = samples_x[idx_rand, :]
-    # y_train_opt = samples_y[idx_rand, :]
+    x_train_opt = samples_x[idx_rand, :]
+    y_train_opt = samples_y[idx_rand, :]
+    x_train_fea = samples_f[idx_rand, :]
+
     """ """
 
     if PLOT:
@@ -277,12 +296,12 @@ def undersample3(x_data, y_data, count_power, WINDOW_LENGTH, PREDICT_STEPS, regi
         plt.subplot(224)
         plt.hist(np.mean(x_train_opt, axis=-1), bins=50), plt.title(
             'seg:' + str(segments) + ' samples: ' + str(x_train_opt.shape[0]))
-        plt.show()
 
     if PLOT and savepath is not None:
         plt.savefig(savepath)
 
     x_train_opt = np.expand_dims(x_train_opt, -1)
     y_train_opt = np.expand_dims(y_train_opt, -1)
+    x_train_fea= np.expand_dims(x_train_fea, -1)
 
-    return x_train_opt, y_train_opt
+    return x_train_opt, y_train_opt,x_train_fea

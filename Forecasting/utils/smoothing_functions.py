@@ -61,13 +61,13 @@ def O_LPF(data, datatype, order, R_EIG_ratio, R_power, midpoint, corr, region_na
 
             # rescale filtered signal
             if datatype == 'daily':
-                Y = data_sums[i] * Y / np.sum(Y)
+                Y = data_sums[i] * Y / (np.sum(Y) if np.sum(Y) != 0 else 1)
                 # Y[Y<0]=0
                 # else:
                 #   for n in range(len(Y)-1):
                 #     if Y[n+1]-Y[n]<0:
                 #       Y[n+1]=Y[n]
-                Y = np.amax(X) * Y / np.amax(Y)
+                Y = np.amax(X) * Y / (np.sum(Y) if np.sum(Y) != 0 else 1)
 
             if corr:
                 J_R.append(np.mean(np.corrcoef(X, Y)))  # obtaining correlations
@@ -78,7 +78,7 @@ def O_LPF(data, datatype, order, R_EIG_ratio, R_power, midpoint, corr, region_na
             X_freqs, X_psd = signal.welch(X)
             Y_freqs, Y_psd = signal.welch(Y)
 
-            X_psd, Y_psd = np.log10(np.abs(X_psd)), np.log10(np.abs(Y_psd))
+            X_psd, Y_psd = np.log10(np.abs(X_psd)+1e-10), np.log10(np.abs(Y_psd)+1e-10)
 
             J0 = []
 
@@ -93,8 +93,8 @@ def O_LPF(data, datatype, order, R_EIG_ratio, R_power, midpoint, corr, region_na
         J_eig = np.around(J_eig).astype(int) ** 2
         J_R = np.array(J_R) ** R_power
         J_eig[J_eig < 0] = 0
-        J_EIG = (J_eig / np.amax(J_eig)) if np.amax(J_eig) != 0 else 0
-        J_Err = (J_R / np.amax(J_R)) if np.amax(J_R) != 0 else 0
+        J_EIG = J_eig / np.amax(J_eig) if np.amax(J_eig) != 0 else np.zeros_like(J_eig)
+        J_Err = J_R / np.amax(J_R) if np.amax(J_R) != 0 else np.zeros_like(J_R)
 
         if midpoint:
             J_tot = 1 - np.abs(R_cons * (J_Err) - EIG_cons * (J_EIG))
@@ -105,7 +105,7 @@ def O_LPF(data, datatype, order, R_EIG_ratio, R_power, midpoint, corr, region_na
         idx = np.argmax(J_tot)
         Y = lowpass_filter(X, cutoff_list[idx], fs, order)
         if datatype == 'daily':
-            Y = np.sum(data_sums[i]) * Y / np.sum(Y)
+            Y = np.sum(data_sums[i]) * Y / (np.sum(Y) if np.sum(Y) != 0 else 1)
             Y[Y < 0] = 0
         else:
             for n in range(len(Y) - 1):

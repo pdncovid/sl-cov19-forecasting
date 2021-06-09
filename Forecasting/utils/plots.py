@@ -59,7 +59,7 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
     """
     # plt.close('all')
     # plt.figure(figsize=(20, 10))
-    print(X.shape, Xf.shape)
+    # print(X.shape, Xf.shape)
     # for Y in Ys:
     #     print(Y.shape)
     # print(region_mask)
@@ -141,12 +141,17 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
                           markers=True, dashes=True,
                           legend=legend)
         
-        # if legend != False:
-#             plt.legend(loc='upper left')
-#             handles, labels = ax.get_legend_handles_labels()
-#             a = 2
-#             b = 6
-#             ax.legend(handles=handles[:a+len(method_list)]+handles[b+len(method_list):], labels=labels[:a+len(method_list)]+labels[b+len(method_list):], loc='lower left')
+        if legend != False:
+            plt.legend(loc='upper left')
+            handles, labels = ax.get_legend_handles_labels()
+            _handles = []
+            _labels = []
+            for i in range(len(labels)):
+                if labels[i] == 'Size' or len(labels[i]) == 1:
+                    continue
+                _handles.append(handles[i])
+                _labels.append(labels[i])
+            ax.legend(handles=_handles, labels=_labels, loc='lower left')
     ax.set_xlabel("Days")
     ax.set_ylabel("Cases")
     # plt.setp(ax.get_legend().get_texts(), fontsize='22') # for legend text
