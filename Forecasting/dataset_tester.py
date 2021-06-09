@@ -19,16 +19,15 @@ _df = pd.read_csv(os.path.join(dataset_path, "EU\jrc-covid-19-all-days-by-region
 _eu = _df['CountryName'].unique().tolist()
 
 plot_hist = False
-undersampling = False
-filtering = False
-check_spectral = True
+undersampling = True
+filtering = True
+check_spectral = False
 check_stft = False
-check_acf = True
+check_acf = False
+check_size = False
 
-# %%
-# countries = ['Texas']
-
-countries = ['Italy', 'Sri Lanka', 'NG', 'Texas']
+countries = ['Sri Lanka']
+# countries = ['Italy', 'Sri Lanka', 'NG', 'Texas']
 fft_mean = []
 fft_var = []
 acf_all = []
@@ -59,25 +58,29 @@ for country in countries:
 
         if midpoint:
             R_EIG_ratio = 1
+            R_power = 2 / 3
         else:
-            R_EIG_ratio = 2
+            R_EIG_ratio = 3
+            R_power = 1
 
         daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=5, R_EIG_ratio=R_EIG_ratio,
-                                             midpoint=midpoint, corr=True,
+                                             R_power=R_power, midpoint=midpoint, corr=True,
                                              region_names=region_names, plot_freq=1, view=False)
 
-        # daily_split_filtered, daily_split = split_and_smooth(daily_cases, look_back_window=seg_len, window_slide=10,
-        #                                                      R_weight=5,
-        #                                                      EIG_weight=2, midpoint=False,
-        #                                                      reduce_last_dim=False)
+        # daily_split_filtered, daily_split = split_and_smooth(daily_cases, look_back_window=100, window_slide=50,
+        #                                                      R_EIG_ratio=R_EIG_ratio, R_power=R_power, order=2,
+        #                                                      midpoint=False, reduce_last_dim=False, view=False)
 
-        for i in range(len(region_names)):
-            plt.figure()
-            plt.plot(daily_cases[i, :])
-            plt.plot(daily_filtered[i, :])
-            plt.show()
+        # for i in range(len(region_names)):
+        #     plt.figure()
+        #     plt.subplot(1, 2, 1)
+        #     plt.plot(daily_cases[i, :])
+        #     plt.plot(daily_filtered[i, :])
+        #     plt.title('region: '+region_names[i]+'  cutoff: '+str(np.around(cutoff_freqs[i], 4)))
+        #     plt.subplot(1, 2, 2)
+        #     plt.show()
 
-    # %% check FFT of each region
+    # check FFT of each region
     if check_spectral:
 
         window = 20
@@ -106,8 +109,7 @@ for country in countries:
         acf_all.append(np.mean(cases_acf, axis=0))
         pacf_all.append(np.mean(cases_pacf, axis=0))
 
-
-    # %% STFT of each region
+    # STFT of each region
 
     if check_stft:
         for i in range(len(region_names)):
@@ -135,9 +137,9 @@ for country in countries:
             # STFT of each region with splitting
         for i in range(len(region_names)):
             # Generate 5 random numbers between 10 and 30
-            randomlist = random.sample(range(0, daily_split.shape[0]), 3)
+            random_list = random.sample(range(0, daily_split.shape[0]), 3)
             # print(randomlist)
-            for k in randomlist:
+            for k in random_list:
                 plt.figure(figsize=(12, 7))
                 plt.subplot(221)
                 plt.plot(daily_split[k, :, i], linewidth=2)
@@ -160,13 +162,26 @@ for country in countries:
                 plt.xlabel('Time [day]')
                 plt.show()
 
-    # %% under sample from whole epicurve
+    # under sample from whole epicurve
     if undersampling:
-        from Forecasting.utils.undersampling import undersample
 
-        x_train_uf, y_train_uf = undersample(daily_filtered, daily_filtered, WINDOW_LENGTH, PREDICT_STEPS, region_names,
-                                             True)
-        x_train_u, y_train_u = undersample(daily_cases, daily_cases, WINDOW_LENGTH, PREDICT_STEPS, region_names, True)
+        count_powers = np.around(np.linspace(0.2, 2, 20), 3)
+        dataset_size = daily_cases.shape[0] * daily_cases.shape[1]
+        print('dataset_size = ' + str(dataset_size))
+        a = (2 - 0.1) / (1000 - 100000)
+        b = 2 - (a / 1000)
+
+        count_power = np.around(dataset_size * a + b, 3)
+        print('count_power = ' + str(count_power))
+
+        from Forecasting.utils.undersampling import undersample, undersample2, undersample3
+
+        x_train_uf, y_train_uf = undersample3(daily_filtered, daily_filtered, count_power, WINDOW_LENGTH,
+                                              PREDICT_STEPS, region_names,
+                                              True)
+
+        x_train_u, y_train_u = undersample3(daily_cases, daily_cases, count_power, WINDOW_LENGTH,
+                                            PREDICT_STEPS, region_names, False)
 
         if plot_hist:
             plt.figure()
@@ -208,38 +223,38 @@ for country in countries:
             k_fold=3, test_fold=2, reduce_last_dim=False,
             only_train_test=True, debug=True)
 
-        x_train_uf, y_train_uf = undersample2(X_trainf, Y_trainf, region_names, True)
-        x_train_u, y_train_u = undersample2(X_train, Y_train, region_names, True)
+        x_train_uf, y_train_uf = undersample2(X_trainf, Y_trainf, count_power, region_names, True)
+        x_train_u, y_train_u = undersample2(X_train, Y_train, count_power, region_names, True)
 
-        if plot_hist:
-            plt.figure()
-            # plt.yscale('log')
-
-            cum = True
-            ht = 'step'
-            alpha = 1
-            s = 100
-            _max = np.max([X_train.max(), X_trainf.max(), x_train_u.max(), x_train_uf.max()])
-            bins = np.linspace(0, _max.max(), s)
-
-
-            def f(x):
-                return x.reshape(-1)
-
-
-            plt.hist(f(X_train), bins=bins, alpha=alpha, cumulative=cum, histtype=ht, label='Raw data', density=True)
-            plt.hist(f(X_trainf), bins=bins, alpha=alpha, cumulative=cum, histtype=ht, label='Smoothed data',
-                     density=True)
-            plt.hist(f(x_train_u), bins=bins, alpha=alpha, cumulative=cum, histtype=ht, label='Raw data (Undersampled)',
-                     density=True)
-            plt.hist(f(x_train_uf), bins=bins, alpha=alpha, cumulative=cum, histtype=ht,
-                     label='Smoothed data (Undersampled)',
-                     density=True)
-            plt.legend()
-            plt.xlabel("Number of daily cases")
-            plt.ylabel("Probability density in the dataset")
-
-            plt.show()
+        # if plot_hist:
+        #     plt.figure()
+        #     # plt.yscale('log')
+        #
+        #     cum = True
+        #     ht = 'step'
+        #     alpha = 1
+        #     s = 100
+        #     _max = np.max([X_train.max(), X_trainf.max(), x_train_u.max(), x_train_uf.max()])
+        #     bins = np.linspace(0, _max.max(), s)
+        #
+        #
+        #     def f(x):
+        #         return x.reshape(-1)
+        #
+        #
+        #     plt.hist(f(X_train), bins=bins, alpha=alpha, cumulative=cum, histtype=ht, label='Raw data', density=True)
+        #     plt.hist(f(X_trainf), bins=bins, alpha=alpha, cumulative=cum, histtype=ht, label='Smoothed data',
+        #              density=True)
+        #     plt.hist(f(x_train_u), bins=bins, alpha=alpha, cumulative=cum, histtype=ht, label='Raw data (Undersampled)',
+        #              density=True)
+        #     plt.hist(f(x_train_uf), bins=bins, alpha=alpha, cumulative=cum, histtype=ht,
+        #              label='Smoothed data (Undersampled)',
+        #              density=True)
+        #     plt.legend()
+        #     plt.xlabel("Number of daily cases")
+        #     plt.ylabel("Probability density in the dataset")
+        #
+        #     plt.show()
 
 if check_spectral:
     fft_mean = np.array(fft_mean)
@@ -252,7 +267,7 @@ if check_spectral:
         plt.subplot(len(countries), 2, 2 * i + 2)
         plt.plot(fft_var[i, :])
         plt.title('var fft for ' + countries[i])
-    plt.suptitle('FFT for countries: '+str(countries), weight='bold')
+    plt.suptitle('FFT for countries: ' + str(countries), weight='bold')
     plt.show()
 
 if check_acf:
@@ -260,7 +275,7 @@ if check_acf:
     pacf_all = np.array(pacf_all)
     acf_diff = np.diff(acf_all)
     pacf_diff = np.diff(pacf_all)
-    plt.figure(figsize=(12*2, 3.5 * len(countries)))
+    plt.figure(figsize=(12 * 2, 3.5 * len(countries)))
     for i in range(len(countries)):
         plt.subplot(len(countries), 4, 4 * i + 1)
         plt.stem(acf_all[i, :])
@@ -274,6 +289,5 @@ if check_acf:
         plt.subplot(len(countries), 4, 4 * i + 4)
         plt.stem(pacf_diff[i, :]), plt.ylim([-0.3, 0.3])
         plt.title('mean pacf DIFF for ' + countries[i])
-    plt.suptitle('ACF and PACF for countries: '+str(countries), weight='bold')
+    plt.suptitle('ACF and PACF for countries: ' + str(countries), weight='bold')
     plt.show()
-
