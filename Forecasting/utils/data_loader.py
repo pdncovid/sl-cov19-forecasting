@@ -7,6 +7,7 @@ from utils.functions import normalize_for_nn
 from utils.smoothing_functions import O_LPF
 import matplotlib.pyplot as plt
 
+
 def reduce_regions_to_batch(arrs):
     ret = []
     for arr in arrs:
@@ -16,6 +17,7 @@ def reduce_regions_to_batch(arrs):
             ret.append(arr)
     return ret
 
+
 def expand_dims(arrs, to):
     ret = []
     for arr in arrs:
@@ -24,6 +26,7 @@ def expand_dims(arrs, to):
         else:
             ret.append(arr)
     return ret
+
 
 def per_million(data, population):
     # divide by population
@@ -60,7 +63,8 @@ def get_data(filtered, normalize, data, dataf, population):
         return x.T, y.T, None
 
 
-def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,R_EIG_ratio, R_power,
+def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint, R_EIG_ratio,
+                    R_power,
                     look_back_filter, look_back_window, window_slide):
     d = load_data(DATASET, path=data_path)
     region_names = d["region_names"]
@@ -103,7 +107,6 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
         Y_test = Y[idx[X_train_idx:]]
         X_train_feat = np.expand_dims(features.T, 0).repeat(X_train.shape[0], 0)
         X_test_feat = np.expand_dims(features.T, 0).repeat(X_test.shape[0], 0)
-
 
         X_val = np.zeros((0, *X_train.shape[1:]))
         Y_val = np.zeros((0, *Y_train.shape[1:]))
@@ -166,12 +169,15 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
 
     return X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat
 
-def load_multiple_train_data(DATASETS, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,R_EIG_ratio, R_power,
-                    look_back_filter, look_back_window, window_slide):
+
+def load_multiple_train_data(DATASETS, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
+                             R_EIG_ratio, R_power,
+                             look_back_filter, look_back_window, window_slide):
     ret = []
     for DATASET in DATASETS:
-        tmp = load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint, R_EIG_ratio, R_power,
-                        look_back_filter, look_back_window, window_slide)
+        tmp = load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
+                              R_EIG_ratio, R_power,
+                              look_back_filter, look_back_window, window_slide)
 
         if len(DATASETS) > 1:
             tmp = reduce_regions_to_batch(tmp)  # can't load multiple datasets if we keep regions in separate dim
@@ -184,7 +190,9 @@ def load_multiple_train_data(DATASETS, data_path, TRAINING_DATA_TYPE, WINDOW_LEN
                 ret[i] = np.concatenate([ret[i], tmp[i]], 0)
     return ret
 
-def load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,R_EIG_ratio, R_power,
+
+def load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint, R_EIG_ratio,
+                    R_power,
                     look_back_filter, look_back_window, window_slide):
     fname = f"{TRAINING_DATA_TYPE}_{WINDOW_LENGTH}_{PREDICT_STEPS}_{R_EIG_ratio}_{R_power}"
     if look_back_filter and TRAINING_DATA_TYPE == "Filtered":
@@ -205,7 +213,8 @@ def load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
         Y_val = np.load(f'./preprocessed_data/{DATASET}/Y_val_{fname}.npy')
         X_val_feat = np.load(f'./preprocessed_data/{DATASET}/X_val_feat_{fname}.npy')
     else:
-        tmp = save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,R_EIG_ratio,R_power,
+        tmp = save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
+                              R_EIG_ratio, R_power,
                               look_back_filter, look_back_window, window_slide)
         X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat = tmp
     return X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat
@@ -300,7 +309,6 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
         df_population = pd.read_csv(os.path.join(dataset_path, "2019_txpopest_county.csv"),
                                     header=0)  # https://demographics.texas.gov/Resources/TPEPP/Estimates/2019/2019_txpopest_county.csv
 
-
         # conv to np.array
         confirmed_cases = np.array(np.float64(df_confirmed.iloc[:, 1:].values))
         region_names = np.array(df_population.iloc[:-1, 1].values)
@@ -378,7 +386,12 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
         dataset_path = os.path.join(path, "Global")
 
     if DATASET == "IT":
-        return load_data_eu("Italy", True, path)
+        d = load_data_eu("Italy", True, path)
+        region_names = d["region_names"]
+        confirmed_cases = d["confirmed_cases"]
+        daily_cases = d["daily_cases"]
+        START_DATE = d["START_DATE"]
+        n_regions = d["n_regions"]
 
     features = pd.DataFrame(columns=['Population'], index=region_names)  # todo population ignored, features ignored now
     features['Population'] = 1e6
