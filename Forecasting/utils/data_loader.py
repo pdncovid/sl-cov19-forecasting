@@ -60,7 +60,7 @@ def get_data(filtered, normalize, data, dataf, population):
         return x.T, y.T, None
 
 
-def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
+def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,R_EIG_ratio, R_power,
                     look_back_filter, look_back_window, window_slide):
     d = load_data(DATASET, path=data_path)
     region_names = d["region_names"]
@@ -75,7 +75,8 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
     features = features.values
 
     daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, midpoint=midpoint, corr=True,
-                                         R_EIG_ratio=1, R_power=1, region_names=region_names, plot_freq=1, view=False)
+                                         R_EIG_ratio=R_EIG_ratio, R_power=R_power, region_names=region_names,
+                                         plot_freq=1, view=False)
     x_data, y_data, x_data_scalers = get_data(False, normalize=True, data=daily_cases, dataf=daily_filtered,
                                               population=population)
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=daily_cases, dataf=daily_filtered,
@@ -88,18 +89,18 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
 
         # smooth data
         _x, _ = split_and_smooth(x_data.T, look_back_window=look_back_window, window_slide=window_slide,
-                                 R_EIG_ratio=1,
+                                 R_EIG_ratio=R_EIG_ratio, R_power=R_power,
                                  midpoint=midpoint,
                                  reduce_last_dim=False)
         X = _x[:, -WINDOW_LENGTH - PREDICT_STEPS:-PREDICT_STEPS, :]
         Y = _x[:, -PREDICT_STEPS:, :]
         idx = np.arange(X.shape[0])
         np.random.shuffle(idx)
-        X_train_idx = np.ceil(len(idx) * 0.66).astype(int)
-        X_train = X[:X_train_idx]
-        Y_train = Y[:X_train_idx]
-        X_test = X[X_train_idx:]
-        Y_test = Y[X_train_idx:]
+        X_train_idx = np.ceil(len(idx) * 0.8).astype(int)
+        X_train = X[idx[:X_train_idx]]
+        Y_train = Y[idx[:X_train_idx]]
+        X_test = X[idx[X_train_idx:]]
+        Y_test = Y[idx[X_train_idx:]]
         X_train_feat = np.expand_dims(features.T, 0).repeat(X_train.shape[0], 0)
         X_test_feat = np.expand_dims(features.T, 0).repeat(X_test.shape[0], 0)
 
@@ -131,7 +132,7 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
         os.makedirs(f'./preprocessed_data/{DATASET}')
     except FileExistsError as e:
         pass
-    fname = f"{TRAINING_DATA_TYPE}_{WINDOW_LENGTH}_{PREDICT_STEPS}"
+    fname = f"{TRAINING_DATA_TYPE}_{WINDOW_LENGTH}_{PREDICT_STEPS}_{R_EIG_ratio}_{R_power}"
     if look_back_filter and TRAINING_DATA_TYPE == "Filtered":
         fname += f"_{midpoint}_{look_back_window}_{window_slide}"
 
@@ -165,15 +166,15 @@ def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
 
     return X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat
 
-def load_multiple_train_data(DATASETS, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
+def load_multiple_train_data(DATASETS, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,R_EIG_ratio, R_power,
                     look_back_filter, look_back_window, window_slide):
     ret = []
     for DATASET in DATASETS:
-        tmp = load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
+        tmp = load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint, R_EIG_ratio, R_power,
                         look_back_filter, look_back_window, window_slide)
 
         if len(DATASETS) > 1:
-            tmp = reduce_regions_to_batch(tmp) # can't load multiple datasets if we keep regions in separate dim
+            tmp = reduce_regions_to_batch(tmp)  # can't load multiple datasets if we keep regions in separate dim
             tmp = expand_dims(tmp, 3)
 
         if len(ret) == 0:
@@ -183,9 +184,9 @@ def load_multiple_train_data(DATASETS, data_path, TRAINING_DATA_TYPE, WINDOW_LEN
                 ret[i] = np.concatenate([ret[i], tmp[i]], 0)
     return ret
 
-def load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
+def load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,R_EIG_ratio, R_power,
                     look_back_filter, look_back_window, window_slide):
-    fname = f"{TRAINING_DATA_TYPE}_{WINDOW_LENGTH}_{PREDICT_STEPS}"
+    fname = f"{TRAINING_DATA_TYPE}_{WINDOW_LENGTH}_{PREDICT_STEPS}_{R_EIG_ratio}_{R_power}"
     if look_back_filter and TRAINING_DATA_TYPE == "Filtered":
         fname += f"_{midpoint}_{look_back_window}_{window_slide}"
 
@@ -204,7 +205,7 @@ def load_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDI
         Y_val = np.load(f'./preprocessed_data/{DATASET}/Y_val_{fname}.npy')
         X_val_feat = np.load(f'./preprocessed_data/{DATASET}/X_val_feat_{fname}.npy')
     else:
-        tmp = save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
+        tmp = save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,R_EIG_ratio,R_power,
                               look_back_filter, look_back_window, window_slide)
         X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat = tmp
     return X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat
@@ -299,7 +300,6 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
         df_population = pd.read_csv(os.path.join(dataset_path, "2019_txpopest_county.csv"),
                                     header=0)  # https://demographics.texas.gov/Resources/TPEPP/Estimates/2019/2019_txpopest_county.csv
 
-        print(df_population)
 
         # conv to np.array
         confirmed_cases = np.array(np.float64(df_confirmed.iloc[:, 1:].values))
@@ -319,26 +319,6 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
         n_regions = confirmed_cases.shape[0]
         days = confirmed_cases.shape[1]
 
-        print('confirmed cases shape:', confirmed_cases.shape, '  daily cases shape:', daily_cases.shape,
-              '  population shape:', population.shape)
-        print('counties:', n_regions, '  days:', days)
-
-        # daily_cases_1M = np.copy(daily_cases)
-        # confirmed_cases_1M = np.copy(confirmed_cases)
-        # for i in range(n_regions):
-        #     daily_cases_1M[i,:] = 1000000*daily_cases_1M[i,:]/population[i]
-        #     confirmed_cases_1M[i,:] = 1000000*confirmed_cases_1M[i,:]/population[i]
-
-        # plots = [confirmed_cases[:,:].T, daily_cases[:,:].T, confirmed_cases_1M[:,:].T, daily_cases_1M[:,:].T, ]
-        # titles = ['Texas: cumulative cases','Texas: daily new cases','Texas: cumulative cases per 1M','Texas: daily new cases per 1M']
-        # plt.figure(figsize=(14,9))
-        # for i in range(len(titles)):
-        #     plt.subplot(2,2,i+1)
-        #     plt.plot(plots[i],linewidth=2)
-        #     plt.title(titles[i])
-        #     if i in [2,3]:
-        #         plt.xlabel('days since April 3 2020')
-        # plt.show()
     if DATASET == "USA":
         dataset_path = os.path.join(path, "US")
 
@@ -396,6 +376,13 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
 
     if DATASET == "Global":
         dataset_path = os.path.join(path, "Global")
+
+    if DATASET == "IT":
+        return load_data_eu("Italy", True, path)
+
+    features = pd.DataFrame(columns=['Population'], index=region_names)  # todo population ignored, features ignored now
+    features['Population'] = 1e6
+
     return {
         "region_names": region_names,
         "confirmed_cases": confirmed_cases,

@@ -68,7 +68,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='Texas')
+                        default='SL')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-01-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
@@ -110,6 +110,11 @@ def main():
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
 
+    midpoint = True
+    R_EIG_ratio = 3
+    R_power = 1
+    look_back_filter = True
+    look_back_window, window_slide = 50, 1
     PLOT = True
 
     # ===================================================================================================== Loading data
@@ -150,8 +155,8 @@ def main():
 
     print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
 
-    daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_EIG_ratio=1, R_power=1,
-                                         midpoint=True,
+    daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_EIG_ratio=R_EIG_ratio, R_power=R_power,
+                                         midpoint=midpoint,
                                          corr=True,
                                          region_names=region_names, plot_freq=1, view=False)
 
@@ -285,7 +290,7 @@ def main():
     #              [{'label_name': model_names[1][1] + '-raw', 'line_size': 4},
     #               {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
     #              ]
-    country="Texas"
+    country="SL"
     model_names = [
         (f'{country}_LSTM_Simple_WO_Regions_Unfiltered_None_14_7', 'LSTM-R-None'),
         (f'{country}_LSTM_Simple_WO_Regions_Filtered_None_14_7', 'LSTM-F-None'),

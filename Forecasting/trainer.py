@@ -177,6 +177,8 @@ def main():
     UNDERSAMPLING = args.undersampling
 
     midpoint = True
+    R_EIG_ratio = 3
+    R_power = 1
     look_back_filter = True
     look_back_window, window_slide = 50, 1
     PLOT = True
@@ -252,7 +254,7 @@ def main():
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=daily_cases, dataf=daily_filtered,
                                                  population=population)
 
-    tmp = load_train_data(DATASET, args.path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,
+    tmp = load_train_data(DATASET, args.path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,R_EIG_ratio,R_power,
                           look_back_filter, look_back_window, window_slide)
     X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat = tmp
 
@@ -269,11 +271,14 @@ def main():
         count_power = np.around(dataset_size * a + b, 3)
         if count_power > 2:
             count_power = 2
-        # elif count_power < 0.1:
-        #     count_power = 0.1
-
+        elif count_power < 0.2:
+            count_power = 0.2
+        n_original = X_train.shape[0]*X_train.shape[2]
         X_train, Y_train,X_train_feat  = undersample3(X_train, Y_train, X_train_feat, count_power, region_names, PLOT,
                                         savepath=f'./logs/{folder}/images/under_{DATASET}.png' if PLOT else None)
+        print(f"Undersample percentage {X_train.shape[0]/n_original*100:.2f}%")
+        EPOCHS = min(250, int(EPOCHS*n_original/X_train.shape[0]))
+        print(f"New Epoch = {EPOCHS}")
         # here Xtrain have been reduced by regions
 
 

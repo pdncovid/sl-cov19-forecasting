@@ -7,12 +7,12 @@ from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool
 
 
-def f(arr, R_EIG_ratio, midpoint):
-    return O_LPF(arr, datatype='daily', order=3, R_EIG_ratio=R_EIG_ratio, R_power=1.5, midpoint=midpoint, corr=True,
+def f(arr, R_EIG_ratio,R_power, midpoint):
+    return O_LPF(arr, datatype='daily', order=3, R_EIG_ratio=R_EIG_ratio, R_power=R_power, midpoint=midpoint, corr=True,
                  plot_freq=1, view=False, region_names=[i for i in range(len(arr))])
 
 
-def split_and_smooth(x, look_back_window=100, window_slide=10, R_EIG_ratio=1, midpoint=False,
+def split_and_smooth(x, look_back_window=100, window_slide=10, R_EIG_ratio=1, R_power=1, midpoint=False,
                      reduce_last_dim=False):
     print(f"Split and smooth. Expected (nregions, days) Got {x.shape}. Look back window {look_back_window}")
     _x_to_smooth, _ = split_into_pieces_inorder(x, x, look_back_window, 0, window_slide, reduce_last_dim=False)
@@ -24,9 +24,10 @@ def split_and_smooth(x, look_back_window=100, window_slide=10, R_EIG_ratio=1, mi
 
     arrs = [_x_to_smooth[:, :, i] for i in range(n)]
     r_eig = list(itertools.repeat(R_EIG_ratio, n))
+    r_pow = list(itertools.repeat(R_power, n))
     mid = list(itertools.repeat(midpoint, n))
 
-    results = pool.starmap(f, zip(arrs, r_eig, mid))
+    results = pool.starmap(f, zip(arrs, r_eig, r_pow, mid))
     _x = [results[i][0] for i in range(len(results))]
 
 
