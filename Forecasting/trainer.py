@@ -29,7 +29,8 @@ from tensorflow.keras.callbacks import TensorBoard
 
 # plots
 import matplotlib.pyplot as plt
-import matplotlib as mpl
+import matplotlib
+matplotlib.use('Agg')
 from utils.plots import plot_prediction
 from utils.functions import normalize_for_nn, undo_normalization, bs
 from utils.data_loader import load_data, per_million, get_data,reduce_regions_to_batch,expand_dims
