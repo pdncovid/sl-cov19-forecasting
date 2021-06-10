@@ -13,7 +13,6 @@ import tensorflow as tf
 import warnings
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-mpl.use('Agg')
 warnings.filterwarnings(
     "ignore")  # We will use deprecated models of statmodels which throw a lot of warnings to use more modern ones
 
