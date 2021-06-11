@@ -143,7 +143,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='IT')
+                        default='NG')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-02-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)

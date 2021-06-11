@@ -67,10 +67,10 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
     sns.set(font_scale=1.5)
     dfs=[]
     idx = 0
-    for i in range(len(X)):
-        x = X[i]
-        xf = Xf[i]
-        y = Ys[i]
+    for _i in range(len(X)):
+        x = X[_i]
+        xf = Xf[_i]
+        y = Ys[_i]
                 
         x_n, lines_x = x.shape
         methods, y_n, lines_y = y.shape
@@ -113,14 +113,14 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
                 d['Days'] += [idx+i for i in range(x_n-1, x_n+y_n+1)]
                 if preprocessing=='Filtered':
                     d['New cases'] += [xf[-1, c]] + [i for i in y[m, :, c]]
-                    if i+1 != X.shape[0]:
-                        d['New cases'] += [Xf[i+1,0,c]]
+                    if _i+1 != X.shape[0]:
+                        d['New cases'] += [Xf[_i+1,0,c]]
                     else:
                         d['New cases'] += [y[m, -1, c]]
                 else:
                     d['New cases'] += [x[-1, c]] + [i for i in y[m, :, c]]
-                    if i+1 != X.shape[0]:
-                        d['New cases'] += [X[i+1,0,c]]
+                    if _i+1 != X.shape[0]:
+                        d['New cases'] += [X[_i+1,0,c]]
                     else:
                         d['New cases'] += [y[m, -1, c]]
                 
@@ -130,7 +130,7 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
         df = pd.DataFrame(d)
         df.set_index('Days')
         dfs.append(df)
-        if i==0:
+        if _i==0:
             legend = 'brief'
         else:
             legend = False
@@ -146,11 +146,11 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
             handles, labels = ax.get_legend_handles_labels()
             _handles = []
             _labels = []
-            for i in range(len(labels)):
-                if labels[i] == 'Size' or len(labels[i]) == 1:
+            for _i in range(len(labels)):
+                if labels[_i] == 'Size' or len(labels[_i]) == 1:
                     continue
-                _handles.append(handles[i])
-                _labels.append(labels[i])
+                _handles.append(handles[_i])
+                _labels.append(labels[_i])
             ax.legend(handles=_handles, labels=_labels, loc='lower left')
     ax.set_xlabel("Days")
     ax.set_ylabel("Cases")
