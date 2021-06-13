@@ -7,7 +7,7 @@ from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool
 
 
-def f(arr, R_EIG_ratio,R_power, midpoint):
+def f(arr, R_EIG_ratio, R_power, midpoint):
     return O_LPF(arr, datatype='daily', order=3, R_EIG_ratio=R_EIG_ratio, R_power=R_power, midpoint=midpoint, corr=True,
                  plot_freq=1, view=False, region_names=[i for i in range(len(arr))])
 
@@ -19,7 +19,7 @@ def split_and_smooth(x, look_back_window=100, window_slide=10, R_EIG_ratio=1, R_
     _x = []
 
     # t = time.time()
-    pool = Pool(8)
+    pool = Pool(6)
     n = _x_to_smooth.shape[-1]
 
     arrs = [_x_to_smooth[:, :, i] for i in range(n)]
@@ -29,7 +29,6 @@ def split_and_smooth(x, look_back_window=100, window_slide=10, R_EIG_ratio=1, R_
 
     results = pool.starmap(f, zip(arrs, r_eig, r_pow, mid))
     _x = [results[i][0] for i in range(len(results))]
-
 
     # t = time.time()
     # for i in range(_x_to_smooth.shape[-1]):
@@ -41,11 +40,14 @@ def split_and_smooth(x, look_back_window=100, window_slide=10, R_EIG_ratio=1, R_
     #     _x.append(_x_samples_filtered)
 
     _x = np.array(_x)
+    _x_to_smooth = np.array(_x_to_smooth)
     if np.isnan(_x).any():
         raise Exception("Smoothed data contains NaN values. Please make sure no NaN values exist after smoothing.")
     _x = _x.transpose([1, 2, 0])
     if reduce_last_dim:
         _x = np.concatenate(_x, -1).T
+        _x_to_smooth = np.array(_x_to_smooth)
+
     return _x, _x_to_smooth
 
 

@@ -6,6 +6,7 @@ import seaborn as sns
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
+
 # Mean squared error with boosting low frequency samples
 def bs(arr, v):
     l, r = 0, len(arr)
@@ -19,12 +20,12 @@ def bs(arr, v):
             return i
     return l
 
-    
+
 # ==================================== TODO: find a good normalization technique
 def normalize_for_nn(data, given_scalers=None):
     data = np.copy(data)
     # print(f"NORMALIZING; Data: {data.shape} expected (regions, days)")
-#     data = np.log(data.astype('float32')+1)
+    #     data = np.log(data.astype('float32')+1)
     if given_scalers is None:
         scalers = MinMaxScaler()
         scalers.fit(data.T)
@@ -41,24 +42,25 @@ def normalize_for_nn(data, given_scalers=None):
     #         scale = float(np.max(data[i,:]))
     #     scalers.append(scale)
     #     data[i,:] /= scale
-    
+
     return data, scalers
+
 
 def undo_normalization(normalized_data, scalers):
     normalized_data = np.copy(normalized_data)
     if len(normalized_data.shape) == 2:
-        normalized_data = np.expand_dims(normalized_data,0)
-    
-    # print(f"DENORMALIZING; Norm Data: {normalized_data.shape} expected (samples, windowsize, region)")
-    samples, windowsize,regions = normalized_data.shape
+        normalized_data = np.expand_dims(normalized_data, 0)
 
-    normalized_data = scalers.inverse_transform(normalized_data.reshape((-1,regions)))
-    normalized_data = normalized_data.reshape((samples, windowsize,regions))
-#     for i in range(len(scalers)):
-#         normalized_data[:,:,i] *= scalers[i]
-# #     normalized_data[normalized_data>10] = np.nan
-# #     normalized_data = np.exp(normalized_data)-1
-# #     print("NAN",np.isnan(normalized_data).sum())
+    # print(f"DENORMALIZING; Norm Data: {normalized_data.shape} expected (samples, windowsize, region)")
+    samples, windowsize, regions = normalized_data.shape
+
+    normalized_data = scalers.inverse_transform(normalized_data.reshape((-1, regions)))
+    normalized_data = normalized_data.reshape((samples, windowsize, regions))
+    #     for i in range(len(scalers)):
+    #         normalized_data[:,:,i] *= scalers[i]
+    # #     normalized_data[normalized_data>10] = np.nan
+    # #     normalized_data = np.exp(normalized_data)-1
+    # #     print("NAN",np.isnan(normalized_data).sum())
     return normalized_data
 
 
@@ -83,25 +85,25 @@ def distance(lat1, lat2, lon1, lon2):
     # calculate the result
     return c * r
 
-def convert_lon_lat_to_adjacency_matrix(df, lat_column="Lat", lon_column="Long", delta = 1e-5):
+
+def convert_lon_lat_to_adjacency_matrix(df, lat_column="Lat", lon_column="Long", delta=1e-5):
     N = len(df)
     A = np.zeros((N, N))
-    i,j=0,0
+    i, j = 0, 0
     for _i, row_i in df.iterrows():
-        j=0
+        j = 0
         for _j, row_j in df.iterrows():
             A[i][j] = distance(row_i[lat_column], row_j[lat_column], row_i[lon_column], row_j[lon_column])
             if A[i][j] < delta:
                 A[i][j] = 0
-            if i==j:
+            if i == j:
                 A[i][j] = 0
-            
+
             if A[i][j] > 0:
-                A[i][j] = 1/A[i][j]
-            
+                A[i][j] = 1 / A[i][j]
+
             j += 1
         i += 1
     print("Adjacency matrix created")
-    A = A/A.max()
+    A = A / A.max()
     return A.astype(np.float32)
-
