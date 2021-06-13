@@ -19,9 +19,8 @@ import os
 import sys
 import time
 import matplotlib as mpl
-mpl.use('Agg')
 
-from utils.data_loader import load_train_data
+mpl.use('Agg')
 
 sys.path.insert(0, os.path.join(sys.path[0], '..'))
 import pandas as pd  # Basic library for all of our dataset operations
@@ -34,7 +33,8 @@ from tensorflow.keras.callbacks import TensorBoard
 import matplotlib.pyplot as plt
 from utils.plots import plot_prediction
 from utils.functions import normalize_for_nn, undo_normalization, bs
-from utils.data_loader import load_data, per_million, get_data,reduce_regions_to_batch,expand_dims
+from utils.data_loader import load_data, per_million, get_data, reduce_regions_to_batch, expand_dims, \
+    load_multiple_data, load_samples
 from utils.smoothing_functions import O_LPF
 from utils.data_splitter import split_on_time_dimension, split_into_pieces_inorder, \
     split_and_smooth
@@ -136,14 +136,12 @@ def train(model, train_data, X_train, Y_train, X_test, Y_test):
     model.save("models/" + fmodel_name + ".h5")
 
 
-
-
 def main():
     # ============================================================================================ Initialize parameters
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
-    parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='NG')
+    parser.add_argument('--dataset', help='Dataset used for training. (SL, Texas, USA, Global)', type=str,
+                        nargs='+')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-02-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
@@ -162,11 +160,11 @@ def main():
 
     args = parser.parse_args()
 
-    global daily_data, DATASET, split_date, EPOCHS, BATCH_SIZE, BUFFER_SIZE, WINDOW_LENGTH, PREDICT_STEPS, lr, \
+    global daily_data, DATASET, DATASETS, split_date, EPOCHS, BATCH_SIZE, BUFFER_SIZE, WINDOW_LENGTH, PREDICT_STEPS, lr, \
         TRAINING_DATA_TYPE, UNDERSAMPLING, PLOT, daily_cases, daily_filtered, population, region_names, split_days, \
         x_data_scalers, folder, fmodel_name
     daily_data = args.daily
-    DATASET = args.dataset
+    DATASETS = args.dataset
     split_date = args.split_date
 
     EPOCHS = args.epochs
@@ -181,7 +179,6 @@ def main():
     midpoint = True
     R_EIG_ratio = 3
     R_power = 1
-    look_back_filter = True
     look_back_window, window_slide = 50, 1
     PLOT = True
 
@@ -201,7 +198,7 @@ def main():
 
 
     """
-
+    DATASET = "SL"
     d = load_data(DATASET, path=args.path)
     region_names = d["region_names"]
     confirmed_cases = d["confirmed_cases"]
@@ -238,7 +235,7 @@ def main():
                                             n_features=n_features,
                                             n_regions=n_regions)
 
-    fmodel_name = DATASET + "_" + model.name + "_" + TRAINING_DATA_TYPE + '_' + UNDERSAMPLING + '_' + str(
+    fmodel_name = str(DATASETS) + "_" + model.name + "_" + TRAINING_DATA_TYPE + '_' + UNDERSAMPLING + '_' + str(
         model.input.shape[1]) + '_' + str(model.output.shape[1])
 
     print(fmodel_name)
@@ -256,10 +253,14 @@ def main():
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=daily_cases, dataf=daily_filtered,
                                                  population=population)
 
-    tmp = load_train_data(DATASET, args.path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint,R_EIG_ratio,R_power,
-                          look_back_filter, look_back_window, window_slide)
-    X_train, Y_train, X_train_feat, X_test, Y_test, X_test_feat, X_val, Y_val, X_val_feat = tmp
-
+    fil, raw = load_multiple_data(DATASETS, args.path, look_back_window, window_slide, R_EIG_ratio, R_power, midpoint)
+    if TRAINING_DATA_TYPE == "Filtered":
+        X_train, Y_train, X_test, Y_test, X_val, Y_val = load_samples(fil, WINDOW_LENGTH, PREDICT_STEPS)
+    else:
+        X_train, Y_train, X_test, Y_test, X_val, Y_val = load_samples(raw, WINDOW_LENGTH, PREDICT_STEPS)
+    X_train_feat = np.random.random((X_train.shape[0], 2, X_train.shape[2]))  # dummy features
+    X_val_feat = np.random.random((X_test.shape[0], 2, X_test.shape[2]))  # dummy features
+    X_test_feat = np.random.random((X_val.shape[0], 2, X_val.shape[2]))  # dummy features
     # ==================================================================================================== Undersampling
     print("================================================== Training data before undersampling")
     print("Train", X_train.shape, Y_train.shape, X_train_feat.shape)
@@ -275,30 +276,36 @@ def main():
             count_power = 2
         elif count_power < 0.2:
             count_power = 0.2
-        n_original = X_train.shape[0]*X_train.shape[2]
-        X_train, Y_train,X_train_feat  = undersample3(X_train, Y_train, X_train_feat, count_power, region_names, PLOT,
-                                        savepath=f'./logs/{folder}/images/under_{DATASET}.png' if PLOT else None)
-        print(f"Undersample percentage {X_train.shape[0]/n_original*100:.2f}%")
-        EPOCHS = min(250, int(EPOCHS*n_original/X_train.shape[0]))
+
+        n_original = X_train.shape[0] * X_train.shape[2]
+
+        # under-sampling parameters
+        count_h, count_l, num_h, num_l = 2, 0.2, 45000, 500
+        power_l, power_h, power_penalty = 0.2, 2, 1000
+
+        X_train, Y_train, X_train_feat = undersample3(
+            str(DATASETS), X_train, Y_train, X_train_feat, count_h, count_l, num_h, num_l, power_l, power_h,
+            power_penalty, True, savepath=f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
+        print(f"Undersample percentage {X_train.shape[0] / n_original * 100:.2f}%")
+        EPOCHS = min(250, int(EPOCHS * n_original / X_train.shape[0]))
         print(f"New Epoch = {EPOCHS}")
         # here Xtrain have been reduced by regions
-
 
     print("================================================== Training data after undersampling")
     print("Train", X_train.shape, Y_train.shape, X_train_feat.shape)
     print("Val", X_val.shape, Y_val.shape, X_val_feat.shape)
     print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
     if reduce_regions2batch:
-        X_train, Y_train,  X_train_feat = reduce_regions_to_batch([X_train, Y_train,  X_train_feat])
-        X_test,Y_test,X_test_feat = reduce_regions_to_batch([X_test,Y_test,X_test_feat])
+        X_train, Y_train, X_train_feat = reduce_regions_to_batch([X_train, Y_train, X_train_feat])
+        X_test, Y_test, X_test_feat = reduce_regions_to_batch([X_test, Y_test, X_test_feat])
         if X_val.shape[0] == 0:
             X_val = np.zeros((0, X_val.shape[1]))
             Y_val = np.zeros((0, Y_val.shape[1]))
             X_val_feat = np.zeros((0, X_val_feat.shape[1]))
         else:
-            X_val, Y_val,X_val_feat=reduce_regions_to_batch([X_val, Y_val,X_val_feat])
+            X_val, Y_val, X_val_feat = reduce_regions_to_batch([X_val, Y_val, X_val_feat])
 
-        X_train, X_train_feat, Y_train = expand_dims([X_train,X_train_feat,Y_train], 3)
+        X_train, X_train_feat, Y_train = expand_dims([X_train, X_train_feat, Y_train], 3)
         X_val, X_val_feat, Y_val = expand_dims([X_val, X_val_feat, Y_val], 3)
         X_test, X_test_feat, Y_test = expand_dims([X_test, X_test_feat, Y_test], 3)
     # ============================================================================================== Creating Dataset
@@ -439,9 +446,9 @@ def test2(model, x_data_scalers):
     _, y_test, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
 
     x_data, y_data, _ = get_data(filtered=False, normalize=False, data=daily_cases, dataf=daily_filtered,
-                              population=population)
+                                 population=population)
     x_dataf, y_dataf, _ = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
-                                population=population)
+                                   population=population)
     # X = np.expand_dims(x_data[split_days-WINDOW_LENGTH:split_days,:],0)
     # Xf = np.expand_dims(x_dataf[split_days-WINDOW_LENGTH:split_days,:],0)
     X = np.expand_dims(x_data[:split_days, :], 0)

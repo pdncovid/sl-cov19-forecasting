@@ -3,24 +3,24 @@ import os
 import numpy as np
 import pandas as pd
 
-from Forecasting.utils.data_loader import load_data_eu, load_data, load_smooth_data, load_samples
+from Forecasting.utils.data_loader import load_data_eu, load_data, load_smooth_data, load_samples,load_multiple_data
 from Forecasting.utils.undersampling import undersample3
 
 
 def main():
-    for country in countries:
-        print('\nregion is: ' + country)
+    # for country in countries:
+    #     print('\nregion is: ' + country)
 
-        daily_split_filtered, daily_split = load_smooth_data(DATASET=country, data_path=dataset_path,
-                                                             look_back_window=look_back_window,
-                                                             window_slide=window_slide, R_EIG_ratio=R_EIG_ratio,
-                                                             R_power=R_power, midpoint=False)
+    daily_split_filtered, daily_split = load_multiple_data(DATASETS=countries, data_path=dataset_path,
+                                                         look_back_window=look_back_window,
+                                                         window_slide=window_slide, R_EIG_ratio=R_EIG_ratio,
+                                                         R_power=R_power, midpoint=False)
 
-        x_train, y_train, _, _, _, _ = load_samples(daily_split_filtered, WINDOW_LENGTH, PREDICT_STEPS)
-        f_train = np.random.random((x_train.shape[0], 2, x_train.shape[2]))  # dummy features
+    x_train, y_train, _, _, _, _ = load_samples(daily_split_filtered, WINDOW_LENGTH, PREDICT_STEPS)
+    f_train = np.random.random((x_train.shape[0], 2, x_train.shape[2]))  # dummy features
 
-        x_train_uf, y_train_uf, x_train_f = undersample3(country, x_train, y_train, f_train, count_h, count_l, num_h, num_l,
-                                                         power_l, power_h, power_penalty, True)
+    x_train_uf, y_train_uf, x_train_f = undersample3("ALL", x_train, y_train, f_train, count_h, count_l, num_h, num_l,
+                                                     power_l, power_h, power_penalty, True)
 
 
 # %% SCRIPT STARTS HERE

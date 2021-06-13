@@ -4,10 +4,12 @@
 
 import numpy as np
 
+
 def naive_mean(df_test):
     mean = df_test.mean()
     mean = np.array([mean for _ in range(len(df_test))])
     return mean
 
+
 def naive_yesterday(df_test):
-    return df_test.values[:-1, :]
+    return np.insert(df_test.values[:-1, :], 0, 0, 0)
