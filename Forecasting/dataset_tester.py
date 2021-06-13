@@ -12,15 +12,20 @@ def main():
     # for country in countries:
     #     print('\nregion is: ' + country)
     fil, raw, fs = load_multiple_data(DATASETS=countries, data_path=dataset_path,
-                                                         look_back_window=look_back_window,
-                                                         window_slide=window_slide, R_EIG_ratio=R_EIG_ratio,
-                                                         R_power=R_power, midpoint=False)
+                                      look_back_window=look_back_window,
+                                      window_slide=window_slide, R_EIG_ratio=R_EIG_ratio,
+                                      R_power=R_power, midpoint=False)
     temp = load_samples(fil, fs, WINDOW_LENGTH, PREDICT_STEPS)
     x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp
-    x_train, y_train, x_train_feat = undersample3(x_train_list, y_train_list, fs_train, count_h, count_l, num_h, num_l, power_l, power_h,
-        power_penalty, str(countries), True)
-    ratio = 0.3
-    x_train_uf, y_train_uf, x_train_f = undersample_random(x_train, y_train, f_train, ratio, "ALL", True)
+
+    if optimised:
+        x_train_uf, y_train_uf, x_train_feat = undersample3(x_train_list, y_train_list, fs_train, count_h, count_l,
+                                                            num_h, num_l, power_l, power_h, power_penalty, clip,
+                                                            clip_percentages, str(countries), True)
+    else:
+        x_train_uf, y_train_uf, x_train_feat = undersample_random(x_train_list, y_train_list, fs_train, ratio,
+                                                                  clip, clip_percentages, str(countries),
+                                                                  True)
 
 
 # %% SCRIPT STARTS HERE
@@ -48,8 +53,17 @@ look_back_window = 100
 window_slide = 1
 
 # under-sampling parameters
-count_h, count_l, num_h, num_l = 2, 0.2, 150000, 500
-power_l, power_h, power_penalty = 0.2, 2, 1000
+optimised = True
+if optimised:
+    count_h, count_l, num_h, num_l = 2, 0.2, 100000, 500
+    power_l, power_h, power_penalty = 0.2, 2, 1000
+else:
+    ratio = 0.3
+
+clip = True
+if clip:
+    clip_percentages = [10, 10]
+
 # >> MAIN LOOP
 if __name__ == "__main__":
     main()
