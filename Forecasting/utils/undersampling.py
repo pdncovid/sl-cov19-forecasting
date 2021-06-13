@@ -199,8 +199,8 @@ def undersample2(x_train, y_train, x_feats, count_power, region_names, PLOT, sav
     return x_train_opt, y_train_opt, feats
 
 
-def undersample3(country, x_data, y_data, x_feats, count_h, count_l, num_h, num_l, power_l, power_h, power_penalty,
-                 PLOT,
+def undersample3(x_data, y_data, x_feats, count_h, count_l, num_h, num_l, power_l, power_h, power_penalty,
+                 country, PLOT,
                  savepath=None):
     print(f"Under-sampling! Expected data (samples, window, regions). Got {x_data.shape}")
 
@@ -299,5 +299,70 @@ def undersample3(country, x_data, y_data, x_feats, count_h, count_l, num_h, num_
     x_train_opt = np.expand_dims(x_train_opt, -1)
     y_train_opt = np.expand_dims(y_train_opt, -1)
     x_train_fea = np.expand_dims(x_train_fea, -1)
+
+    return x_train_opt, y_train_opt, x_train_fea
+
+
+def undersample_random(x_data, y_data, x_feats, ratio, country, PLOT, savepath=None):
+    # input shape is [samples, input sequence size, regions]
+    for i in range(x_data.shape[-1]):
+        shift = min(np.amin(x_data[:, :, i]), np.amin(y_data[:, :, i]))
+        deno = max(np.amax(x_data[:, :, i]), np.amax(y_data[:, :, i])) - shift
+
+        if deno == 0:
+            deno = 1
+        x_data[:, :, i] = (x_data[:, :, i] - shift) / deno
+        y_data[:, :, i] = (y_data[:, :, i] - shift) / deno
+
+    samples_x = np.copy(np.concatenate(x_data, -1).T)
+    samples_y = np.copy(np.concatenate(y_data, -1).T)
+    samples_f = np.copy(np.concatenate(x_feats, -1).T)
+
+    _, window_x, _ = x_data.shape
+    _, window_y, _ = y_data.shape
+
+    samples_x_mean = np.mean(samples_x, axis=-1)
+
+    samples_norm = (samples_x_mean - np.min(samples_x_mean)) / (np.max(samples_x_mean) - np.min(samples_x_mean))
+
+    count_total = np.rint(ratio * len(samples_norm)).astype(int)
+    print('initial samples = ' + str(len(samples_norm)) + '   final samples = ' + str(count_total))
+
+    idx_rand = []
+    for count in range(count_total):
+        x_rand = np.around(np.max(samples_norm) * np.random.rand(), 5)
+        err = np.abs(samples_norm - x_rand)
+        idx_rand.append(err.argmin())
+
+    x_train_opt = samples_x[idx_rand, :]
+    y_train_opt = samples_y[idx_rand, :]
+    x_train_fea = samples_f[idx_rand, :]
+
+    # todo: fix this thing
+    idx_sort = np.argsort(x_train_opt)
+    x_train_sorted = x_train_opt[idx_sort]
+    vals, idx_start, count = np.unique(x_train_sorted, return_counts=True, return_index=True)
+    res = np.split(idx_sort, idx_start[1:])
+    vals = vals[count > 1]
+    # res = filter(lambda x: x.size > 1, res)
+
+    if PLOT:
+        plt.figure(figsize=(12, 8))
+        plt.subplot(221)
+        plt.hist(samples_x_mean, bins=50, alpha=0.5, label='original')
+        plt.title('initial samples: ' + str(len(samples_x_mean)))
+        plt.subplot(222)
+        plt.hist(np.mean(x_train_opt, axis=-1), bins=50, alpha=0.5, label='under-sampled')
+        plt.title('ratio: ' + str(ratio) + '   final samples: ' + str(count_total))
+        plt.subplot(223)
+        plt.hist(np.unique(x_train_opt), bins=50, alpha=0.5, label='original')
+        plt.title('unique samples: ' + str(len(np.unique(x_train_opt))))
+        plt.subplot(224)
+        plt.hist(vals, bins=50, alpha=0.5, label='original')
+        plt.title('repeated samples (RECHECK THIS!): ' + str(len(vals)))
+        plt.suptitle('region: ' + str(country))
+        plt.show()
+        if savepath is not None:
+            plt.savefig(savepath)
 
     return x_train_opt, y_train_opt, x_train_fea

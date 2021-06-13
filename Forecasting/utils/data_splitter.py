@@ -14,7 +14,7 @@ def f(arr, R_EIG_ratio, R_power, midpoint):
 
 def split_and_smooth(x, look_back_window=100, window_slide=10, R_EIG_ratio=1, R_power=1, midpoint=False,
                      reduce_last_dim=False):
-    print(f"Split and smooth. Expected (nregions, days) Got {x.shape}. Look back window {look_back_window}")
+    print(f"Split and smooth. Expected (n_regions, days) Got {x.shape}. Look back window {look_back_window}")
     _x_to_smooth, _ = split_into_pieces_inorder(x, x, look_back_window, 0, window_slide, reduce_last_dim=False)
     _x = []
 
