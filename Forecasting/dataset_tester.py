@@ -29,8 +29,8 @@ def main():
 dataset_path = '../Datasets'
 _df = pd.read_csv(os.path.join(dataset_path, "EU\jrc-covid-19-all-days-by-regions.csv"))
 _eu = _df['CountryName'].unique().tolist()
-# countries = ['NG']
-countries = ['IT', 'SL', 'NG', 'Texas']
+countries = ['SL']
+# countries = ['IT', 'SL', 'NG', 'Texas']
 WINDOW_LENGTH = 14
 PREDICT_STEPS = 7
 

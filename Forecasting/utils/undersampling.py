@@ -236,6 +236,7 @@ def undersample3(country, x_data, y_data, x_feats, count_h, count_l, num_h, num_
     _, window_y, _ = y_data.shape
 
     samples_x_mean = np.mean(samples_x, axis=-1)
+    # samples_x_mean = np.median(samples_x, axis=-1)
 
     # evaluating optimal number of segments for each district
     segment_array = np.rint(np.linspace(2, 20, 19)).astype(int)
