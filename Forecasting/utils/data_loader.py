@@ -16,12 +16,15 @@ def min_max(data):
 
 
 def reduce_regions_to_batch(arrs):
+    # input arrs : (n_arrays, n_regions*, samples*, window)
+    # output : (n_arrays, n_regions x samples, window)
     ret = []
     for arr in arrs:
-        if arr.shape[-1] != 1:
-            ret.append(np.concatenate(arr, -1).T)
-        else:
-            ret.append(arr)
+        new_arr = []
+        for i_regions in range(len(arr)):
+            for i_sample in range(len(arr[i_regions])):
+                new_arr.append(arr[i_regions][i_sample])
+        ret.append(np.array(new_arr))
     return ret
 
 
@@ -124,48 +127,70 @@ def load_smooth_data(DATASET, data_path, look_back_window, window_slide, R_EIG_r
 
     return _x, _x_to_smooth
 
+
 def load_multiple_data(DATASETS, data_path, look_back_window, window_slide, R_EIG_ratio, R_power,
-                     midpoint):
+                       midpoint):
     ret_smooth, ret_raw = [], []
+    features = []
     print(f"Loading datasets {DATASETS}")
     if type(DATASETS) == str:
         DATASETS = DATASETS.split()
     for DATASET in DATASETS:
+
         print(f"Now Loading {DATASET} =)")
-        tmp_smoothed, tmp_raw = load_smooth_data(DATASET, data_path,look_back_window, window_slide, R_EIG_ratio, R_power,
-                     midpoint)
+        tmp_smoothed, tmp_raw = load_smooth_data(DATASET, data_path, look_back_window, window_slide, R_EIG_ratio,
+                                                 R_power,
+                                                 midpoint)
+        features.append(np.zeros((tmp_smoothed.shape[-1], 2)))  # dummy features
 
-
-        tmp_smoothed = reduce_regions_to_batch([tmp_smoothed])[0]
-        tmp_smoothed = expand_dims([tmp_smoothed], 3)[0]
+        # tmp_smoothed = reduce_regions_to_batch([tmp_smoothed])[0]
+        # tmp_smoothed = expand_dims([tmp_smoothed], 3)[0]
         ret_smooth.append(tmp_smoothed)
-        tmp_raw = reduce_regions_to_batch([tmp_raw])[0]
-        tmp_raw = expand_dims([tmp_raw], 3)[0]
+
+        # tmp_raw = reduce_regions_to_batch([tmp_raw])[0]
+        # tmp_raw = expand_dims([tmp_raw], 3)[0]
         ret_raw.append(tmp_raw)
-    #  ret_raw : (datasets, samples*, lookback)
-    # ret_smooth = np.array(ret_smooth)
-    # ret_raw = np.array(ret_raw)
-    ret_raw_np = np.zeros((0, look_back_window, 1))
-    ret_smooth_np = np.zeros((0, look_back_window, 1))
+
+    #  if the shape of ret_raw : (datasets, samples*, lookback, regions*)
+    ret_smooth2, ret_raw2, features2 = [], [], []
     for i in range(len(DATASETS)):
-        ret_raw_np = np.concatenate([ret_raw_np, np.array(ret_raw[i])], 0)
-        ret_smooth_np = np.concatenate([ret_smooth_np, np.array(ret_smooth[i])], 0)
-    return ret_smooth_np, ret_raw_np
+        for j in range(ret_smooth[i].shape[-1]):  # n_regions will be different for each dataset
+            ret_smooth2.append(ret_smooth[i][:, :, j])
+            ret_raw2.append(ret_raw[i][:, :, j])
+            features2.append(features[i][j])
 
-def load_samples(_x, WINDOW_LENGTH, PREDICT_STEPS):
-    X = _x[:, -WINDOW_LENGTH - PREDICT_STEPS:-PREDICT_STEPS, :]
-    Y = _x[:, -PREDICT_STEPS:, :]
-    idx = np.arange(X.shape[0])
-    np.random.shuffle(idx)
-    X_train_idx = np.ceil(len(idx) * 0.8).astype(int)
-    X_train = X[idx[:X_train_idx]]
-    Y_train = Y[idx[:X_train_idx]]
-    X_test = X[idx[X_train_idx:]]
-    Y_test = Y[idx[X_train_idx:]]
-    X_val = np.zeros((0, *X_train.shape[1:]))
-    Y_val = np.zeros((0, *Y_train.shape[1:]))
+    # # if the shape of ret_raw : (datasets, samples*, lookback)
+    # ret_raw2 = np.zeros((0, look_back_window, 1))
+    # ret_smooth2 = np.zeros((0, look_back_window, 1))
+    # for i in range(len(DATASETS)):
+    #     ret_raw2 = np.concatenate([ret_raw2, np.array(ret_raw[i])], 0)
+    #     ret_smooth2 = np.concatenate([ret_smooth2, np.array(ret_smooth[i])], 0)
+    return ret_smooth2, ret_raw2, features2
 
-    return X_train, Y_train, X_test, Y_test, X_val, Y_val
+
+def load_samples(_x, fs, WINDOW_LENGTH, PREDICT_STEPS):
+    # input _x : (regions, samples*, seqlength)
+    # input fs : (regions, features*)
+    x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list = [], [], [], [], [], []
+    fs_train, fs_test, fs_val =[], [], []
+    for i_region in range(len(_x)):
+        x = _x[i_region][:, -WINDOW_LENGTH - PREDICT_STEPS:-PREDICT_STEPS]
+        y = _x[i_region][:, -PREDICT_STEPS:]
+        idx = np.arange(x.shape[0])
+        np.random.shuffle(idx)
+        x_train_idx = np.ceil(len(idx) * 0.8).astype(int)
+        x_train_list.append(x[idx[:x_train_idx]])
+        y_train_list.append(y[idx[:x_train_idx]])
+        x_test_list.append(x[idx[x_train_idx:]])
+        y_test_list.append(y[idx[x_train_idx:]])
+        x_val_list.append(np.zeros((0, *x_train_list[-1].shape[1:])))
+        y_val_list.append(np.zeros((0, *y_train_list[-1].shape[1:])))
+
+        fs_train.append(np.repeat(fs[i_region:i_region+1], x_train_list[-1].shape[0],0))
+        fs_test.append(np.repeat(fs[i_region:i_region+1], x_test_list[-1].shape[0],0))
+        fs_val.append(np.repeat(fs[i_region:i_region+1], x_val_list[-1].shape[0],0))
+
+    return x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val
 
 
 # def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint, R_EIG_ratio,

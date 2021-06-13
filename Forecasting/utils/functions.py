@@ -46,6 +46,19 @@ def normalize_for_nn(data, given_scalers=None):
     return data, scalers
 
 
+def normalize_3d_xy_data(x_data, y_data):
+    # input shape is [regions, samples, input sequence size] - list of regions
+    for i in range(len(x_data)):
+        shift = min(np.amin(x_data[i]), np.amin(y_data[i]))
+        deno = max(np.amax(x_data[i]), np.amax(y_data[i])) - shift
+
+        if deno == 0:
+            deno = 1
+        x_data[i] = (x_data[i] - shift) / deno
+        y_data[i] = (y_data[i] - shift) / deno
+    return x_data, y_data
+
+
 def undo_normalization(normalized_data, scalers):
     normalized_data = np.copy(normalized_data)
     if len(normalized_data.shape) == 2:

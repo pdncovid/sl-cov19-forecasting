@@ -11,16 +11,15 @@ def main():
     # for country in countries:
     #     print('\nregion is: ' + country)
 
-    daily_split_filtered, daily_split = load_multiple_data(DATASETS=countries, data_path=dataset_path,
+    fil, raw, fs = load_multiple_data(DATASETS=countries, data_path=dataset_path,
                                                          look_back_window=look_back_window,
                                                          window_slide=window_slide, R_EIG_ratio=R_EIG_ratio,
                                                          R_power=R_power, midpoint=False)
-
-    x_train, y_train, _, _, _, _ = load_samples(daily_split_filtered, WINDOW_LENGTH, PREDICT_STEPS)
-    f_train = np.random.random((x_train.shape[0], 2, x_train.shape[2]))  # dummy features
-
-    x_train_uf, y_train_uf, x_train_f = undersample3("ALL", x_train, y_train, f_train, count_h, count_l, num_h, num_l,
-                                                     power_l, power_h, power_penalty, True)
+    temp = load_samples(fil, fs, WINDOW_LENGTH, PREDICT_STEPS)
+    x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp
+    x_train, y_train, x_train_feat = undersample3(
+        str(countries), x_train_list, y_train_list, fs_train, count_h, count_l, num_h, num_l, power_l, power_h,
+        power_penalty, True)
 
 
 # %% SCRIPT STARTS HERE

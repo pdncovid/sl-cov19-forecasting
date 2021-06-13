@@ -291,28 +291,35 @@ def main():
     #              [{'label_name': model_names[1][1] + '-raw', 'line_size': 4},
     #               {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
     #              ]
-    country = args.dataset
-    modeltype = 'LSTM_Simple_WO_Regions'
-    model_names = [
-        (f'{country}_{modeltype}_Unfiltered_None_14_7', 'LSTM-R-None'),
-        (f'{country}_{modeltype}_Filtered_None_14_7', 'LSTM-F-None'),
-        # ('SL_{modeltype}_Unfiltered_Loss_14_7', 'LSTM-R-Loss'),
-        # ('SL_{modeltype}_Filtered_Loss_14_7', 'LSTM-F-Loss'),
-        (f'{country}_{modeltype}_Unfiltered_Reduce_14_7', 'LSTM-R-Reduce'),
-        (f'{country}_{modeltype}_Filtered_Reduce_14_7', 'LSTM-F-Reduce'),
-    ]
-    plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4}, {}],
-                 [{}, {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
-                 [{'label_name': model_names[2][1] + '-raw', 'line_size': 4}, {}],
-                 [{}, {'label_name': model_names[3][1] + '-fil', 'line_size': 3}],
-                 # [{'label_name': model_names[4][1] + '-raw', 'line_size': 4}, {}],
-                 # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
 
+    # country = args.dataset
+    # modeltype = 'LSTM_Simple_WO_Regions'
+    # model_names = [
+    #     (f'{country}_{modeltype}_Unfiltered_None_14_7', 'LSTM-R-None'),
+    #     (f'{country}_{modeltype}_Filtered_None_14_7', 'LSTM-F-None'),
+    #     # ('SL_{modeltype}_Unfiltered_Loss_14_7', 'LSTM-R-Loss'),
+    #     # ('SL_{modeltype}_Filtered_Loss_14_7', 'LSTM-F-Loss'),
+    #     (f'{country}_{modeltype}_Unfiltered_Reduce_14_7', 'LSTM-R-Reduce'),
+    #     (f'{country}_{modeltype}_Filtered_Reduce_14_7', 'LSTM-F-Reduce'),
+    # ]
+    # plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4}, {}],
+    #              [{}, {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
+    #              [{'label_name': model_names[2][1] + '-raw', 'line_size': 4}, {}],
+    #              [{}, {'label_name': model_names[3][1] + '-fil', 'line_size': 3}],
+    #              # [{'label_name': model_names[4][1] + '-raw', 'line_size': 4}, {}],
+    #              # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
+    #              ]
+    model_names = [
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_14_7", 'LSTM-ALL-F-Reduce'),
+    ]
+    plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4},
+                  {'label_name': model_names[0][1] + '-fil', 'line_size': 3}]
                  ]
+
     show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=False)
 
-    # show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
-    # show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
+    show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
+    show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
 
     # ======================================================================================== ## Comparison of methods
 
@@ -339,7 +346,7 @@ def main():
         err = predictionsDict[method] - gtDict[method]
         abserr = np.abs(err)
         sqderr = err ** 2
-        mape = (abserr / (abs(gtDict[method]) + abs(predictionsDict[method])+1e-5) * 100)
+        mape = (abserr / (abs(gtDict[method]) + abs(predictionsDict[method]) + 1e-5) * 100)
         # mean = 0
         # for r in range(len(resultsDict[method])):
         #     mean += resultsDict[method][r][metric]
@@ -372,7 +379,7 @@ def main():
 
 
 def get_ub_lb(pred, true, n_regions):
-    err = abs((pred - true)**2)
+    err = abs((pred - true) ** 2)
     ub_err = np.sqrt(np.mean(err, axis=-1, keepdims=True)).repeat(n_regions, axis=-1) + pred
     lb_err = -np.sqrt(np.mean(err, axis=-1, keepdims=True)).repeat(n_regions, axis=-1) + pred
     return ub_err, lb_err
@@ -440,7 +447,7 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
         x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
                                      population=population)
         x_test, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
-        ygt=y_testf if use_f_gt else y_test
+        ygt = y_testf if use_f_gt else y_test
         if len(plot[0].keys()) != 0:
             resultsDict[f'{model_label} (R)'] = evaluate(ygt, yhat)  # raw predictions v raw true values
             predictionsDict[f'{model_label} (R)'] = yhat
@@ -560,7 +567,7 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
     Xf = np.expand_dims(x_dataf[split_days - 14:split_days, :], 0)
     # X = np.expand_dims(x_data[:split_days,:],0)
     # Xf = np.expand_dims(x_dataf[:split_days,:],0)
-    Y = y_data[split_days :, :]
+    Y = y_data[split_days:, :]
     Yf = y_dataf[split_days:, :]
 
     Ys = [Y]
