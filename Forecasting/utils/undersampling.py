@@ -4,6 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
+from Forecasting.utils.data_loader import reduce_regions_to_batch
+from Forecasting.utils.functions import normalize_3d_xy_data
+
 
 def min_max(data):
     for k in range(data.shape[0]):
@@ -202,9 +205,12 @@ def undersample2(x_train, y_train, x_feats, count_power, region_names, PLOT, sav
 def undersample3(x_data, y_data, x_feats, count_h, count_l, num_h, num_l, power_l, power_h, power_penalty,
                  country, PLOT,
                  savepath=None):
-    print(f"Under-sampling! Expected data (samples, window, regions). Got {x_data.shape}")
+    print(f"Under-sampling! Expected data (regions, samples*, window).")
+    total_regions, total_samples = 0,0
+    for i in range(len(x_data)):  # (n_regions, samples*, WINDOW_LENGTH)
+        total_regions += 1
+        total_samples += x_data[i].shape[0]
 
-    total_samples = x_data.shape[0] * x_data.shape[2]
     a = (count_l - count_h) / (num_h - num_l)
     b = count_h - (a * num_l)
     count_power_init = np.around(total_samples * a + b, 3)
@@ -218,22 +224,8 @@ def undersample3(x_data, y_data, x_feats, count_h, count_l, num_h, num_l, power_
     print('old samples = ' + str(total_samples) + '   count power (raw) = ' + str(
         count_power_init) + '   count power (fixed) = ' + str(count_power))
 
-    # input shape is [samples, input sequence size, regions]
-    for i in range(x_data.shape[-1]):
-        shift = min(np.amin(x_data[:, :, i]), np.amin(y_data[:, :, i]))
-        deno = max(np.amax(x_data[:, :, i]), np.amax(y_data[:, :, i])) - shift
-
-        if deno == 0:
-            deno = 1
-        x_data[:, :, i] = (x_data[:, :, i] - shift) / deno
-        y_data[:, :, i] = (y_data[:, :, i] - shift) / deno
-
-    samples_x = np.copy(np.concatenate(x_data, -1).T)
-    samples_y = np.copy(np.concatenate(y_data, -1).T)
-    samples_f = np.copy(np.concatenate(x_feats, -1).T)
-
-    _, window_x, _ = x_data.shape
-    _, window_y, _ = y_data.shape
+    x_data, y_data = normalize_3d_xy_data(x_data, y_data)
+    samples_x, samples_y, samples_f = reduce_regions_to_batch([x_data,y_data, x_feats])
 
     samples_x_mean = np.mean(samples_x, axis=-1)
     # samples_x_mean = np.median(samples_x, axis=-1)
@@ -296,11 +288,12 @@ def undersample3(x_data, y_data, x_feats, count_h, count_l, num_h, num_l, power_
         if savepath is not None:
             plt.savefig(savepath)
     print('new samples = ' + str(x_train_opt.shape[0]))
-    x_train_opt = np.expand_dims(x_train_opt, -1)
-    y_train_opt = np.expand_dims(y_train_opt, -1)
-    x_train_fea = np.expand_dims(x_train_fea, -1)
+    # x_train_opt = np.expand_dims(x_train_opt, -1)
+    # y_train_opt = np.expand_dims(y_train_opt, -1)
+    # x_train_fea = np.expand_dims(x_train_fea, -1)
 
-    return x_train_opt, y_train_opt, x_train_fea
+
+    return [x_train_opt], [y_train_opt], [x_train_fea]
 
 
 def undersample_random(x_data, y_data, x_feats, ratio, country, PLOT, savepath=None):
@@ -366,3 +359,4 @@ def undersample_random(x_data, y_data, x_feats, ratio, country, PLOT, savepath=N
             plt.savefig(savepath)
 
     return x_train_opt, y_train_opt, x_train_fea
+

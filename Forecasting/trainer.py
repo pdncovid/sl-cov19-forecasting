@@ -165,6 +165,8 @@ def main():
         x_data_scalers, folder, fmodel_name
     daily_data = args.daily
     DATASETS = args.dataset
+    if len(DATASETS) == 1:
+        DATASETS = DATASETS[0].split(' ')
     split_date = args.split_date
 
     EPOCHS = args.epochs
@@ -253,72 +255,68 @@ def main():
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=daily_cases, dataf=daily_filtered,
                                                  population=population)
 
-    fil, raw = load_multiple_data(DATASETS, args.path, look_back_window, window_slide, R_EIG_ratio, R_power, midpoint)
+    fil, raw, fs = load_multiple_data(DATASETS, args.path, look_back_window, window_slide, R_EIG_ratio, R_power,
+                                      midpoint)
     if TRAINING_DATA_TYPE == "Filtered":
-        X_train, Y_train, X_test, Y_test, X_val, Y_val = load_samples(fil, WINDOW_LENGTH, PREDICT_STEPS)
+        temp = load_samples(fil, fs, WINDOW_LENGTH, PREDICT_STEPS)
+        x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp
     else:
-        X_train, Y_train, X_test, Y_test, X_val, Y_val = load_samples(raw, WINDOW_LENGTH, PREDICT_STEPS)
-    X_train_feat = np.random.random((X_train.shape[0], 2, X_train.shape[2]))  # dummy features
-    X_val_feat = np.random.random((X_test.shape[0], 2, X_test.shape[2]))  # dummy features
-    X_test_feat = np.random.random((X_val.shape[0], 2, X_val.shape[2]))  # dummy features
+        temp = load_samples(raw, fs, WINDOW_LENGTH, PREDICT_STEPS)
+        x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp
+
     # ==================================================================================================== Undersampling
     print("================================================== Training data before undersampling")
-    print("Train", X_train.shape, Y_train.shape, X_train_feat.shape)
-    print("Val", X_val.shape, Y_val.shape, X_val_feat.shape)
-    print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
+    total_regions, total_samples = 0, 0
+    for i in range(len(x_train_list)):  # (n_regions, samples*, WINDOW_LENGTH)
+        total_regions += 1
+        total_samples += x_train_list[i].shape[0]
+    for i in range(len(x_test_list)):  # (n_regions, samples*, WINDOW_LENGTH)
+        total_regions += 1
+        total_samples += x_test_list[i].shape[0]
+    for i in range(len(x_val_list)):  # (n_regions, samples*, WINDOW_LENGTH)
+        total_regions += 1
+        total_samples += x_val_list[i].shape[0]
+    print(f"Total regions {total_regions} Total samples {total_samples}")
+
     if UNDERSAMPLING == "Reduce":
-        dataset_size = daily_cases.shape[0] * daily_cases.shape[1]
-        a = (2 - 0.1) / (1000 - 25000)
-        b = 2 - (a / 1000)
-
-        count_power = np.around(dataset_size * a + b, 3)
-        if count_power > 2:
-            count_power = 2
-        elif count_power < 0.2:
-            count_power = 0.2
-
-        n_original = X_train.shape[0] * X_train.shape[2]
-
         # under-sampling parameters
         count_h, count_l, num_h, num_l = 2, 0.2, 45000, 500
         power_l, power_h, power_penalty = 0.2, 2, 1000
 
-        X_train, Y_train, X_train_feat = undersample3(
-            str(DATASETS), X_train, Y_train, X_train_feat, count_h, count_l, num_h, num_l, power_l, power_h,
+        x_train_list, y_train_list, fs_train = undersample3(
+            str(DATASETS), x_train_list, y_train_list, fs_train, count_h, count_l, num_h, num_l, power_l, power_h,
             power_penalty, True, savepath=f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
-        print(f"Undersample percentage {X_train.shape[0] / n_original * 100:.2f}%")
-        EPOCHS = min(250, int(EPOCHS * n_original / X_train.shape[0]))
+        print(f"Undersample percentage {x_train_list[0].shape[0] / total_samples * 100:.2f}%")
+        EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
         print(f"New Epoch = {EPOCHS}")
         # here Xtrain have been reduced by regions
 
     print("================================================== Training data after undersampling")
-    print("Train", X_train.shape, Y_train.shape, X_train_feat.shape)
-    print("Val", X_val.shape, Y_val.shape, X_val_feat.shape)
-    print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
+    # print("Train", x_train.shape, y_train.shape, x_train_feat.shape)
+    # print("Val", x_val.shape, y_val.shape, x_val_feat.shape)
+    # print("Test", x_test.shape, y_test.shape, x_test_feat.shape)
     if reduce_regions2batch:
-        X_train, Y_train, X_train_feat = reduce_regions_to_batch([X_train, Y_train, X_train_feat])
-        X_test, Y_test, X_test_feat = reduce_regions_to_batch([X_test, Y_test, X_test_feat])
-        if X_val.shape[0] == 0:
-            X_val = np.zeros((0, X_val.shape[1]))
-            Y_val = np.zeros((0, Y_val.shape[1]))
-            X_val_feat = np.zeros((0, X_val_feat.shape[1]))
-        else:
-            X_val, Y_val, X_val_feat = reduce_regions_to_batch([X_val, Y_val, X_val_feat])
+        x_train_list, y_train_list, fs_train = reduce_regions_to_batch([x_train_list, y_train_list, fs_train])
+        x_test_list, y_test_list, fs_test = reduce_regions_to_batch([x_test_list, y_test_list, fs_test])
+        x_val_list, y_val_list, fs_val = reduce_regions_to_batch([x_val_list, y_val_list, fs_val])
 
-        X_train, X_train_feat, Y_train = expand_dims([X_train, X_train_feat, Y_train], 3)
-        X_val, X_val_feat, Y_val = expand_dims([X_val, X_val_feat, Y_val], 3)
-        X_test, X_test_feat, Y_test = expand_dims([X_test, X_test_feat, Y_test], 3)
+        x_train, y_train, x_train_feat = expand_dims([x_train_list, y_train_list, fs_train], 3)
+        x_test, y_test, x_test_feat = expand_dims([x_test_list, y_test_list, fs_test], 3)
+        x_val, y_val, x_val_feat = expand_dims([x_val_list, y_val_list, fs_val], 3)
+    else:
+        raise NotImplementedError()
+
     # ============================================================================================== Creating Dataset
-    train_data = tf.data.Dataset.from_tensor_slices((X_train, Y_train))
+    train_data = tf.data.Dataset.from_tensor_slices((x_train, y_train))
     train_data = train_data.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
 
     global freq, xcheck
-    freq, xcheck = np.histogram(np.concatenate(X_train, -1).mean(0))
+    freq, xcheck = np.histogram(np.concatenate(x_train, -1).mean(0))
 
     print("================================================== Training data after reducing shapes")
-    print("Train", X_train.shape, Y_train.shape, X_train_feat.shape)
-    print("Val", X_val.shape, Y_val.shape, X_val_feat.shape)
-    print("Test", X_test.shape, Y_test.shape, X_test_feat.shape)
+    print("Train", x_train.shape, y_train.shape, x_train_feat.shape)
+    print("Val", x_val.shape, y_val.shape, x_val_feat.shape)
+    print("Test", x_test.shape, y_test.shape, x_test_feat.shape)
 
     if PLOT:
         fig, axs = plt.subplots(2, 2)
@@ -327,21 +325,22 @@ def main():
         axs[0, 0].plot(x_data)
         axs[0, 0].set_title("Original data")
 
-        for i in range(X_train.shape[-1]):
-            axs[0, 1].plot(np.concatenate([X_train[:, :, i], Y_train[:, :, i]], 1).T, linewidth=1)
-        axs[0, 1].axvline(X_train.shape[1], color='r', linestyle='--')
+        for i in range(x_train.shape[-1]):
+            idx = np.random.randint(0, len(x_train), 100)
+            axs[0, 1].plot(np.concatenate([x_train[idx, :, i], y_train[idx, :, i]], 1).T, linewidth=1)
+        axs[0, 1].axvline(x_train.shape[1], color='r', linestyle='--')
 
-        axs[1, 0].hist(X_train.reshape(-1), bins=100)
+        axs[1, 0].hist(x_train.reshape(-1), bins=100)
         axs[1, 0].set_title("Histogram of cases")
 
-        axs[1, 1].hist(np.concatenate(X_train, -1).mean(0), bins=100)
+        axs[1, 1].hist(np.concatenate(x_train, -1).mean(0), bins=100)
         axs[1, 1].set_title("Histogram of mean of training samples")
 
         plt.savefig('./logs/' + folder + f"/images/Train_data.png", bbox_inches='tight')
 
     # =================================================================================================  Train
 
-    train(model, train_data, X_train, Y_train, X_test, Y_test)
+    train(model, train_data, x_train, y_train, x_test, y_test)
 
     # ================================================================================================= Few Evaluations
 

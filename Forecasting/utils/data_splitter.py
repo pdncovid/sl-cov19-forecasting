@@ -19,7 +19,7 @@ def split_and_smooth(x, look_back_window=100, window_slide=10, R_EIG_ratio=1, R_
     _x = []
 
     # t = time.time()
-    pool = Pool(6)
+    pool = Pool(8)
     n = _x_to_smooth.shape[-1]
 
     arrs = [_x_to_smooth[:, :, i] for i in range(n)]
