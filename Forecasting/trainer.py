@@ -283,11 +283,11 @@ def main():
         count_h, count_l, num_h, num_l = 2, 0.2, 45000, 500
         power_l, power_h, power_penalty = 0.2, 2, 1000
 
-        x_train, y_train, x_train_feat = undersample3(
+        x_train_list, y_train_list, fs_train = undersample3(
             str(DATASETS), x_train_list, y_train_list, fs_train, count_h, count_l, num_h, num_l, power_l, power_h,
             power_penalty, True, savepath=f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
-        print(f"Undersample percentage {x_train.shape[0] / total_samples * 100:.2f}%")
-        EPOCHS = min(250, int(EPOCHS * total_samples / x_train.shape[0]))
+        print(f"Undersample percentage {x_train_list[0].shape[0] / total_samples * 100:.2f}%")
+        EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
         print(f"New Epoch = {EPOCHS}")
         # here Xtrain have been reduced by regions
 
@@ -300,9 +300,9 @@ def main():
         x_test_list, y_test_list, fs_test = reduce_regions_to_batch([x_test_list, y_test_list, fs_test])
         x_val_list, y_val_list, fs_val = reduce_regions_to_batch([x_val_list, y_val_list, fs_val])
 
-        x_train, y_train, samples_x = expand_dims([x_train_list, y_train_list, fs_train], 3)
-        x_val, y_val, x_val_feat = expand_dims([x_test_list, y_test_list, fs_test], 3)
-        x_test, y_test, x_test_feat = expand_dims([x_val_list, y_val_list, fs_val], 3)
+        x_train, y_train, x_train_feat = expand_dims([x_train_list, y_train_list, fs_train], 3)
+        x_test, y_test, x_test_feat = expand_dims([x_test_list, y_test_list, fs_test], 3)
+        x_val, y_val, x_val_feat = expand_dims([x_val_list, y_val_list, fs_val], 3)
     else:
         raise NotImplementedError()
 

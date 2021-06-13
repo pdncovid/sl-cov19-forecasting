@@ -287,8 +287,8 @@ def undersample3(country, x_data, y_data, x_feats, count_h, count_l, num_h, num_
         if savepath is not None:
             plt.savefig(savepath)
     print('new samples = ' + str(x_train_opt.shape[0]))
-    x_train_opt = np.expand_dims(x_train_opt, -1)
-    y_train_opt = np.expand_dims(y_train_opt, -1)
-    x_train_fea = np.expand_dims(x_train_fea, -1)
+    # x_train_opt = np.expand_dims(x_train_opt, -1)
+    # y_train_opt = np.expand_dims(y_train_opt, -1)
+    # x_train_fea = np.expand_dims(x_train_fea, -1)
 
-    return x_train_opt, y_train_opt, x_train_fea
+    return [x_train_opt], [y_train_opt], [x_train_fea]
