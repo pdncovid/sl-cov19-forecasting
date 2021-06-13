@@ -2,10 +2,17 @@ import pandas as pd
 import numpy as np
 import os, sys
 
-from utils.data_splitter import split_and_smooth, split_on_time_dimension
-from utils.functions import normalize_for_nn
-from utils.smoothing_functions import O_LPF
+from Forecasting.utils.data_splitter import split_and_smooth, split_on_time_dimension
+from Forecasting.utils.functions import normalize_for_nn
+from Forecasting.utils.smoothing_functions import O_LPF
 import matplotlib.pyplot as plt
+
+
+# normalise all as 0-1
+def min_max(data):
+    for k in range(data.shape[0]):
+        data[k, :] = (data[k, :] - np.amin(data[k, :])) / (np.amax(data[k, :]) - np.amin(data[k, :]))
+    return data
 
 
 def reduce_regions_to_batch(arrs):
@@ -61,6 +68,77 @@ def get_data(filtered, normalize, data, dataf, population):
         return x.T, y.T, xs
     else:
         return x.T, y.T, None
+
+
+def save_smooth_data(DATASET, data_path, look_back_window, window_slide, R_EIG_ratio, R_power,
+                     midpoint):
+    d = load_data(DATASET, path=data_path)
+    region_names = d["region_names"]
+    confirmed_cases = d["confirmed_cases"]
+    daily_cases = d["daily_cases"]
+    features = d["features"]
+    daily_cases[daily_cases < 0] = 0
+    population = features["Population"]
+
+    daily_filtered, _ = O_LPF(daily_cases, datatype='daily', order=3, midpoint=midpoint, corr=True,
+                              R_EIG_ratio=R_EIG_ratio, R_power=R_power, region_names=region_names,
+                              plot_freq=1, view=False)
+    # creates dataset
+    _, _, x_data_scalers = get_data(False, normalize=True, data=daily_cases, dataf=daily_filtered,
+                                    population=population)
+
+    # dont get why this is there but ok
+    x_data, y_data, _ = get_data(False, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
+                                 population=population)  # get raw data
+
+    # smooths data, now we have (samples x window x regions)
+    _x, _x_to_smooth = split_and_smooth(x_data.T, look_back_window=look_back_window, window_slide=window_slide,
+                                        R_EIG_ratio=R_EIG_ratio, R_power=R_power,
+                                        midpoint=midpoint,
+                                        reduce_last_dim=False)
+    # tries something
+    try:
+        os.makedirs(f'./smoothed_data/{DATASET}')
+    except FileExistsError as e:
+        pass
+    f_name = f"{look_back_window}_{window_slide}_{R_EIG_ratio}"
+    np.save(f'./smoothed_data/{DATASET}/data_windows_{f_name}_smoothed', _x)
+    np.save(f'./smoothed_data/{DATASET}/data_windows_{f_name}_original', _x_to_smooth)
+
+    return _x, _x_to_smooth
+
+
+def load_smooth_data(DATASET, data_path, look_back_window, window_slide, R_EIG_ratio, R_power,
+                     midpoint):
+    f_name = f"{look_back_window}_{window_slide}_{R_EIG_ratio}"
+    from pathlib import Path
+    my_file = Path(f'./smoothed_data/{DATASET}/data_windows_{f_name}_smoothed.npy')
+    if my_file.is_file():
+        print("Loading data from saved smoothed data folder ^_^")
+        _x = np.load(f'./smoothed_data/{DATASET}/data_windows_{f_name}_smoothed.npy')
+        _x_to_smooth = np.load(f'./smoothed_data/{DATASET}/data_windows_{f_name}_original.npy')
+    else:
+        print("Need to smooth! smoothing now ^_^ ")
+        _x, _x_to_smooth = save_smooth_data(DATASET, data_path, look_back_window, window_slide, R_EIG_ratio, R_power,
+                                            midpoint)
+
+    return _x, _x_to_smooth
+
+
+def load_samples(_x, WINDOW_LENGTH, PREDICT_STEPS):
+    X = _x[:, -WINDOW_LENGTH - PREDICT_STEPS:-PREDICT_STEPS, :]
+    Y = _x[:, -PREDICT_STEPS:, :]
+    idx = np.arange(X.shape[0])
+    np.random.shuffle(idx)
+    X_train_idx = np.ceil(len(idx) * 0.8).astype(int)
+    X_train = X[idx[:X_train_idx]]
+    Y_train = Y[idx[:X_train_idx]]
+    X_test = X[idx[X_train_idx:]]
+    Y_test = Y[idx[X_train_idx:]]
+    X_val = np.zeros((0, *X_train.shape[1:]))
+    Y_val = np.zeros((0, *Y_train.shape[1:]))
+
+    return X_train, Y_train, X_test, Y_test, X_val, Y_val
 
 
 def save_train_data(DATASET, data_path, TRAINING_DATA_TYPE, WINDOW_LENGTH, PREDICT_STEPS, midpoint, R_EIG_ratio,
@@ -395,7 +473,7 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
 
     features = pd.DataFrame(columns=['Population'], index=region_names)  # todo population ignored, features ignored now
     features['Population'] = 1e6
-
+    daily_cases[daily_cases < 0] = 0
     return {
         "region_names": region_names,
         "confirmed_cases": confirmed_cases,

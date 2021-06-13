@@ -199,28 +199,32 @@ def undersample2(x_train, y_train, x_feats, count_power, region_names, PLOT, sav
     return x_train_opt, y_train_opt, feats
 
 
-def undersample3(x_data, y_data, x_feats, count_power, region_names, PLOT, savepath=None):
-    print(f"Undersampling. Expected data (samples, window, regions). Got {x_data.shape}")
-    # input shape is [samples, window, regions]
+def undersample3(country, x_data, y_data, x_feats, count_h, count_l, num_h, num_l, power_l, power_h, power_penalty,
+                 PLOT,
+                 savepath=None):
+    print(f"Under-sampling! Expected data (samples, window, regions). Got {x_data.shape}")
 
-    """ PREVIOUS CODE """
-    # n_regions, days = x_data.shape
-    # alldata_train = min_max(x_data)
-    # samples_x_normed = np.zeros([n_regions, days - WINDOW_LENGTH - PREDICT_STEPS, WINDOW_LENGTH + PREDICT_STEPS])
-    #
-    # for i in range(n_regions):
-    #     for k in range(samples_x_normed.shape[1]):
-    #         samples_x_normed[i, k, :] = alldata_train[i, k:k + WINDOW_LENGTH + PREDICT_STEPS]
-    #
-    # samples_x_normed = np.reshape(samples_x_normed, (samples_x_normed.shape[0] * samples_x_normed.shape[1], samples_x_normed.shape[2]))
-    """ """
-    """ NEW CODE """
+    total_samples = x_data.shape[0] * x_data.shape[2]
+    a = (count_l - count_h) / (num_h - num_l)
+    b = count_h - (a * num_l)
+    count_power_init = np.around(total_samples * a + b, 3)
+    if count_power_init > power_h:
+        count_power = power_h
+    elif count_power_init < power_l:
+        count_power = power_l
+    else:
+        count_power = count_power_init
+
+    print('old samples = ' + str(total_samples) + '   count power (raw) = ' + str(
+        count_power_init) + '   count power (fixed) = ' + str(count_power))
+
+    # input shape is [samples, input sequence size, regions]
     for i in range(x_data.shape[-1]):
-        shift = min(np.amin(x_data[:, :, i]),np.amin(y_data[:, :, i]))
-        deno = max(np.amax(x_data[:, :, i]),np.amax(y_data[:, :, i])) - shift
+        shift = min(np.amin(x_data[:, :, i]), np.amin(y_data[:, :, i]))
+        deno = max(np.amax(x_data[:, :, i]), np.amax(y_data[:, :, i])) - shift
 
-        if deno ==0:
-            deno=1
+        if deno == 0:
+            deno = 1
         x_data[:, :, i] = (x_data[:, :, i] - shift) / deno
         y_data[:, :, i] = (y_data[:, :, i] - shift) / deno
 
@@ -234,12 +238,11 @@ def undersample3(x_data, y_data, x_feats, count_power, region_names, PLOT, savep
     samples_x_mean = np.mean(samples_x, axis=-1)
 
     # evaluating optimal number of segments for each district
-    segment_array = np.rint(np.linspace(2, 20, 10)).astype(int)
+    segment_array = np.rint(np.linspace(2, 20, 19)).astype(int)
 
     all_counts = []
     # evaluating the count score for each district
-    for n in range(len(segment_array)):
-        segments = segment_array[n]
+    for segments in segment_array:
         [count, _, _] = get_count(segments, samples_x_mean)
         all_counts.append(np.amin(count) * len(count))
 
@@ -247,10 +250,9 @@ def undersample3(x_data, y_data, x_feats, count_power, region_names, PLOT, savep
     all_counts_norm = (all_counts - np.amin(all_counts)) / (np.amax(all_counts) - np.amin(all_counts))
     seg_score = np.linspace(1, len(segment_array), len(segment_array))
     count_score = np.multiply(all_counts_norm ** count_power, seg_score)
-    count_score[all_counts < 1000] = 0.001 * count_score[all_counts < 1000]
+    count_score[all_counts < power_penalty] = 0.001 * count_score[all_counts < power_penalty]
 
     segments = segment_array[np.argmax(count_score)]
-
 
     if PLOT:
         plt.figure(figsize=(12, 8))
@@ -277,16 +279,9 @@ def undersample3(x_data, y_data, x_feats, count_power, region_names, PLOT, savep
     idx_rand = np.reshape(idx_rand, [-1, ]).astype(int)
     # print('idx_rand.shape=', idx_rand.shape)
 
-    """ PREVIOUS CODE """
-    # x_train_opt = samples_x_normed[idx_rand, 0:WINDOW_LENGTH]
-    # y_train_opt = samples_x_normed[idx_rand, WINDOW_LENGTH:WINDOW_LENGTH + PREDICT_STEPS]
-    """ """
-    """ NEW CODE """
     x_train_opt = samples_x[idx_rand, :]
     y_train_opt = samples_y[idx_rand, :]
     x_train_fea = samples_f[idx_rand, :]
-
-    """ """
 
     if PLOT:
         plt.subplot(223)
@@ -295,10 +290,11 @@ def undersample3(x_data, y_data, x_feats, count_power, region_names, PLOT, savep
         plt.subplot(224)
         plt.hist(np.mean(x_train_opt, axis=-1), bins=50, alpha=0.5, label='original')
         plt.title(f'seg:{segments} n_per_seg: {n_per_seg} samples: {x_train_opt.shape[0]}')
-
-    if PLOT and savepath is not None:
-        plt.savefig(savepath)
-
+        plt.suptitle('region: ' + str(country))
+        plt.show()
+        if savepath is not None:
+            plt.savefig(savepath)
+    print('new samples = ' + str(x_train_opt.shape[0]))
     x_train_opt = np.expand_dims(x_train_opt, -1)
     y_train_opt = np.expand_dims(y_train_opt, -1)
     x_train_fea = np.expand_dims(x_train_fea, -1)
