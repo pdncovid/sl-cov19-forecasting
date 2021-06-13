@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 
 def get_model(modeltype, input_days, output_days, n_features, n_regions):
@@ -31,7 +32,7 @@ def get_model(modeltype, input_days, output_days, n_features, n_regions):
 
 
 def Dense_WO_regions(seq_size, predict_steps, n_features):
-    inp_seq = tf.keras.layers.Input((seq_size,1), name="input_sequence")
+    inp_seq = tf.keras.layers.Input((seq_size, 1), name="input_sequence")
     x = tf.keras.layers.Reshape((seq_size,))(inp_seq)
     # inp_fea = tf.keras.layers.Input(n_features, name="input_features")
 
@@ -72,19 +73,13 @@ def LSTM_Simple_WO_Regions(input_seq_size, output_seq_size):
     #     inp_fea = tf.keras.layers.Input(n_features, name="input_fea")
 
     x = inp_seq
-    #     x = tf.keras.layers.LSTM(32, activation='relu', return_sequences=True)(x)
-    x = tf.keras.layers.LSTM(output_seq_size)(x)
+    # x = tf.keras.layers.LSTM(32, activation='relu', return_sequences=True)(x)
+    cells = int(np.ceil((input_seq_size - output_seq_size) * 0.4 + output_seq_size))
+    x = tf.keras.layers.LSTM(cells)(x)
     x = tf.keras.layers.Activation('relu')(x)
+    x = tf.keras.layers.Dense(output_seq_size)(x)
     x = tf.keras.layers.Reshape((output_seq_size, 1))(x)
     model = tf.keras.models.Model(inp_seq, x, name="LSTM_Simple_WO_Regions")
-
-    #     print("Input shape", X_train.shape[-2:])
-    #     model = tf.keras.models.Sequential([
-    #         tf.keras.layers.LSTM(128, input_shape=X_train.shape[-2:],dropout=dropout),
-    #         tf.keras.layers.Dense(128),
-    #         tf.keras.layers.Dense(output_seq_size),
-    #         tf.keras.layers.Activation('sigmoid')
-    #     ])
 
     return model
 
@@ -106,7 +101,7 @@ def LSTM4EachDay_W_Regions(input_seq_size, output_seq_size, n_regions):
     lstm_input = inp_seq
     for i in range(output_seq_size):
         xx = tf.keras.layers.LSTM(n_regions, activation='relu')(lstm_input)
-        out = xx if i == 0 else tf.keras.layers.concatenate([out, xx],1)
+        out = xx if i == 0 else tf.keras.layers.concatenate([out, xx], 1)
 
         xx = tf.reshape(xx, (-1, 1, n_regions))
 

@@ -68,7 +68,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='IT')
+                        default='SL')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-01-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
@@ -194,9 +194,9 @@ def main():
     gtDict['Naive mean'] = df_test.values
 
     yesterday = naive_yesterday(df_test)
-    resultsDict['Yesterdays value'] = evaluate(df_test.values[:-1, :], yesterday)
+    resultsDict['Yesterdays value'] = evaluate(df_test.values, yesterday)
     predictionsDict['Yesterdays value'] = yesterday
-    gtDict['Yesterdays value'] = df_test.values[1:, :]
+    gtDict['Yesterdays value'] = df_test.values
 
     # ses = SES(df, df_training, df_test)
     # resultsDict['SES'] = evaluate(df_test.values, ses)
@@ -292,13 +292,14 @@ def main():
     #               {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
     #              ]
     country = args.dataset
+    modeltype = 'LSTM_Simple_WO_Regions'
     model_names = [
-        (f'{country}_LSTM_Simple_WO_Regions_Unfiltered_None_14_7', 'LSTM-R-None'),
-        (f'{country}_LSTM_Simple_WO_Regions_Filtered_None_14_7', 'LSTM-F-None'),
-        # ('SL_LSTM_Simple_WO_Regions_Unfiltered_Loss_14_7', 'LSTM-R-Loss'),
-        # ('SL_LSTM_Simple_WO_Regions_Filtered_Loss_14_7', 'LSTM-F-Loss'),
-        (f'{country}_LSTM_Simple_WO_Regions_Unfiltered_Reduce_14_7', 'LSTM-R-Reduce'),
-        (f'{country}_LSTM_Simple_WO_Regions_Filtered_Reduce_14_7', 'LSTM-F-Reduce'),
+        (f'{country}_{modeltype}_Unfiltered_None_14_7', 'LSTM-R-None'),
+        (f'{country}_{modeltype}_Filtered_None_14_7', 'LSTM-F-None'),
+        # ('SL_{modeltype}_Unfiltered_Loss_14_7', 'LSTM-R-Loss'),
+        # ('SL_{modeltype}_Filtered_Loss_14_7', 'LSTM-F-Loss'),
+        (f'{country}_{modeltype}_Unfiltered_Reduce_14_7', 'LSTM-R-Reduce'),
+        (f'{country}_{modeltype}_Filtered_Reduce_14_7', 'LSTM-F-Reduce'),
     ]
     plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4}, {}],
                  [{}, {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
@@ -308,23 +309,20 @@ def main():
                  # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
 
                  ]
-    show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
+    show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=False)
 
-    show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
-    show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
+    # show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
+    # show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
 
     # ======================================================================================== ## Comparison of methods
 
-    metric = 'mae'
-
-    arr = []
-    for method in resultsDict.keys():
-        arr.append([])
-        for dist in resultsDict[method].keys():
-            arr[-1].append(resultsDict[method][dist][metric])
-
-    arr = np.array(arr)
-
+    # metric = 'mae'
+    # arr = []
+    # for method in resultsDict.keys():
+    #     arr.append([])
+    #     for dist in resultsDict[method].keys():
+    #         arr[-1].append(resultsDict[method][dist][metric])
+    # arr = np.array(arr)
     # X = np.arange(len(arr[0]))
     # fig = plt.figure()
     # ax = fig.add_axes([0, 0, 1, 1])
@@ -373,93 +371,10 @@ def main():
     #     pickle.dump(predictionsDict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-# def show_predictions(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data):
-#     def get_model_predictions(model, x_data, y_data, scalers):
-#         WINDOW_LENGTH = model.input.shape[1]
-#         PREDICT_STEPS = model.output.shape[1]
-#
-#         print(model.input.shape, "-->", model.output.shape)
-#
-#         print(f"Predicting from model. X={x_data.shape} Y={y_data.shape}")
-#         # CREATING TRAIN-TEST SETS FOR CASES
-#         x_test, y_test = split_into_pieces_inorder(x_data.T, y_data.T, WINDOW_LENGTH, PREDICT_STEPS,
-#                                                    WINDOW_LENGTH + PREDICT_STEPS,
-#                                                    reduce_last_dim=False)
-#
-#         if model.input.shape[-1] == 1:
-#             y_pred = np.zeros_like(y_test)
-#             for i in range(len(region_names)):
-#                 y_pred[:, :, i] = model(x_test[:, :, i:i + 1])[:, :, 0]
-#         else:
-#             y_pred = model(x_test).numpy()
-#         print(x_test.shape, "-->", y_pred.shape)
-#         # # NOTE:
-#         # # max value may change with time. then we have to retrain the model!!!!!!
-#         # # we can have a predefined max value. 1 for major cities and 1 for smaller districts
-#         x_test = undo_normalization(x_test, scalers)
-#         y_test = undo_normalization(y_test, scalers)
-#         y_pred = undo_normalization(y_pred, scalers)
-#
-#         return x_test, y_test, y_pred
-#
-#     Ys = []
-#     method_list = []
-#     styles = {
-#         'X': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 2},
-#         'Xf': {'Preprocessing': 'Filtered', 'Data': 'Training', 'Size': 2},
-#         'Observations Raw': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 2},
-#         'Observations Filtered': {'Preprocessing': 'Filtered', 'Data': 'Training', 'Size': 2},
-#     }
-#     err_plot = []
-#     #########################################################################
-#     for i in range(len(model_names)):
-#         plot = plot_data[i]
-#
-#         model_filename, model_label = model_names[i]
-#         model = tf.keras.models.load_model(f"models/{model_filename}.h5")
-#         x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
-#                                        population=population)
-#         x_testf, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
-#         x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
-#                                      population=population)
-#         x_test, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
-#
-#         if len(plot[1].keys()) != 0:
-#             Ys.append(yhatf)
-#             method_name = plot[1]['label_name']
-#             method_list.append(method_name)
-#             styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
-#             err_plot.append((method_name, y_testf - yhat))
-#
-#         if len(plot[0].keys()) != 0:
-#             Ys.append(yhat)
-#             method_name = plot[0]['label_name']
-#             method_list.append(method_name)
-#             styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
-#             err_plot.append((method_name, y_testf - yhat))
-#
-#     #########################################################################
-#     plt.figure()
-#     for m, err in err_plot:
-#         plt.plot(abs(err).mean(axis=2).mean(axis=0), label=m)
-#     plt.legend()
-#     plt.show()
-#
-#     Ys = [y_test, y_testf] + Ys
-#     Ys = np.stack(Ys, 1)
-#     method_list = ['Observations Raw', 'Observations Filtered'] + method_list
-#
-#     plt.figure(figsize=(20, 10))
-#     plot_prediction(x_test, x_testf, Ys, method_list, styles, region_names, region_mask)
-#
-#     # plt.savefig(f"images/{DATASET}.eps")
-#     # plt.savefig(f"images/{DATASET}.jpg")
-#     plt.show()
-
 def get_ub_lb(pred, true, n_regions):
-    err = abs(pred - true)
-    ub_err = np.mean(err, axis=-1, keepdims=True).repeat(n_regions, axis=-1) + pred
-    lb_err = -np.mean(err, axis=-1, keepdims=True).repeat(n_regions, axis=-1) + pred
+    err = abs((pred - true)**2)
+    ub_err = np.sqrt(np.mean(err, axis=-1, keepdims=True)).repeat(n_regions, axis=-1) + pred
+    lb_err = -np.sqrt(np.mean(err, axis=-1, keepdims=True)).repeat(n_regions, axis=-1) + pred
     return ub_err, lb_err
 
 
@@ -918,224 +833,3 @@ def test_evolution(model):
 
 if __name__ == "__main__":
     main()
-
-# ### Autoregressive Moving Average (ARMA) - Not fitting!
-#
-# This method will basically join the previous two `AR` and `MA`. Model parameters will be the sum of the two.
-#
-# - __Number of AR (Auto-Regressive) terms (p):__ p is the parameter associated with the auto-regressive aspect of the model, which incorporates past values i.e lags of dependent variable. For instance if p is 5, the predictors for x(t) will be x(t-1)….x(t-5).
-# - __Number of MA (Moving Average) terms (q):__ q is size of the moving average part window of the model i.e. lagged forecast errors in prediction equation. For instance if q is 5, the predictors for x(t) will be e(t-1)….e(t-5) where e(i) is the difference between the moving average at ith instant and actual value.
-#
-#
-
-# In[ ]:
-
-
-# # ARMA example
-# from statsmodels.tsa.arima_model import ARMA
-# from random import random
-
-# # Walk throught the test data, training and predicting 1 day ahead for all the test data
-# index = len(df_training)
-# yhat = [[]]*df_training.shape[1]
-# for t in tqdm(range(len(df_test))):
-#     temp_train = df.iloc[:len(df_training)+t,:]
-#     for col in range(n_regions):
-#         model = ARMA(temp_train.iloc[:,col], order=(1, 1))
-
-#         model_fit = model.fit(disp=True)
-#         predictions = model_fit.predict(start=len(temp_train), end=len(temp_train), dynamic=False)
-#         yhat[col] = yhat[col] + [predictions]
-
-# yhat = np.squeeze(np.array(yhat)).T
-# resultsDict['ARMA'] = evaluate(df_test.values, yhat)
-# predictionsDict['ARMA'] = yhat
-
-
-# #### Auto ARIMA - Not fitting for some
-
-# In[ ]:
-
-
-# #building the model
-# autoModels = []
-# for col in range(df_training.shape[1]):
-#     autoModel = pm.auto_arima(df.iloc[:,col], trace=True, error_action='ignore', suppress_warnings=True,seasonal=False)
-#     autoModel.fit(df.iloc[:,col])
-#     autoModels.append(autoModel)
-
-
-# In[ ]:
-
-
-# yhat = [[]]*df_training.shape[1]
-# for t in tqdm(range(len(df_test))):
-#     temp_train = df.iloc[:len(df_training)+t,:]
-#     for col in range(n_regions):
-#         order = autoModels[col].order
-#         print(col)
-#         model = ARIMA(temp_train.iloc[:,col], order=order)
-#         model_fit = model.fit(disp=False)
-#         predictions = model_fit.predict(start=len(temp_train), end=len(temp_train), dynamic=False)
-#         yhat[col] = yhat[col] + [predictions]
-
-# yhat = np.squeeze(np.array(yhat)).T
-# resultsDict['AutoARIMA'] = evaluate(df_test.values, yhat)
-# predictionsDict['AutoARIMA'] = yhat
-
-
-# ### Prophet - Cannot install
-#
-# Prophet is a model released by [facebook](https://github.com/facebook/prophet). Is essentially a curve fitting approach, very similar in spirit to how BSTS models trend and seasonality, except that it uses generalized additive models instead of a state-space representation to describe each component.
-#
-
-# In[ ]:
-
-
-# #Prophet needs some specifics data stuff, coment it here
-# prophet_training = df_training.rename(columns={'pollution_today': 'y'})  # old method
-# prophet_training['ds'] = prophet_training.index
-# prophet_training.index = pd.RangeIndex(len(prophet_training.index))
-
-# prophet_test = df_test.rename(columns={'pollution_today': 'y'})  # old method
-# prophet_test['ds'] = prophet_test.index
-# prophet_test.index = pd.RangeIndex(len(prophet_test.index))
-
-
-# In[ ]:
-
-
-# prophet = Prophet(
-#     growth='linear',
-#     seasonality_mode='multiplicative',
-#     holidays_prior_scale=20,
-#     daily_seasonality=False,
-#     weekly_seasonality=False,
-#     yearly_seasonality=False
-#     ).add_seasonality(
-#         name='monthly',
-#         period=30.5,
-#         fourier_order=55
-#     ).add_seasonality(
-#         name='daily',
-#         period=1,
-#         fourier_order=15
-#     ).add_seasonality(
-#         name='weekly',
-#         period=7,
-#         fourier_order=25
-#     ).add_seasonality(
-#         name='yearly',
-#         period=365.25,
-#         fourier_order=20
-#     ).add_seasonality(
-#         name='quarterly',
-#         period=365.25/4,
-#         fourier_order=55
-#     ).add_country_holidays(country_name='China')
-
-
-# In[ ]:
-
-
-# prophet.fit(prophet_training)
-# yhat = prophet.predict(prophet_test)
-# resultsDict['Prophet univariate'] = evaluate(df_test.pollution_today, yhat.yhat.values)
-# predictionsDict['Prophet univariate'] = yhat.yhat.values
-
-
-# In[ ]:
-
-
-# plt.plot(df_test.pollution_today.values , label='Original')
-# plt.plot(yhat.yhat,color='red',label='Prophet univariate')
-# plt.legend()
-
-
-# ### Prophet multivariate
-
-# In[ ]:
-
-
-# prophet = Prophet(
-#     growth='linear',
-#     seasonality_mode='multiplicative',
-#     daily_seasonality=True,
-#     ).add_country_holidays(country_name='China')
-
-
-# for col in prophet_training.columns:
-#     if col not in ["ds", "y"]:
-#         prophet.add_regressor(col)
-
-
-# In[ ]:
-
-
-# prophet.fit(prophet_training)
-# yhat = prophet.predict(prophet_test)
-# resultsDict['Prophet multivariate'] = evaluate(y_test, yhat.yhat.values)
-# predictionsDict['Prophet multivariate'] = yhat.yhat.values
-
-
-# In[ ]:
-
-
-# plt.plot(df_test.pollution_today.values , label='Original')
-# plt.plot(yhat.yhat,color='red',label='Prophet multivariate')
-# plt.legend()
-
-
-# #### DeepAR - Pandas version mismatch
-
-# [DeepAR](https://arxiv.org/pdf/1704.04110.pdf) is a deep learning architecture released by amazon
-
-# In[ ]:
-
-
-# features = ['COL']
-# # X_train = df_training.values
-
-# # scaler = StandardScaler()
-# # scaler.fit(X_train) #No cheating, never scale on the training+test!
-# # df_training[features] = scaler.transform(df_training[features])
-# # df_test[features] = scaler.transform(df_test[features])
-
-
-# training_data = ListDataset(
-#     [{"start": df_training.index[0], "target": df_training.COL,
-#       'feat_dynamic_real': [df_training[feature] for feature in features]
-#       }],
-#     freq="d"
-# )
-# test_data = ListDataset(
-#     [{"start": df_test.index[0], "target": df_test.COL,
-#       'feat_dynamic_real': [df_test[feature] for feature in features]
-#       }],
-#     freq="d"
-# )
-
-
-# In[ ]:
-
-
-# estimator = DeepAREstimator(freq="d",
-#                             prediction_length=1
-#                             , context_length=30,
-#                             trainer=Trainer(epochs=5))
-
-# predictor = estimator.train(training_data=training_data)
-
-
-# forecast_it, ts_it = make_evaluation_predictions(test_data, predictor=predictor, num_samples=len(df_test))
-
-# forecasts = list(forecast_it)
-# tss = list(ts_it)
-
-
-# In[ ]:
-
-
-# yhat = forecasts[0].samples.reshape(1,-1)[0]
-# resultsDict['DeepAR'] = evaluate(y_test,yhat)
-# predictionsDict['DeepAR'] = yhat
