@@ -127,7 +127,11 @@ def load_smooth_data(DATASET, data_path, look_back_window, window_slide, R_EIG_r
 def load_multiple_data(DATASETS, data_path, look_back_window, window_slide, R_EIG_ratio, R_power,
                      midpoint):
     ret_smooth, ret_raw = [], []
+    print(f"Loading datasets {DATASETS}")
+    if type(DATASETS) == str:
+        DATASETS = DATASETS.split()
     for DATASET in DATASETS:
+        print(f"Now Loading {DATASET} =)")
         tmp_smoothed, tmp_raw = load_smooth_data(DATASET, data_path,look_back_window, window_slide, R_EIG_ratio, R_power,
                      midpoint)
 

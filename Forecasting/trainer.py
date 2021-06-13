@@ -165,6 +165,8 @@ def main():
         x_data_scalers, folder, fmodel_name
     daily_data = args.daily
     DATASETS = args.dataset
+    if len(DATASETS) == 1:
+        DATASETS = DATASETS[0].split(' ')
     split_date = args.split_date
 
     EPOCHS = args.epochs
