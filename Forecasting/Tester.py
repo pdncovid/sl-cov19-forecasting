@@ -325,7 +325,7 @@ def main():
                   {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
                  ]
 
-    show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=False)
+    show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=False, skip_plotting=False)
 
     show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
     show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
@@ -380,7 +380,7 @@ def get_ub_lb(pred, true, n_regions):
     return ub_err, lb_err
 
 
-def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True):
+def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True, skip_plotting=False):
     n_regions = len(x_data_scalers.data_max_)
     Ys = []
     method_list = []
@@ -489,6 +489,8 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
             styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
 
     #########################################################################
+    if skip_plotting:
+        return
     Ys = [y_test, y_testf] + Ys
     method_list = ['Observations Raw', 'Observations Filtered'] + method_list
     _cut = 1e10
