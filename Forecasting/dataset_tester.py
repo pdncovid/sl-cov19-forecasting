@@ -21,11 +21,10 @@ def main():
     if optimised:
         x_train_uf, y_train_uf, x_train_feat = undersample3(x_train_list, y_train_list, fs_train, count_h, count_l,
                                                             num_h, num_l, power_l, power_h, power_penalty, clip,
-                                                            clip_percentages, str(countries), True)
+                                                            clip_percentages, str(countries), plot_)
     else:
         x_train_uf, y_train_uf, x_train_feat = undersample_random(x_train_list, y_train_list, fs_train, ratio,
-                                                                  clip, clip_percentages, str(countries),
-                                                                  True)
+                                                                  str(countries), plot_)
 
 
 # %% SCRIPT STARTS HERE
@@ -53,17 +52,20 @@ look_back_window = 100
 window_slide = 1
 
 # under-sampling parameters
-optimised = True
-if optimised:
-    count_h, count_l, num_h, num_l = 2, 0.2, 100000, 500
-    power_l, power_h, power_penalty = 0.2, 2, 1000
-else:
-    ratio = 0.3
+optimise_ = [True]
 
-clip = True
-if clip:
-    clip_percentages = [10, 10]
+for optimised in optimise_:
+    clip = True
+    plot_ = True
 
-# >> MAIN LOOP
-if __name__ == "__main__":
-    main()
+    if optimised:
+        if clip:
+            clip_percentages = [0, 10]
+        count_h, count_l, num_h, num_l = 2, 0.2, 100000, 500
+        power_l, power_h, power_penalty = 0.2, 2, 1000
+    else:
+        ratio = 0.3
+
+    # >> MAIN LOOP
+    if __name__ == "__main__":
+        main()
