@@ -259,17 +259,17 @@ def main():
     for method in predictionsDict.keys():
         if method not in gtDict.keys():
             gtDict[method] = df_test.values
-    if PLOT:
-        for method in predictionsDict.keys():
-            plt.figure(figsize=(15, len(to_plot)))
-            plt.title(method)
-            yhat = predictionsDict[method]
-            for i, tp in enumerate(to_plot):
-                plt.subplot(1 + len(to_plot) // 3, 3, i + 1)
-                plt.plot(df_test[tp].values, label='Original ' + str(tp))
-                plt.plot(yhat[:, list(df_test.columns).index(tp)], color='red', label=method + ' ' + str(tp))
-                plt.legend()
-            plt.show()
+    # if PLOT:
+    #     for method in predictionsDict.keys():
+    #         plt.figure(figsize=(15, len(to_plot)))
+    #         plt.title(method)
+    #         yhat = predictionsDict[method]
+    #         for i, tp in enumerate(to_plot):
+    #             plt.subplot(1 + len(to_plot) // 3, 3, i + 1)
+    #             plt.plot(df_test[tp].values, label='Original ' + str(tp))
+    #             plt.plot(yhat[:, list(df_test.columns).index(tp)], color='red', label=method + ' ' + str(tp))
+    #             plt.legend()
+    #         plt.show()
 
     # ================================================================================================### Deep learning
     x_data, y_data, x_data_scalers = get_data(False, normalize=True, data=daily_cases, dataf=daily_filtered,
@@ -310,10 +310,10 @@ def main():
     #              # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
     #              ]
     model_names = [
-        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_5_10", 'LSTM-ALL-F-Reduce-5'),
-        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_15_10", 'LSTM-ALL-F-Reduce-15'),
-        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_25_10", 'LSTM-ALL-F-Reduce-25'),
-        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_50_10", 'LSTM-ALL-F-Reduce-50'),
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_5_14", 'LSTM-ALL-F-Reduce-5'),
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_15_14", 'LSTM-ALL-F-Reduce-15'),
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_25_14", 'LSTM-ALL-F-Reduce-25'),
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_50_14", 'LSTM-ALL-F-Reduce-50'),
     ]
     plot_data = [[{},  # {'label_name': model_names[0][1] + '-raw', 'line_size': 4},
                   {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
@@ -325,7 +325,8 @@ def main():
                   {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
                  ]
 
-    show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=False, skip_plotting=False)
+    show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=False,
+                      skip_plotting=False)
 
     show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
     show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
@@ -333,8 +334,12 @@ def main():
     # ======================================================================================== ## Comparison of methods
 
     plt.figure(figsize=(15, 8))
-    arr = []
     i = 0
+    colors = {'Naive': 'k', 'Yester': 'c', '(F)': 'r', '(F-D)': 'b', '(F-E)': 'g'}
+    linetypeidx = {}
+    for key in colors.keys():
+        linetypeidx[key] = 0
+    linetypes = ['-', '--',  '-.', 'dotted']
     for method in resultsDict.keys():
         # if method == "Yesterdays value":
         #     continue
@@ -347,21 +352,37 @@ def main():
         #     mean += resultsDict[method][r][metric]
         # mean = mean/len(resultsDict[method])
         # arr.append(mean)
-
+        color = None
+        linetype = None
+        for key in colors.keys():
+            if key in method:
+                color = colors[key]
+                linetype = linetypes[linetypeidx[key]]
+                linetypeidx[key] += 1
+        plt.subplot(211)
         n, bins, patches = plt.hist(abserr.reshape(-1), 1000, density=True, histtype='step',
-                                    cumulative=True, label=method)
+                                    cumulative=True, color=color, linestyle=linetype, label=method)
         i += 1
 
         patches[0].set_xy(patches[0].get_xy()[:-1])
 
+        plt.subplot(212)
+        if len(abserr.shape) == 2:
+            daily_err = np.mean(abserr, 1)
+        else:
+            daily_err = np.mean(abserr, 0).mean(1)
+        plt.plot(daily_err, color=color, linestyle=linetype, label=method)
         print(f'{method}\t{np.mean(abserr):.2f}\t{np.mean(sqderr) ** 0.5:.2f}\t{np.mean(mape):.2f}')
-
+    plt.subplot(211)
     plt.legend(loc='lower right')
     plt.xlabel("Absolute error")
     plt.ylabel("Cumulative probability density")
+    plt.xscale('log')
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 6})
 
-    plt.plot(np.mean(arr, -1).T)
-    plt.legend(predictionsDict.keys())
+    plt.subplot(212)
+    plt.yscale('log')
+    # plt.legend(bbox_to_anchor=(1.05, 1), loc='lower left')
     plt.show()
 
     # import pickle
@@ -380,7 +401,8 @@ def get_ub_lb(pred, true, n_regions):
     return ub_err, lb_err
 
 
-def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True, skip_plotting=False):
+def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True,
+                      skip_plotting=False):
     n_regions = len(x_data_scalers.data_max_)
     Ys = []
     method_list = []
