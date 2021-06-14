@@ -69,7 +69,7 @@ def main():
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
                         default='SL')
-    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-01-01')
+    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-2-1')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
@@ -310,10 +310,19 @@ def main():
     #              # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
     #              ]
     model_names = [
-        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_14_7", 'LSTM-ALL-F-Reduce'),
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_5_10", 'LSTM-ALL-F-Reduce-5'),
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_15_10", 'LSTM-ALL-F-Reduce-15'),
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_25_10", 'LSTM-ALL-F-Reduce-25'),
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_50_10", 'LSTM-ALL-F-Reduce-50'),
     ]
-    plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4},
-                  {'label_name': model_names[0][1] + '-fil', 'line_size': 3}]
+    plot_data = [[{},  # {'label_name': model_names[0][1] + '-raw', 'line_size': 4},
+                  {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
+                 [{},  # {'label_name': model_names[1][1] + '-raw', 'line_size': 4},
+                  {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
+                 [{},  # {'label_name': model_names[2][1] + '-raw', 'line_size': 4},
+                  {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
+                 [{},  # {'label_name': model_names[3][1] + '-raw', 'line_size': 4},
+                  {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
                  ]
 
     show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=False)
@@ -322,20 +331,6 @@ def main():
     show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
 
     # ======================================================================================== ## Comparison of methods
-
-    # metric = 'mae'
-    # arr = []
-    # for method in resultsDict.keys():
-    #     arr.append([])
-    #     for dist in resultsDict[method].keys():
-    #         arr[-1].append(resultsDict[method][dist][metric])
-    # arr = np.array(arr)
-    # X = np.arange(len(arr[0]))
-    # fig = plt.figure()
-    # ax = fig.add_axes([0, 0, 1, 1])
-    # w = 1 / len(arr)
-    # for i in range(len(arr)):
-    #     ax.bar(X + w * i, arr[i, :], width=w)
 
     plt.figure(figsize=(15, 8))
     arr = []
@@ -496,14 +491,17 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
     #########################################################################
     Ys = [y_test, y_testf] + Ys
     method_list = ['Observations Raw', 'Observations Filtered'] + method_list
-
+    _cut = 1e10
+    for i in range(len(Ys)):
+        _cut = min(Ys[i].shape[0], _cut)
     for i in range(len(Ys)):
         print(method_list[i], Ys[i].shape, np.arange(0, Ys[i].shape[0], WINDOW_LENGTH + PREDICT_STEPS))
+        Ys[i] = Ys[i][-_cut:, :, :]
         Ys[i] = Ys[i][np.arange(0, Ys[i].shape[0], WINDOW_LENGTH + PREDICT_STEPS), :, :]
     Ys = np.stack(Ys, 1)
 
-    x_test = x_test[np.arange(0, x_test.shape[0], WINDOW_LENGTH + PREDICT_STEPS), :, :]
-    x_testf = x_testf[np.arange(0, x_testf.shape[0], WINDOW_LENGTH + PREDICT_STEPS), :, :]
+    x_test = x_test[np.arange(0, x_test.shape[0], WINDOW_LENGTH + PREDICT_STEPS), -WINDOW_LENGTH:, :]
+    x_testf = x_testf[np.arange(0, x_testf.shape[0], WINDOW_LENGTH + PREDICT_STEPS), -WINDOW_LENGTH:, :]
     plt.figure(figsize=(18, 9))
 
     plot_prediction(x_test, x_testf, Ys, method_list, styles, region_names, region_mask)
@@ -533,19 +531,22 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
         '''
         x = []
         y = []
-        for i in range(window, len(X)):
-            x.append(X[i - window:i])
+        for i in range(window - 1, len(X)):
+            x.append(X[i - window + 1:i + 1])
             y.append(Y[i])
         return np.array(x), np.array(y)
 
     def get_model_predictions(model, x_data, y_data, scalers):
         WINDOW_LENGTH = model.input.shape[1]
         PREDICT_STEPS = model.output.shape[1]
-        print(f"Predicting from model. X={x_data.shape} Y={y_data.shape}")
         X_w, y_w = window_data(x_data, y_data, window=WINDOW_LENGTH)
-
+        if split_days - WINDOW_LENGTH - 1 < 0:
+            raise Exception(
+                f"Test data too small to  predict  from all models. Try to increase test data size! {split_days} <= {WINDOW_LENGTH}")
         X_test_w = X_w[split_days - WINDOW_LENGTH - 1:-1]
         y_test_w = y_w[split_days - WINDOW_LENGTH - 1:-1]
+
+        print(f"Predicting from model. X={X_test_w.shape} Y={y_test_w.shape}")
 
         if model.input.shape[-1] == 1:
             yhat = []
@@ -567,8 +568,8 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
     Xf = np.expand_dims(x_dataf[split_days - 14:split_days, :], 0)
     # X = np.expand_dims(x_data[:split_days,:],0)
     # Xf = np.expand_dims(x_dataf[:split_days,:],0)
-    Y = y_data[split_days:, :]
-    Yf = y_dataf[split_days:, :]
+    Y = y_data[split_days - 1:, :]
+    Yf = y_dataf[split_days - 1:, :]
 
     Ys = [Y]
     method_list = ['Observations Raw']

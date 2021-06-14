@@ -282,10 +282,14 @@ def main():
         # under-sampling parameters
         count_h, count_l, num_h, num_l = 2, 0.2, 45000, 500
         power_l, power_h, power_penalty = 0.2, 2, 1000
+        clip = True
+        clip_percentages = [0, 10]
 
         x_train_list, y_train_list, fs_train = undersample3(
-            str(DATASETS), x_train_list, y_train_list, fs_train, count_h, count_l, num_h, num_l, power_l, power_h,
-            power_penalty, True, savepath=f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
+            x_train_list, y_train_list, fs_train, count_h, count_l,
+            num_h, num_l, power_l, power_h, power_penalty, clip,
+            clip_percentages, str(DATASETS), PLOT,
+            savepath=f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
         print(f"Undersample percentage {x_train_list[0].shape[0] / total_samples * 100:.2f}%")
         EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
         print(f"New Epoch = {EPOCHS}")
