@@ -162,7 +162,7 @@ def main():
 
     global daily_data, DATASET, DATASETS, split_date, EPOCHS, BATCH_SIZE, BUFFER_SIZE, WINDOW_LENGTH, PREDICT_STEPS, lr, \
         TRAINING_DATA_TYPE, UNDERSAMPLING, PLOT, daily_cases, daily_filtered, population, region_names, split_days, \
-        x_data_scalers, folder, fmodel_name
+        x_data_scalers, folder, fmodel_name, count_h, count_l, num_l, num_h, power_l, power_h, power_penalty, clip_percentages
     daily_data = args.daily
     DATASETS = args.dataset
     if len(DATASETS) == 1:
@@ -179,10 +179,15 @@ def main():
     UNDERSAMPLING = args.undersampling
 
     midpoint = True
-    R_EIG_ratio = 3
-    R_power = 1
-    look_back_window, window_slide = 50, 1
-    PLOT = True
+    if midpoint:
+        R_EIG_ratio = 1
+        R_power = 2 / 3
+    else:
+        R_EIG_ratio = 3
+        R_power = 1
+
+    look_back_window, window_slide = 100, 1
+    PLOT = False
 
     # ===================================================================================================== Loading data
 
@@ -226,7 +231,7 @@ def main():
     features = features.values
 
     daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, midpoint=midpoint, corr=True,
-                                         R_EIG_ratio=1, R_power=1.5,
+                                         R_EIG_ratio=R_EIG_ratio, R_power=R_power,
                                          region_names=region_names, plot_freq=1, view=False)
 
     # ================================================================================================= Initialize Model
@@ -280,18 +285,24 @@ def main():
 
     if UNDERSAMPLING == "Reduce":
         # under-sampling parameters
-        count_h, count_l, num_h, num_l = 2, 0.2, 45000, 500
-        power_l, power_h, power_penalty = 0.2, 2, 1000
+
+        optimised = True
         clip = True
-        clip_percentages = [0, 10]
+
+        if optimised:
+            if clip:
+                clip_percentages = [0, 10]
+            count_h, count_l, num_h, num_l = 2, 0.2, 100000, 500
+            power_l, power_h, power_penalty = 0.2, 2, 1000
+        else:
+            ratio = 0.3
 
         x_train_list, y_train_list, fs_train = undersample3(
-            x_train_list, y_train_list, fs_train, count_h, count_l,
-            num_h, num_l, power_l, power_h, power_penalty, clip,
-            clip_percentages, str(DATASETS), PLOT,
-            savepath=f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
+            str(DATASETS), x_train_list, y_train_list, fs_train, count_h, count_l, num_h, num_l, power_l, power_h,
+            power_penalty, clip, clip_percentages, PLOT, f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
+
         print(f"Undersample percentage {x_train_list[0].shape[0] / total_samples * 100:.2f}%")
-        EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
+        # EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
         print(f"New Epoch = {EPOCHS}")
         # here Xtrain have been reduced by regions
 
