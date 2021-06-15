@@ -69,7 +69,7 @@ def main():
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
                         default='SL')
-    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-01-01')
+    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-2-1')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
@@ -259,17 +259,17 @@ def main():
     for method in predictionsDict.keys():
         if method not in gtDict.keys():
             gtDict[method] = df_test.values
-    if PLOT:
-        for method in predictionsDict.keys():
-            plt.figure(figsize=(15, len(to_plot)))
-            plt.title(method)
-            yhat = predictionsDict[method]
-            for i, tp in enumerate(to_plot):
-                plt.subplot(1 + len(to_plot) // 3, 3, i + 1)
-                plt.plot(df_test[tp].values, label='Original ' + str(tp))
-                plt.plot(yhat[:, list(df_test.columns).index(tp)], color='red', label=method + ' ' + str(tp))
-                plt.legend()
-            plt.show()
+    # if PLOT:
+    #     for method in predictionsDict.keys():
+    #         plt.figure(figsize=(15, len(to_plot)))
+    #         plt.title(method)
+    #         yhat = predictionsDict[method]
+    #         for i, tp in enumerate(to_plot):
+    #             plt.subplot(1 + len(to_plot) // 3, 3, i + 1)
+    #             plt.plot(df_test[tp].values, label='Original ' + str(tp))
+    #             plt.plot(yhat[:, list(df_test.columns).index(tp)], color='red', label=method + ' ' + str(tp))
+    #             plt.legend()
+    #         plt.show()
 
     # ================================================================================================### Deep learning
     x_data, y_data, x_data_scalers = get_data(False, normalize=True, data=daily_cases, dataf=daily_filtered,
@@ -310,36 +310,36 @@ def main():
     #              # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
     #              ]
     model_names = [
-        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_14_7", 'LSTM-ALL-F-Reduce'),
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_5_14", 'LSTM-ALL-F-Reduce-5'),
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_15_14", 'LSTM-ALL-F-Reduce-15'),
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_25_14", 'LSTM-ALL-F-Reduce-25'),
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_50_14", 'LSTM-ALL-F-Reduce-50'),
     ]
-    plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4},
-                  {'label_name': model_names[0][1] + '-fil', 'line_size': 3}]
+    plot_data = [[{},  # {'label_name': model_names[0][1] + '-raw', 'line_size': 4},
+                  {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
+                 [{},  # {'label_name': model_names[1][1] + '-raw', 'line_size': 4},
+                  {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
+                 [{},  # {'label_name': model_names[2][1] + '-raw', 'line_size': 4},
+                  {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
+                 [{},  # {'label_name': model_names[3][1] + '-raw', 'line_size': 4},
+                  {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
                  ]
 
-    show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=False)
+    show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=False,
+                      skip_plotting=False)
 
     show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
     show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
 
     # ======================================================================================== ## Comparison of methods
 
-    # metric = 'mae'
-    # arr = []
-    # for method in resultsDict.keys():
-    #     arr.append([])
-    #     for dist in resultsDict[method].keys():
-    #         arr[-1].append(resultsDict[method][dist][metric])
-    # arr = np.array(arr)
-    # X = np.arange(len(arr[0]))
-    # fig = plt.figure()
-    # ax = fig.add_axes([0, 0, 1, 1])
-    # w = 1 / len(arr)
-    # for i in range(len(arr)):
-    #     ax.bar(X + w * i, arr[i, :], width=w)
-
     plt.figure(figsize=(15, 8))
-    arr = []
     i = 0
+    colors = {'Naive': 'k', 'Yester': 'c', '(F)': 'r', '(F-D)': 'b', '(F-E)': 'g'}
+    linetypeidx = {}
+    for key in colors.keys():
+        linetypeidx[key] = 0
+    linetypes = ['-', '--',  '-.', 'dotted']
     for method in resultsDict.keys():
         # if method == "Yesterdays value":
         #     continue
@@ -352,21 +352,37 @@ def main():
         #     mean += resultsDict[method][r][metric]
         # mean = mean/len(resultsDict[method])
         # arr.append(mean)
-
+        color = None
+        linetype = None
+        for key in colors.keys():
+            if key in method:
+                color = colors[key]
+                linetype = linetypes[linetypeidx[key]]
+                linetypeidx[key] += 1
+        plt.subplot(211)
         n, bins, patches = plt.hist(abserr.reshape(-1), 1000, density=True, histtype='step',
-                                    cumulative=True, label=method)
+                                    cumulative=True, color=color, linestyle=linetype, label=method)
         i += 1
 
         patches[0].set_xy(patches[0].get_xy()[:-1])
 
+        plt.subplot(212)
+        if len(abserr.shape) == 2:
+            daily_err = np.mean(abserr, 1)
+        else:
+            daily_err = np.mean(abserr, 0).mean(1)
+        plt.plot(daily_err, color=color, linestyle=linetype, label=method)
         print(f'{method}\t{np.mean(abserr):.2f}\t{np.mean(sqderr) ** 0.5:.2f}\t{np.mean(mape):.2f}')
-
+    plt.subplot(211)
     plt.legend(loc='lower right')
     plt.xlabel("Absolute error")
     plt.ylabel("Cumulative probability density")
+    plt.xscale('log')
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 6})
 
-    plt.plot(np.mean(arr, -1).T)
-    plt.legend(predictionsDict.keys())
+    plt.subplot(212)
+    plt.yscale('log')
+    # plt.legend(bbox_to_anchor=(1.05, 1), loc='lower left')
     plt.show()
 
     # import pickle
@@ -385,7 +401,8 @@ def get_ub_lb(pred, true, n_regions):
     return ub_err, lb_err
 
 
-def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True):
+def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True,
+                      skip_plotting=False):
     n_regions = len(x_data_scalers.data_max_)
     Ys = []
     method_list = []
@@ -494,16 +511,21 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
             styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
 
     #########################################################################
+    if skip_plotting:
+        return
     Ys = [y_test, y_testf] + Ys
     method_list = ['Observations Raw', 'Observations Filtered'] + method_list
-
+    _cut = 1e10
+    for i in range(len(Ys)):
+        _cut = min(Ys[i].shape[0], _cut)
     for i in range(len(Ys)):
         print(method_list[i], Ys[i].shape, np.arange(0, Ys[i].shape[0], WINDOW_LENGTH + PREDICT_STEPS))
+        Ys[i] = Ys[i][-_cut:, :, :]
         Ys[i] = Ys[i][np.arange(0, Ys[i].shape[0], WINDOW_LENGTH + PREDICT_STEPS), :, :]
     Ys = np.stack(Ys, 1)
 
-    x_test = x_test[np.arange(0, x_test.shape[0], WINDOW_LENGTH + PREDICT_STEPS), :, :]
-    x_testf = x_testf[np.arange(0, x_testf.shape[0], WINDOW_LENGTH + PREDICT_STEPS), :, :]
+    x_test = x_test[np.arange(0, x_test.shape[0], WINDOW_LENGTH + PREDICT_STEPS), -WINDOW_LENGTH:, :]
+    x_testf = x_testf[np.arange(0, x_testf.shape[0], WINDOW_LENGTH + PREDICT_STEPS), -WINDOW_LENGTH:, :]
     plt.figure(figsize=(18, 9))
 
     plot_prediction(x_test, x_testf, Ys, method_list, styles, region_names, region_mask)
@@ -533,19 +555,22 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
         '''
         x = []
         y = []
-        for i in range(window, len(X)):
-            x.append(X[i - window:i])
+        for i in range(window - 1, len(X)):
+            x.append(X[i - window + 1:i + 1])
             y.append(Y[i])
         return np.array(x), np.array(y)
 
     def get_model_predictions(model, x_data, y_data, scalers):
         WINDOW_LENGTH = model.input.shape[1]
         PREDICT_STEPS = model.output.shape[1]
-        print(f"Predicting from model. X={x_data.shape} Y={y_data.shape}")
         X_w, y_w = window_data(x_data, y_data, window=WINDOW_LENGTH)
-
+        if split_days - WINDOW_LENGTH - 1 < 0:
+            raise Exception(
+                f"Test data too small to  predict  from all models. Try to increase test data size! {split_days} <= {WINDOW_LENGTH}")
         X_test_w = X_w[split_days - WINDOW_LENGTH - 1:-1]
         y_test_w = y_w[split_days - WINDOW_LENGTH - 1:-1]
+
+        print(f"Predicting from model. X={X_test_w.shape} Y={y_test_w.shape}")
 
         if model.input.shape[-1] == 1:
             yhat = []
@@ -567,8 +592,8 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
     Xf = np.expand_dims(x_dataf[split_days - 14:split_days, :], 0)
     # X = np.expand_dims(x_data[:split_days,:],0)
     # Xf = np.expand_dims(x_dataf[:split_days,:],0)
-    Y = y_data[split_days:, :]
-    Yf = y_dataf[split_days:, :]
+    Y = y_data[split_days - 1:, :]
+    Yf = y_dataf[split_days - 1:, :]
 
     Ys = [Y]
     method_list = ['Observations Raw']
