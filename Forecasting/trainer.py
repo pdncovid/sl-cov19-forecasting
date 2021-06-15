@@ -187,7 +187,7 @@ def main():
         R_power = 1
 
     look_back_window, window_slide = 100, 1
-    PLOT = False
+    PLOT = True
 
     # ===================================================================================================== Loading data
 
@@ -297,17 +297,12 @@ def main():
         else:
             ratio = 0.3
 
-<<<<<<< Updated upstream
-        x_train_list, y_train_list, fs_train = undersample3(
-            str(DATASETS), x_train_list, y_train_list, fs_train, count_h, count_l, num_h, num_l, power_l, power_h,
-            power_penalty, clip, clip_percentages, PLOT, f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
 
-=======
         x_train_list, y_train_list, fs_train = undersample3(x_train_list, y_train_list, fs_train, count_h, count_l,
                                                             num_h, num_l, power_l, power_h, power_penalty, clip,
                                                             clip_percentages, str(DATASETS), PLOT,
                                                             f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
->>>>>>> Stashed changes
+
         print(f"Undersample percentage {x_train_list[0].shape[0] / total_samples * 100:.2f}%")
         # EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
         print(f"New Epoch = {EPOCHS}")
