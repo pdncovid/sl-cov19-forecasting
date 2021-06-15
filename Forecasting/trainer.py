@@ -141,7 +141,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (SL, Texas, USA, Global)', type=str,
-                        nargs='+')
+                        nargs='+', default='SL Texas IT NG')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-02-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
@@ -297,10 +297,17 @@ def main():
         else:
             ratio = 0.3
 
+<<<<<<< Updated upstream
         x_train_list, y_train_list, fs_train = undersample3(
             str(DATASETS), x_train_list, y_train_list, fs_train, count_h, count_l, num_h, num_l, power_l, power_h,
             power_penalty, clip, clip_percentages, PLOT, f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
 
+=======
+        x_train_list, y_train_list, fs_train = undersample3(x_train_list, y_train_list, fs_train, count_h, count_l,
+                                                            num_h, num_l, power_l, power_h, power_penalty, clip,
+                                                            clip_percentages, str(DATASETS), PLOT,
+                                                            f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
+>>>>>>> Stashed changes
         print(f"Undersample percentage {x_train_list[0].shape[0] / total_samples * 100:.2f}%")
         # EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
         print(f"New Epoch = {EPOCHS}")
