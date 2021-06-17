@@ -7,29 +7,29 @@ modeltype="LSTM_Simple_WO_Regions"
 dataset="SL Texas NG IT"
 
 # UM
-python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 5 --output_days 10 --modeltype $modeltype --preprocessing Filtered --undersampling Reduce --lr 0.004
+#python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 5 --output_days 10 --modeltype $modeltype --preprocessing Filtered --undersampling Reduce --lr 0.004
 python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 15 --output_days 10 --modeltype $modeltype --preprocessing Filtered --undersampling Reduce --lr 0.004
 python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 25 --output_days 10 --modeltype $modeltype --preprocessing Filtered --undersampling Reduce --lr 0.004
 python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 50 --output_days 10 --modeltype $modeltype --preprocessing Filtered --undersampling Reduce --lr 0.004
 
 # SERVER
-python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 5 --output_days 10 --modeltype $modeltype --preprocessing Filtered --undersampling None --lr 0.004
-python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 15 --output_days 10 --modeltype $modeltype --preprocessing Filtered --undersampling None --lr 0.004
-python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 25 --output_days 10 --modeltype $modeltype --preprocessing Filtered --undersampling None --lr 0.004
-python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 50 --output_days 10 --modeltype $modeltype --preprocessing Filtered --undersampling None --lr 0.004
-
-# HW
-python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 5 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling Reduce --lr 0.004
-python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 15 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling Reduce --lr 0.004
-python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 25 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling Reduce --lr 0.004
-python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 50 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling Reduce --lr 0.004
-
-# SERVER
-python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 5 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling None --lr 0.004
-python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 15 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling None --lr 0.004
-python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 25 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling None --lr 0.004
-python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 50 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling None --lr 0.004
-
+#python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 5 --output_days 10 --modeltype $modeltype --preprocessing Filtered --undersampling None --lr 0.004
+#python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 15 --output_days 10 --modeltype $modeltype --preprocessing Filtered --undersampling None --lr 0.004
+#python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 25 --output_days 10 --modeltype $modeltype --preprocessing Filtered --undersampling None --lr 0.004
+#python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 50 --output_days 10 --modeltype $modeltype --preprocessing Filtered --undersampling None --lr 0.004
+#
+## HW
+#python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 5 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling Reduce --lr 0.004
+#python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 15 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling Reduce --lr 0.004
+#python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 25 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling Reduce --lr 0.004
+#python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 50 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling Reduce --lr 0.004
+#
+## SERVER
+#python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 5 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling None --lr 0.004
+#python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 15 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling None --lr 0.004
+#python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 25 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling None --lr 0.004
+#python trainer.py --daily --dataset $dataset --epochs $epochs --input_days 50 --output_days 10 --modeltype $modeltype --preprocessing Unfiltered --undersampling None --lr 0.004
+#
 
 #dataset="SL"
 #python trainer.py --daily --dataset $dataset --epochs $epochs --input_days $input_days --output_days $output_days --modeltype $modeltype --preprocessing Unfiltered --undersampling None --lr 0.002

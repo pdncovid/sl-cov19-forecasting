@@ -12,6 +12,9 @@ def get_model(modeltype, input_days, output_days, n_features, n_regions):
     elif modeltype == "LSTM_Simple_WO_Regions":
         reduce_regions2batch = True
         model = LSTM_Simple_WO_Regions(input_days, output_days)
+    elif modeltype == "LSTM_Simple_WO_Regions_v2":
+        reduce_regions2batch = True
+        model = LSTM_Simple_WO_Regions_v2(input_days, output_days)
     elif modeltype == "LSTM_Simple_W_Regions":
         reduce_regions2batch = False
         model = LSTM_Simple_W_Regions(input_days, output_days, n_regions)
@@ -70,16 +73,32 @@ def Dense_W_regions(input_seq_size, output_seq_size, n_features, n_regions):
 
 def LSTM_Simple_WO_Regions(input_seq_size, output_seq_size):
     inp_seq = tf.keras.layers.Input((input_seq_size, 1), name="input_seq")
-    #     inp_fea = tf.keras.layers.Input(n_features, name="input_fea")
-
     x = inp_seq
-    # x = tf.keras.layers.LSTM(32, activation='relu', return_sequences=True)(x)
     cells = int(np.ceil((input_seq_size - output_seq_size) * 0.4 + output_seq_size))
     x = tf.keras.layers.LSTM(cells)(x)
     x = tf.keras.layers.Activation('relu')(x)
     x = tf.keras.layers.Dense(output_seq_size)(x)
+    x = tf.keras.layers.Activation('relu')(x)
     x = tf.keras.layers.Reshape((output_seq_size, 1))(x)
     model = tf.keras.models.Model(inp_seq, x, name="LSTM_Simple_WO_Regions")
+
+    return model
+
+
+def LSTM_Simple_WO_Regions_v2(input_seq_size, output_seq_size):
+    inp_seq = tf.keras.layers.Input((input_seq_size, 1), name="input_seq")
+    max_cells = 15
+    x = inp_seq
+    if input_seq_size > max_cells:
+        cells = max_cells
+    else:
+        cells = int(np.ceil((input_seq_size - output_seq_size) * 0.8 + output_seq_size))
+    x = tf.keras.layers.LSTM(cells)(x)
+    x = tf.keras.layers.Activation('softmax')(x)
+    x = tf.keras.layers.Dense(output_seq_size)(x)
+    x = tf.keras.layers.Activation('relu')(x)
+    x = tf.keras.layers.Reshape((output_seq_size, 1))(x)
+    model = tf.keras.models.Model(inp_seq, x, name="LSTM_Simple_WO_Regions_v2")
 
     return model
 
