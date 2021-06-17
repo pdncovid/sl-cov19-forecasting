@@ -51,7 +51,7 @@ else:
     R_power = 1
 
 look_back_window = 100
-window_slide = 1
+window_slide = 10
 
 # under-sampling parameters
 
