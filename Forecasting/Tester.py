@@ -309,33 +309,47 @@ def main():
     #              # [{'label_name': model_names[4][1] + '-raw', 'line_size': 4}, {}],
     #              # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
     #              ]
+    fil='Unfiltered'
+    sam = 'None'
     model_names = [
-        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_5_14", 'LSTM-ALL-F-Reduce-5'),
-        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_15_14", 'LSTM-ALL-F-Reduce-15'),
-        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_25_14", 'LSTM-ALL-F-Reduce-25'),
-        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_50_14", 'LSTM-ALL-F-Reduce-50'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_5_10", f'LSTM-ALL-{fil[0]}-{sam}-5'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_15_10", f'LSTM-ALL-{fil[0]}-{sam}-15'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_25_10", f'LSTM-ALL-{fil[0]}-{sam}-25'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_50_10", f'LSTM-ALL-{fil[0]}-{sam}-50'),
     ]
-    plot_data = [[{},  # {'label_name': model_names[0][1] + '-raw', 'line_size': 4},
-                  {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
-                 [{},  # {'label_name': model_names[1][1] + '-raw', 'line_size': 4},
-                  {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
-                 [{},  # {'label_name': model_names[2][1] + '-raw', 'line_size': 4},
-                  {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
-                 [{},  # {'label_name': model_names[3][1] + '-raw', 'line_size': 4},
-                  {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
-                 ]
-
-    show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=False,
+    if fil =='Filtered':
+        plot_data = [[{},#{'label_name': model_names[0][1] + '-raw', 'line_size': 4},
+                      {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
+                     [{},#{'label_name': model_names[1][1] + '-raw', 'line_size': 4},
+                      {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
+                     [{},#{'label_name': model_names[2][1] + '-raw', 'line_size': 4},
+                      {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
+                     [{},#{'label_name': model_names[3][1] + '-raw', 'line_size': 4},
+                      {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
+                     ]
+        use_f_gt = True
+    else:
+        plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4},
+                      {}],#{'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
+                     [{'label_name': model_names[1][1] + '-raw', 'line_size': 4},
+                      {}],#{'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
+                     [{'label_name': model_names[2][1] + '-raw', 'line_size': 4},
+                      {}],#{'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
+                     [{'label_name': model_names[3][1] + '-raw', 'line_size': 4},
+                      {}],#{'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
+                     ]
+        use_f_gt = False
+    show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=use_f_gt,
                       skip_plotting=False)
 
-    show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
-    show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True)
+    show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=use_f_gt)
+    show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=use_f_gt)
 
     # ======================================================================================== ## Comparison of methods
 
     plt.figure(figsize=(15, 8))
     i = 0
-    colors = {'Naive': 'k', 'Yester': 'c', '(F)': 'r', '(F-D)': 'b', '(F-E)': 'g'}
+    colors = {'Naive': 'k', 'Yester': 'c', '(F)': 'r', '(F-D)': 'b', '(F-E)': 'g','(R)': 'r', '(R-D)': 'b', '(R-E)': 'g'}
     linetypeidx = {}
     for key in colors.keys():
         linetypeidx[key] = 0
