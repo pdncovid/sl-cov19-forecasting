@@ -110,7 +110,7 @@ def main():
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
 
-    midpoint = True
+    midpoint = False
     R_EIG_ratio = 3
     R_power = 1
     look_back_filter = True
@@ -310,7 +310,8 @@ def main():
     #              # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
     #              ]
     fil='Unfiltered'
-    sam = 'None'
+    sam = 'Reduce'
+    flip_compare = True
     model_names = [
         (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_5_10", f'LSTM-ALL-{fil[0]}-{sam}-5'),
         (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_15_10", f'LSTM-ALL-{fil[0]}-{sam}-15'),
@@ -339,6 +340,8 @@ def main():
                       {}],#{'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
                      ]
         use_f_gt = False
+    if flip_compare:
+        use_f_gt = False if use_f_gt else True
     show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=use_f_gt,
                       skip_plotting=False)
 
