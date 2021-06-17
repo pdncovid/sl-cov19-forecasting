@@ -68,7 +68,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='SL')
+                        default='JP')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-2-1')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
@@ -309,9 +309,9 @@ def main():
     #              # [{'label_name': model_names[4][1] + '-raw', 'line_size': 4}, {}],
     #              # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
     #              ]
-    fil='Unfiltered'
+    fil='Filtered'
     sam = 'Reduce'
-    flip_compare = True
+    flip_compare = False
     model_names = [
         (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_5_10", f'LSTM-ALL-{fil[0]}-{sam}-5'),
         (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_15_10", f'LSTM-ALL-{fil[0]}-{sam}-15'),
@@ -357,6 +357,7 @@ def main():
     for key in colors.keys():
         linetypeidx[key] = 0
     linetypes = ['-', '--',  '-.', 'dotted']
+    prediction_err_daywise = []
     for method in resultsDict.keys():
         # if method == "Yesterdays value":
         #     continue
@@ -389,7 +390,12 @@ def main():
         else:
             daily_err = np.mean(abserr, 0).mean(1)
         plt.plot(daily_err, color=color, linestyle=linetype, label=method)
+        prediction_err_daywise.append(daily_err)
         print(f'{method}\t{np.mean(abserr):.2f}\t{np.mean(sqderr) ** 0.5:.2f}\t{np.mean(mape):.2f}')
+
+    for idx, method in enumerate(resultsDict.keys()):
+        print(f'{method}\t'+'\t'.join(map(str,prediction_err_daywise[idx])))
+
     plt.subplot(211)
     plt.legend(loc='lower right')
     plt.xlabel("Absolute error")
@@ -414,7 +420,7 @@ def main():
 def get_ub_lb(pred, true, n_regions):
     err = abs((pred - true) ** 2)
     ub_err = np.sqrt(np.mean(err, axis=-1, keepdims=True)).repeat(n_regions, axis=-1) + pred
-    lb_err = -np.sqrt(np.mean(err, axis=-1, keepdims=True)).repeat(n_regions, axis=-1) + pred
+    lb_err = np.maximum(-np.sqrt(np.mean(err, axis=-1, keepdims=True)).repeat(n_regions, axis=-1) + pred, 0)
     return ub_err, lb_err
 
 
