@@ -34,6 +34,11 @@ def main():
     plt.title(region_names[plt_idx])
     plt.show()
 
+    for i in range(len(daily_filtered)):
+        plt.plot(daily_filtered[i,:]/max(daily_filtered[i,:]))
+        plt.title(str(i))
+        plt.show()
+
     temp = load_samples(fil, fs, WINDOW_LENGTH, PREDICT_STEPS)
 
     x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp

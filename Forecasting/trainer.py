@@ -152,7 +152,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (SL, Texas, USA, Global)', type=str,
-                        nargs='+', default='SL Texas IT NG')
+                        nargs='+', default='JP')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-02-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
@@ -234,6 +234,7 @@ def main():
     n_features = features.shape[1]
 
     split_days = (pd.to_datetime(split_date) - pd.to_datetime(START_DATE)).days
+    test_dates = 200
 
     print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
 
@@ -274,6 +275,13 @@ def main():
 
     fil, raw, fs = load_multiple_data(DATASETS, args.path, look_back_window, window_slide, R_EIG_ratio, R_power,
                                       midpoint)
+    for i_region in range(len(fil)):
+        if fil[i_region].shape[0] < test_dates:
+            Warning(f"Region has too few data {fil[i_region].shape[0]} to train, can't keep {test_dates} samples as test data.")
+        else:
+            fil[i_region] = fil[i_region][:-test_dates]
+            raw[i_region] = raw[i_region][:-test_dates]
+
     if TRAINING_DATA_TYPE == "Filtered":
         temp = load_samples(fil, fs, WINDOW_LENGTH, PREDICT_STEPS)
         x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp

@@ -151,7 +151,7 @@ def main():
     n_features = features.shape[1]
 
     global region_mask
-    region_mask = (np.arange(n_regions) == 5).astype('int32')
+    region_mask = (np.arange(n_regions) == 11).astype('int32')
 
     print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
 
@@ -545,12 +545,18 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
         print(method_list[i], Ys[i].shape, np.arange(0, Ys[i].shape[0], WINDOW_LENGTH + PREDICT_STEPS))
         Ys[i] = Ys[i][-_cut:, :, :]
         Ys[i] = Ys[i][np.arange(0, Ys[i].shape[0], WINDOW_LENGTH + PREDICT_STEPS), :, :]
-    Ys = np.stack(Ys, 1)
 
     x_test = x_test[np.arange(0, x_test.shape[0], WINDOW_LENGTH + PREDICT_STEPS), -WINDOW_LENGTH:, :]
     x_testf = x_testf[np.arange(0, x_testf.shape[0], WINDOW_LENGTH + PREDICT_STEPS), -WINDOW_LENGTH:, :]
-    plt.figure(figsize=(18, 9))
 
+    showhowmuch=3
+    x_test=x_test[-showhowmuch:]
+    x_testf=x_testf[-showhowmuch:]
+    for i in range(len(Ys)):
+        Ys[i]=Ys[i][-showhowmuch:]
+
+    Ys = np.stack(Ys, 1)
+    plt.figure(figsize=(18, 9))
     plot_prediction(x_test, x_testf, Ys, method_list, styles, region_names, region_mask)
 
     # plt.savefig(f"images/{DATASET}_DayByDay.eps")

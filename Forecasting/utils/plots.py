@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-
+import numpy as np
 def bar_metrics(resultsDict):
     df = pd.DataFrame.from_dict(resultsDict)
     colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
@@ -113,17 +113,17 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
                 d['Days'] += [idx+i for i in range(x_n-1, x_n+y_n+1)]
                 if preprocessing=='Filtered':
                     d['New cases'] += [xf[-1, c]] + [i for i in y[m, :, c]]
-                    if _i+1 != X.shape[0]:
-                        d['New cases'] += [Xf[_i+1,0,c]]
-                    else:
-                        d['New cases'] += [y[m, -1, c]]
+                    # if _i+1 != X.shape[0]:
+                    #     d['New cases'] += [Xf[_i+1,0,c]]
+                    # else:
+                    #     d['New cases'] += [y[m, -1, c]]
                 else:
                     d['New cases'] += [x[-1, c]] + [i for i in y[m, :, c]]
-                    if _i+1 != X.shape[0]:
-                        d['New cases'] += [X[_i+1,0,c]]
-                    else:
-                        d['New cases'] += [y[m, -1, c]]
-                
+                    # if _i+1 != X.shape[0]:
+                    #     d['New cases'] += [X[_i+1,0,c]]
+                    # else:
+                    #     d['New cases'] += [y[m, -1, c]]
+                d['New cases'] += [np.nan]
                 
         idx += x_n+y_n
 
