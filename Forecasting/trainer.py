@@ -48,11 +48,22 @@ np.random.seed(seed)
 plt.style.use('bmh')
 mpl.rcParams['axes.labelsize'] = 14
 mpl.rcParams['xtick.labelsize'] = 12
-mpl.rcParams['ytick.labelsize'] = 12
 mpl.rcParams['text.color'] = 'k'
 mpl.rcParams['figure.figsize'] = 18, 8
 
 print(tf.__version__)
+
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    try:
+        # Currently, memory growth needs to be the same across GPUs
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+    except RuntimeError as e:
+        # Memory growth must be set before GPUs have been initialized
+        print(e)
 
 
 def get_loss_f(undersampling, xcheck, freq):
@@ -146,8 +157,8 @@ def main():
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
-    parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=14)
-    parser.add_argument('--output_days', help='Number of days predicted by the model', type=int, default=7)
+    parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=25)
+    parser.add_argument('--output_days', help='Number of days predicted by the model', type=int, default=10)
     parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM_Simple_WO_Regions')
 
     parser.add_argument('--lr', help='Learning rate', type=float, default=0.002)
@@ -178,7 +189,8 @@ def main():
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
 
-    midpoint = True
+    midpoint = False
+
     if midpoint:
         R_EIG_ratio = 1
         R_power = 2 / 3
@@ -297,18 +309,17 @@ def main():
         else:
             ratio = 0.3
 
-
         x_train_list, y_train_list, fs_train = undersample3(x_train_list, y_train_list, fs_train, count_h, count_l,
                                                             num_h, num_l, power_l, power_h, power_penalty, clip,
                                                             clip_percentages, str(DATASETS), PLOT,
                                                             f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
 
         print(f"Undersample percentage {x_train_list[0].shape[0] / total_samples * 100:.2f}%")
-        # EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
+        EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
         print(f"New Epoch = {EPOCHS}")
         # here Xtrain have been reduced by regions
 
-    print("================================================== Training data after undersampling")
+    print("================================================= Training data after undersampling")
     # print("Train", x_train.shape, y_train.shape, x_train_feat.shape)
     # print("Val", x_val.shape, y_val.shape, x_val_feat.shape)
     # print("Test", x_test.shape, y_test.shape, x_test_feat.shape)

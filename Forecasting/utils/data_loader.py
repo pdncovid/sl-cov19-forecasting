@@ -75,6 +75,8 @@ def get_data(filtered, normalize, data, dataf, population):
 
 def save_smooth_data(DATASET, data_path, look_back_window, window_slide, R_EIG_ratio, R_power,
                      midpoint):
+    print('temp temp ' + DATASET)
+    print(data_path)
     d = load_data(DATASET, path=data_path)
     region_names = d["region_names"]
     confirmed_cases = d["confirmed_cases"]
@@ -86,6 +88,7 @@ def save_smooth_data(DATASET, data_path, look_back_window, window_slide, R_EIG_r
     daily_filtered, _ = O_LPF(daily_cases, datatype='daily', order=3, midpoint=midpoint, corr=True,
                               R_EIG_ratio=R_EIG_ratio, R_power=R_power, region_names=region_names,
                               plot_freq=1, view=False)
+
     # creates dataset
     _, _, x_data_scalers = get_data(False, normalize=True, data=daily_cases, dataf=daily_filtered,
                                     population=population)
@@ -136,7 +139,6 @@ def load_multiple_data(DATASETS, data_path, look_back_window, window_slide, R_EI
     if type(DATASETS) == str:
         DATASETS = DATASETS.split()
     for DATASET in DATASETS:
-
         print(f"Now Loading {DATASET} =)")
         tmp_smoothed, tmp_raw = load_smooth_data(DATASET, data_path, look_back_window, window_slide, R_EIG_ratio,
                                                  R_power,
@@ -172,7 +174,7 @@ def load_samples(_x, fs, WINDOW_LENGTH, PREDICT_STEPS):
     # input _x : (regions, samples*, seqlength)
     # input fs : (regions, features*)
     x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list = [], [], [], [], [], []
-    fs_train, fs_test, fs_val =[], [], []
+    fs_train, fs_test, fs_val = [], [], []
     for i_region in range(len(_x)):
         x = _x[i_region][:, -WINDOW_LENGTH - PREDICT_STEPS:-PREDICT_STEPS]
         y = _x[i_region][:, -PREDICT_STEPS:]
@@ -186,9 +188,9 @@ def load_samples(_x, fs, WINDOW_LENGTH, PREDICT_STEPS):
         x_val_list.append(np.zeros((0, *x_train_list[-1].shape[1:])))
         y_val_list.append(np.zeros((0, *y_train_list[-1].shape[1:])))
 
-        fs_train.append(np.repeat(fs[i_region:i_region+1], x_train_list[-1].shape[0],0))
-        fs_test.append(np.repeat(fs[i_region:i_region+1], x_test_list[-1].shape[0],0))
-        fs_val.append(np.repeat(fs[i_region:i_region+1], x_val_list[-1].shape[0],0))
+        fs_train.append(np.repeat(fs[i_region:i_region + 1], x_train_list[-1].shape[0], 0))
+        fs_test.append(np.repeat(fs[i_region:i_region + 1], x_test_list[-1].shape[0], 0))
+        fs_val.append(np.repeat(fs[i_region:i_region + 1], x_val_list[-1].shape[0], 0))
 
     return x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val
 
@@ -511,6 +513,32 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
         features['Population'] = 1e6
 
         START_DATE = df_time.columns[0]
+
+    elif DATASET == "JP":
+        dataset_path = os.path.join(path, "JP")
+        df = pd.read_csv(os.path.join(dataset_path, "covid_jpn_prefecture.csv"))
+        positive = df.pivot(index='Prefecture', columns='Date', values='Positive')
+        positive.fillna(0)
+        discharged = df.pivot(index='Prefecture', columns='Date', values='Discharged')
+        discharged.fillna(0)
+
+        positive_arr = np.nan_to_num(positive.to_numpy())
+        discharged_arr = np.nan_to_num(discharged.to_numpy())
+
+        confirmed_arr = (positive_arr + discharged_arr).astype(int)
+        for i in range(confirmed_arr.shape[0]):
+            for k in range(confirmed_arr.shape[1] - 1):
+                if confirmed_arr[i, k + 1] < confirmed_arr[i, k]:
+                    confirmed_arr[i, k + 1] = confirmed_arr[i, k]
+
+        daily_arr = np.diff(confirmed_arr, axis=1)
+
+        region_names = discharged.index
+        features = pd.DataFrame(columns=['Population'], index=region_names)
+        features['Population'] = 1e6
+        START_DATE = discharged.columns[0]
+        daily_cases = np.copy(daily_arr)
+        confirmed_cases = np.copy(confirmed_arr)
 
     elif DATASET == "Global":
         dataset_path = os.path.join(path, "Global")
