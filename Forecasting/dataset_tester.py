@@ -25,6 +25,15 @@ def main():
                                       window_slide=window_slide, R_EIG_ratio=R_EIG_ratio,
                                       R_power=R_power, midpoint=midpoint)
 
+    plt_idx = 0
+    plt.plot(daily_filtered[plt_idx,:]/max(daily_filtered[plt_idx,:]))
+    plt.plot(daily_cases[plt_idx,:]/max(daily_cases[plt_idx,:]), alpha=0.5)
+    slide = fil[plt_idx].shape[-1]
+    for jj in range(0,  fil[plt_idx].shape[0], slide):
+        plt.plot(np.arange(jj,jj+slide), fil[plt_idx][jj, :])
+    plt.title(region_names[plt_idx])
+    plt.show()
+
     temp = load_samples(fil, fs, WINDOW_LENGTH, PREDICT_STEPS)
 
     x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp
@@ -61,7 +70,7 @@ else:
     R_power = 1
 
 look_back_window = 100
-window_slide = 50
+window_slide = 1
 
 # under-sampling parameters
 
