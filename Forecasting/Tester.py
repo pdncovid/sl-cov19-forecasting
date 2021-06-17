@@ -310,19 +310,19 @@ def main():
     #              # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
     #              ]
     model_names = [
-        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_5_14", 'LSTM-ALL-F-Reduce-5'),
-        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_15_14", 'LSTM-ALL-F-Reduce-15'),
-        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_25_14", 'LSTM-ALL-F-Reduce-25'),
-        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_50_14", 'LSTM-ALL-F-Reduce-50'),
+        # ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_5_10", 'LSTM-ALL-F-Reduce-5'),
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_15_10", 'LSTM-ALL-F-Reduce-15'),
+        ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_25_10", 'LSTM-ALL-F-Reduce-25'),
+        # ("['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_Filtered_Reduce_50_10", 'LSTM-ALL-F-Reduce-50'),
     ]
     plot_data = [[{},  # {'label_name': model_names[0][1] + '-raw', 'line_size': 4},
                   {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
                  [{},  # {'label_name': model_names[1][1] + '-raw', 'line_size': 4},
                   {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
-                 [{},  # {'label_name': model_names[2][1] + '-raw', 'line_size': 4},
-                  {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
-                 [{},  # {'label_name': model_names[3][1] + '-raw', 'line_size': 4},
-                  {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
+                 # [{},  # {'label_name': model_names[2][1] + '-raw', 'line_size': 4},
+                 #  {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
+                 # [{},  # {'label_name': model_names[3][1] + '-raw', 'line_size': 4},
+                 #  {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
                  ]
 
     show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=False,
