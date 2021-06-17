@@ -309,35 +309,37 @@ def main():
     #              # [{'label_name': model_names[4][1] + '-raw', 'line_size': 4}, {}],
     #              # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
     #              ]
+
     fil='Unfiltered'
     sam = 'Reduce'
     flip_compare = True
+
     model_names = [
         (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_5_10", f'LSTM-ALL-{fil[0]}-{sam}-5'),
         (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_15_10", f'LSTM-ALL-{fil[0]}-{sam}-15'),
         (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_25_10", f'LSTM-ALL-{fil[0]}-{sam}-25'),
         (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_50_10", f'LSTM-ALL-{fil[0]}-{sam}-50'),
     ]
-    if fil =='Filtered':
-        plot_data = [[{},#{'label_name': model_names[0][1] + '-raw', 'line_size': 4},
+    if fil == 'Filtered':
+        plot_data = [[{},  # {'label_name': model_names[0][1] + '-raw', 'line_size': 4},
                       {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
-                     [{},#{'label_name': model_names[1][1] + '-raw', 'line_size': 4},
+                     [{},  # {'label_name': model_names[1][1] + '-raw', 'line_size': 4},
                       {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
-                     [{},#{'label_name': model_names[2][1] + '-raw', 'line_size': 4},
+                     [{},  # {'label_name': model_names[2][1] + '-raw', 'line_size': 4},
                       {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
-                     [{},#{'label_name': model_names[3][1] + '-raw', 'line_size': 4},
+                     [{},  # {'label_name': model_names[3][1] + '-raw', 'line_size': 4},
                       {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
                      ]
         use_f_gt = True
     else:
         plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4},
-                      {}],#{'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
+                      {}],  # {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
                      [{'label_name': model_names[1][1] + '-raw', 'line_size': 4},
-                      {}],#{'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
+                      {}],  # {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
                      [{'label_name': model_names[2][1] + '-raw', 'line_size': 4},
-                      {}],#{'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
+                      {}],  # {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
                      [{'label_name': model_names[3][1] + '-raw', 'line_size': 4},
-                      {}],#{'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
+                      {}],  # {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
                      ]
         use_f_gt = False
     if flip_compare:
@@ -352,11 +354,12 @@ def main():
 
     plt.figure(figsize=(15, 8))
     i = 0
-    colors = {'Naive': 'k', 'Yester': 'c', '(F)': 'r', '(F-D)': 'b', '(F-E)': 'g','(R)': 'r', '(R-D)': 'b', '(R-E)': 'g'}
+    colors = {'Naive': 'k', 'Yester': 'c', '(F)': 'r', '(F-D)': 'b', '(F-E)': 'g', '(R)': 'r', '(R-D)': 'b',
+              '(R-E)': 'g'}
     linetypeidx = {}
     for key in colors.keys():
         linetypeidx[key] = 0
-    linetypes = ['-', '--',  '-.', 'dotted']
+    linetypes = ['-', '--', '-.', 'dotted']
     for method in resultsDict.keys():
         # if method == "Yesterdays value":
         #     continue
