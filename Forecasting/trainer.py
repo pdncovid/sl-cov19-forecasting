@@ -172,7 +172,7 @@ def main():
     args = parser.parse_args()
 
     global daily_data, DATASET, DATASETS, split_date, EPOCHS, BATCH_SIZE, BUFFER_SIZE, WINDOW_LENGTH, PREDICT_STEPS, lr, \
-        TRAINING_DATA_TYPE, UNDERSAMPLING, PLOT, daily_cases, daily_filtered, population, region_names, split_days, \
+        TRAINING_DATA_TYPE, UNDERSAMPLING, PLOT, daily_cases, daily_filtered, population, region_names, test_days, \
         x_data_scalers, folder, fmodel_name, count_h, count_l, num_l, num_h, power_l, power_h, power_penalty, clip_percentages
     daily_data = args.daily
     DATASETS = args.dataset
@@ -233,8 +233,7 @@ def main():
     days = confirmed_cases.shape[1]
     n_features = features.shape[1]
 
-    split_days = (pd.to_datetime(split_date) - pd.to_datetime(START_DATE)).days
-    test_dates = 200
+    test_days = 100
 
     print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
 
@@ -276,11 +275,12 @@ def main():
     fil, raw, fs = load_multiple_data(DATASETS, args.path, look_back_window, window_slide, R_EIG_ratio, R_power,
                                       midpoint)
     for i_region in range(len(fil)):
-        if fil[i_region].shape[0] < test_dates:
-            Warning(f"Region has too few data {fil[i_region].shape[0]} to train, can't keep {test_dates} samples as test data.")
+        if fil[i_region].shape[0] < test_days:
+            Warning(f"Region has too few data {fil[i_region].shape[0]} to train, can't keep {test_days} samples as test data.")
         else:
-            fil[i_region] = fil[i_region][:-test_dates]
-            raw[i_region] = raw[i_region][:-test_dates]
+            print(f"Total samples for {i_region} is {len(fil[i_region])}. Dropping last {test_days}")
+            fil[i_region] = fil[i_region][:-test_days]
+            raw[i_region] = raw[i_region][:-test_days]
 
     if TRAINING_DATA_TYPE == "Filtered":
         temp = load_samples(fil, fs, WINDOW_LENGTH, PREDICT_STEPS)
@@ -458,8 +458,8 @@ def test2(model, x_data_scalers):
             y_w.append(y_data[i])
         X_w, y_w = np.array(X_w), np.array(y_w)
 
-        X_test_w = X_w[split_days - WINDOW_LENGTH - 1:-1]
-        y_test_w = y_w[split_days - WINDOW_LENGTH - 1:-1]
+        X_test_w = X_w[-test_days - WINDOW_LENGTH:-1]
+        y_test_w = y_w[-test_days - WINDOW_LENGTH:-1]
 
         if model.input.shape[-1] == 1:
             yhat = []
@@ -484,12 +484,10 @@ def test2(model, x_data_scalers):
                                  population=population)
     x_dataf, y_dataf, _ = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
                                    population=population)
-    # X = np.expand_dims(x_data[split_days-WINDOW_LENGTH:split_days,:],0)
-    # Xf = np.expand_dims(x_dataf[split_days-WINDOW_LENGTH:split_days,:],0)
-    X = np.expand_dims(x_data[:split_days, :], 0)
-    Xf = np.expand_dims(x_dataf[:split_days, :], 0)
-    Y = y_data[split_days - 1:, :]
-    Yf = y_dataf[split_days - 1:, :]
+    X = np.expand_dims(x_data[:-test_days, :], 0)
+    Xf = np.expand_dims(x_dataf[:-test_days, :], 0)
+    Y = y_data[-test_days:, :]
+    Yf = y_dataf[-test_days:, :]
 
     Ys = [Y, Yf, yhat, yhatf]
     method_list = ['Observations Raw',

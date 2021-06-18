@@ -66,7 +66,7 @@ PREDICT_STEPS = 7
 
 # filtering parameters
 
-midpoint = True
+midpoint = False
 if midpoint:
     R_EIG_ratio = 1
     R_power = 2/3
