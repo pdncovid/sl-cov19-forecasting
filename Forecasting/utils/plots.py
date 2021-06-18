@@ -151,7 +151,7 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
                     continue
                 _handles.append(handles[_i])
                 _labels.append(labels[_i])
-            ax.legend(handles=_handles, labels=_labels, loc='lower left')
+            ax.legend(handles=_handles, labels=_labels)#, loc='lower left')
     ax.set_xlabel("Days")
     ax.set_ylabel("Cases")
     # plt.setp(ax.get_legend().get_texts(), fontsize='22') # for legend text

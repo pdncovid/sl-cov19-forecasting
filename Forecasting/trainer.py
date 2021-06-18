@@ -323,7 +323,7 @@ def main():
                                                             f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
 
         print(f"Undersample percentage {x_train_list[0].shape[0] / total_samples * 100:.2f}%")
-        EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
+        # EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
         print(f"New Epoch = {EPOCHS}")
         # here Xtrain have been reduced by regions
 
