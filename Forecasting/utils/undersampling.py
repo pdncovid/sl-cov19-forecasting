@@ -27,7 +27,6 @@ def clip_dist(data_mean, data_list, clip_percentages):
 
 
 def rejoin_dist(data_mean_new, data_list_new, data_mean_old, data_list_old, idx):
-
     data_mean = np.concatenate((data_mean_new, data_mean_old[idx]), axis=0)
     list_out = [data_mean]
     for n in range(len(data_list_new)):
@@ -58,7 +57,7 @@ def get_count(segments, data):
 
 
 def undersample3(x_data, y_data, x_feats, count_h, count_l, num_h, num_l, power_l, power_h, power_penalty,
-                 clip, clip_percentages, country, PLOT,
+                 clip, clip_percentages, country, PLOT, repeat,
                  savepath=None):
     global idx_clip
     print(f"Under-sampling! Expected data (regions, samples*, window).")
@@ -69,6 +68,13 @@ def undersample3(x_data, y_data, x_feats, count_h, count_l, num_h, num_l, power_
 
     x_data, y_data = normalize_3d_xy_data(x_data, y_data)
     x_init, y_init, f_init = reduce_regions_to_batch([x_data, y_data, x_feats])
+
+    if repeat:
+        repeat_val = 3
+        x_init = np.repeat(x_init, repeat_val, axis=0)
+        y_init = np.repeat(y_init, repeat_val, axis=0)
+        f_init = np.repeat(f_init, repeat_val, axis=0)
+        total_samples = total_samples * repeat_val
 
     a = (count_l - count_h) / (num_h - num_l)
     b = count_h - (a * num_l)
@@ -153,10 +159,50 @@ def undersample3(x_data, y_data, x_feats, count_h, count_l, num_h, num_l, power_
         plt.show()
         if savepath is not None:
             plt.savefig(savepath)
-    print('new samples = ' + str(x_train_opt.shape[0]))
-    # x_train_opt = np.expand_dims(x_train_opt, -1)
-    # y_train_opt = np.expand_dims(y_train_opt, -1)
-    # x_train_fea = np.expand_dims(x_train_fea, -1)
+        # bins1 = 15
+        # div_num = 1
+        # # if country == 'NG':
+        # # if window_slide == 3 :
+        # if not repeat:
+        #     plt.figure(figsize=(12, 4))
+        #     plt.subplot(121)
+        #     # str1 = 'Italy (small): original samples = ' + str(int(len(x_mean_init)/div_num))
+        #     str1 = 'Nigeria: original samples = ' + str(int(len(x_mean_init) / div_num))
+        #
+        #     plt.hist(x_mean_init / np.max(x_mean_init), bins=bins1, alpha=0.5, density=True,
+        #              histtype='stepfilled', linewidth=1, facecolor='r', edgecolor='k', label=str1)
+        #     plt.xlabel('mean of all samples (normalised)')
+        #     plt.ylabel('occurence (density)')
+        #
+        #     plt.subplot(122)
+        #     # str2 = 'Italy (small): reduced samples = ' + str(int(len(x_mean_opt)/div_num))
+        #     str2 = 'Nigeria: reduced samples = ' + str(int(len(x_mean_opt) / div_num))
+        #     plt.hist(x_mean_opt / np.max(x_mean_opt), bins=bins1, alpha=0.5, density=True,
+        #              histtype='stepfilled', linewidth=1, facecolor='r', edgecolor='k', label=str2
+        #              )
+        #     plt.xlabel('mean of all samples (normalised)')
+        #     plt.ylabel('occurence (density)')
+        #
+        # else:
+        #     plt.subplot(121)
+        #     str1 = 'Nigeria (repeated): original samples = ' + str(int(len(x_mean_init) / div_num))
+        #     plt.hist(x_mean_init / np.max(x_mean_init), bins=bins1, alpha=0.5, density=True,
+        #              histtype='stepfilled', linewidth=1, facecolor='c', edgecolor='k', label=str1)
+        #     plt.legend(loc='best')
+        #     plt.subplot(122)
+        #     str2 = 'Nigeria (repeated): reduced samples = ' + str(int(len(x_mean_opt) / div_num))
+        #     plt.hist(x_mean_opt / np.max(x_mean_opt), bins=bins1, alpha=0.5, density=True,
+        #              histtype='stepfilled', linewidth=1, facecolor='c', edgecolor='k', label=str2
+        #              )
+        #     plt.ylim([0, 2])
+        #     plt.legend(loc='best')
+        #     plt.show()
+
+        print('new samples = ' + str(x_train_opt.shape[0]))
+        print('percentage retained = ' + str(100 * len(x_mean_opt) / len(x_mean_init)))
+        # x_train_opt = np.expand_dims(x_train_opt, -1)
+        # y_train_opt = np.expand_dims(y_train_opt, -1)
+        # x_train_fea = np.expand_dims(x_train_fea, -1)
 
     return [x_train_opt], [y_train_opt], [x_train_fea]
 

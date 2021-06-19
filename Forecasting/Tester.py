@@ -310,15 +310,15 @@ def main():
     #              # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
     #              ]
 
-    fil='Unfiltered'
+    fil = 'Filtered'
     sam = 'Reduce'
-    flip_compare = True
+    flip_compare = False
 
     model_names = [
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_5_10", f'LSTM-ALL-{fil[0]}-{sam}-5'),
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_15_10", f'LSTM-ALL-{fil[0]}-{sam}-15'),
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_25_10", f'LSTM-ALL-{fil[0]}-{sam}-25'),
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_50_10", f'LSTM-ALL-{fil[0]}-{sam}-50'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_10", f'LSTM-ALL-{fil[0]}-{sam}-5'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_15", f'LSTM-ALL-{fil[0]}-{sam}-15'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_25", f'LSTM-ALL-{fil[0]}-{sam}-25'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_30", f'LSTM-ALL-{fil[0]}-{sam}-50'),
     ]
     if fil == 'Filtered':
         plot_data = [[{},  # {'label_name': model_names[0][1] + '-raw', 'line_size': 4},

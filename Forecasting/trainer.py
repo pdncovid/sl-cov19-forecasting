@@ -189,16 +189,16 @@ def main():
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
 
-    midpoint = False
+    midpoint = True
 
     if midpoint:
-        R_EIG_ratio = 1
-        R_power = 2 / 3
+        R_EIG_ratio = 1.02
+        R_power = 1
     else:
         R_EIG_ratio = 3
         R_power = 1
 
-    look_back_window, window_slide = 100, 1
+    look_back_window, window_slide = 100, 20
     PLOT = True
 
     # ===================================================================================================== Loading data
@@ -304,7 +304,7 @@ def main():
         if optimised:
             if clip:
                 clip_percentages = [0, 10]
-            count_h, count_l, num_h, num_l = 2, 0.2, 100000, 500
+            count_h, count_l, num_h, num_l = 2, 0.2, 10000, 100
             power_l, power_h, power_penalty = 0.2, 2, 1000
         else:
             ratio = 0.3
@@ -315,8 +315,8 @@ def main():
                                                             f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
 
         print(f"Undersample percentage {x_train_list[0].shape[0] / total_samples * 100:.2f}%")
-        EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
-        print(f"New Epoch = {EPOCHS}")
+        # EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
+        # print(f"New Epoch = {EPOCHS}")
         # here Xtrain have been reduced by regions
 
     print("================================================= Training data after undersampling")
