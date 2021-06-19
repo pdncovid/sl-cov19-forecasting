@@ -322,12 +322,13 @@ def main():
     fil = 'Filtered'
     sam = 'Reduce'
     flip_compare = False
+
     model_names = [
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_10", f'LSTM-ALL-{fil[0]}-{sam}-70-10'),
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_15", f'LSTM-ALL-{fil[0]}-{sam}-70-15'),
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_25", f'LSTM-ALL-{fil[0]}-{sam}-70-25'),
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_30", f'LSTM-ALL-{fil[0]}-{sam}-70-30'),
-        # (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_10", f'LSTM-ALL-{fil[0]}-{sam}-70-10'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_10", f'LSTM-ALL-{fil[0]}-{sam}-5'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_15", f'LSTM-ALL-{fil[0]}-{sam}-15'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_25", f'LSTM-ALL-{fil[0]}-{sam}-25'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_30", f'LSTM-ALL-{fil[0]}-{sam}-50'),
+
     ]
     if fil == 'Filtered':
         plot_data = [[{},  # {'label_name': model_names[0][1] + '-raw', 'line_size': 4},
@@ -337,9 +338,11 @@ def main():
                      [{},  # {'label_name': model_names[2][1] + '-raw', 'line_size': 4},
                       {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
                      [{},  # {'label_name': model_names[3][1] + '-raw', 'line_size': 4},
+
                       {'label_name': model_names[3][1] + '-fil', 'line_size': 3}],
                      # [{},  # {'label_name': model_names[3][1] + '-raw', 'line_size': 4},
                      #  {'label_name': model_names[4][1] + '-fil', 'line_size': 3}],
+
                      ]
         use_f_gt = True
     else:
@@ -351,8 +354,6 @@ def main():
                       {}],  # {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
                      [{'label_name': model_names[3][1] + '-raw', 'line_size': 4},
                       {}],  # {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
-                     # [{'label_name': model_names[4][1] + '-raw', 'line_size': 4},
-                     #  {}],  # {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
                      ]
         use_f_gt = False
     if flip_compare:
@@ -372,8 +373,12 @@ def main():
     linetypeidx = {}
     for key in colors.keys():
         linetypeidx[key] = 0
+
     linetypes = ['-', 'dotted','-.','--',  (0, (1, 10))]
     prediction_err_daywise = []
+
+#     linetypes = ['-', '--', '-.', 'dotted']
+
     for method in resultsDict.keys():
         # if method == "Yesterdays value":
         #     continue

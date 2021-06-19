@@ -25,19 +25,20 @@ def main():
                                       window_slide=window_slide, R_EIG_ratio=R_EIG_ratio,
                                       R_power=R_power, midpoint=midpoint)
 
-    plt_idx = 0
-    plt.plot(daily_filtered[plt_idx,:]/max(daily_filtered[plt_idx,:]))
-    plt.plot(daily_cases[plt_idx,:]/max(daily_cases[plt_idx,:]), alpha=0.5)
-    slide = fil[plt_idx].shape[-1]
-    for jj in range(0,  fil[plt_idx].shape[0], slide):
-        plt.plot(np.arange(jj,jj+slide), fil[plt_idx][jj, :])
-    plt.title(region_names[plt_idx])
-    plt.show()
 
-    for i in range(len(daily_filtered)):
-        plt.plot(daily_filtered[i,:]/max(daily_filtered[i,:]))
-        plt.title(str(i))
-        plt.show()
+#     plt_idx = 0
+#     plt.plot(daily_filtered[plt_idx,:]/max(daily_filtered[plt_idx,:]))
+#     plt.plot(daily_cases[plt_idx,:]/max(daily_cases[plt_idx,:]), alpha=0.5)
+#     slide = fil[plt_idx].shape[-1]
+#     for jj in range(0,  fil[plt_idx].shape[0], slide):
+#         plt.plot(np.arange(jj,jj+slide), fil[plt_idx][jj, :])
+#     plt.title(region_names[plt_idx])
+#     plt.show()
+
+#     for i in range(len(daily_filtered)):
+#         plt.plot(daily_filtered[i,:]/max(daily_filtered[i,:]))
+#         plt.title(str(i))
+#         plt.show()
 
     temp = load_samples(fil, fs, WINDOW_LENGTH, PREDICT_STEPS)
 
@@ -46,7 +47,7 @@ def main():
     if optimised:
         x_train_uf, y_train_uf, x_train_feat = undersample3(x_train_list, y_train_list, fs_train, count_h, count_l,
                                                             num_h, num_l, power_l, power_h, power_penalty, clip,
-                                                            clip_percentages, str(countries), plot_)
+                                                            clip_percentages, str(countries), plot_, repeat)
     else:
         x_train_uf, y_train_uf, x_train_feat = undersample_random(x_train_list, y_train_list, fs_train, ratio,
                                                                   str(countries), plot_)
@@ -59,34 +60,41 @@ def main():
 dataset_path = '../Datasets'
 _df = pd.read_csv(os.path.join(dataset_path, "EU\jrc-covid-19-all-days-by-regions.csv"))
 _eu = _df['CountryName'].unique().tolist()
-countries = ['JP']
-# countries = ['IT', 'SL', 'NG', 'Texas']
-WINDOW_LENGTH = 14
-PREDICT_STEPS = 7
 
+# countries1 = ['NG']
+countries = ['IT', 'SL', 'NG', 'Texas']
+# countries1 = ['NG', 'IT']
+
+
+WINDOW_LENGTH = 40
+PREDICT_STEPS = 10
 # filtering parameters
 
 midpoint = False
 if midpoint:
-    R_EIG_ratio = 1
-    R_power = 2/3
+    R_EIG_ratio = 1.02
+    R_power = 1
 else:
     R_EIG_ratio = 3
     R_power = 1
 
 look_back_window = 100
-window_slide = 1
+
+window_slide = 20
+# window_slide = 1
 
 # under-sampling parameters
 
 optimised = True
 clip = True
 plot_ = True
+repeat = False
 
 if optimised:
     if clip:
         clip_percentages = [0, 10]
-    count_h, count_l, num_h, num_l = 2, 0.2, 100000, 500
+    count_h, count_l, num_h, num_l = 2, 0.2, 10000, 100
+    # 10k, 500
     power_l, power_h, power_penalty = 0.2, 2, 1000
 else:
     ratio = 0.3
