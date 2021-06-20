@@ -152,12 +152,12 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (SL, Texas, USA, Global)', type=str,
-                        nargs='+', default='SL Texas IT NG')
-    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-02-01')
+                        nargs='+', default='JP')
+    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-2-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
-    parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=25)
+    parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=50)
     parser.add_argument('--output_days', help='Number of days predicted by the model', type=int, default=10)
     parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM_Simple_WO_Regions')
 
@@ -172,12 +172,14 @@ def main():
     args = parser.parse_args()
 
     global daily_data, DATASET, DATASETS, split_date, EPOCHS, BATCH_SIZE, BUFFER_SIZE, WINDOW_LENGTH, PREDICT_STEPS, lr, \
-        TRAINING_DATA_TYPE, UNDERSAMPLING, PLOT, daily_cases, daily_filtered, population, region_names, split_days, \
+        TRAINING_DATA_TYPE, UNDERSAMPLING, PLOT, daily_cases, daily_filtered, population, region_names, test_days_split_idx, \
         x_data_scalers, folder, fmodel_name, count_h, count_l, num_l, num_h, power_l, power_h, power_penalty, clip_percentages
     daily_data = args.daily
     DATASETS = args.dataset
     if len(DATASETS) == 1:
         DATASETS = DATASETS[0].split(' ')
+    if type(DATASETS) == str:
+        DATASETS = [DATASETS]
     split_date = args.split_date
 
     EPOCHS = args.epochs
@@ -189,6 +191,7 @@ def main():
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
 
+    split_train_data = True
     midpoint = True
 
     if midpoint:
@@ -202,22 +205,7 @@ def main():
     PLOT = True
 
     # ===================================================================================================== Loading data
-
-    """Required variables:
-
-    *   **region_names** - Names of the unique regions.
-    *   **confirmed_cases** - 2D array. Each row should corresponds to values in 'region_names'. 
-                            Each column represents a day. Columns should be in ascending order. 
-                            (Starting day -> Present)
-    *   **daily_cases** - confirmed_cases.diff()
-    *   **population** - Population in 'region'
-    *   **features** - Features of the regions. Each column is a certain feature.
-    *   **START_DATE** - Starting date of the data DD/MM/YYYY
-    *   **n_regions** Number of regions
-
-
-    """
-    DATASET = "SL"
+    DATASET = 'JP'
     d = load_data(DATASET, path=args.path)
     region_names = d["region_names"]
     confirmed_cases = d["confirmed_cases"]
@@ -227,18 +215,10 @@ def main():
     n_regions = d["n_regions"]
     daily_cases[daily_cases < 0] = 0
     population = features["Population"]
-    for i in range(len(population)):
-        print("{:.2f}%".format(confirmed_cases[i, :].max() / population[i] * 100), region_names[i])
 
     days = confirmed_cases.shape[1]
     n_features = features.shape[1]
 
-    split_days = (pd.to_datetime(split_date) - pd.to_datetime(START_DATE)).days
-
-    print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
-
-    # df = pd.DataFrame(daily_cases.T, columns=features.index)
-    # df.index = pd.to_datetime(pd.to_datetime(START_DATE).value + df.index * 24 * 3600 * 1000000000)
 
     features = features.values
 
@@ -274,6 +254,19 @@ def main():
 
     fil, raw, fs = load_multiple_data(DATASETS, args.path, look_back_window, window_slide, R_EIG_ratio, R_power,
                                       midpoint)
+    if split_train_data:
+        test_days_split_idx = (pd.to_datetime(split_date) - pd.to_datetime(START_DATE)).days
+        print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
+        print(f"Start date {START_DATE}, split date {split_date} testing days {days-test_days_split_idx}")
+        for i_region in range(len(fil)):
+            to_keep = (test_days_split_idx-look_back_window)//window_slide
+            if fil[i_region].shape[0] <to_keep:
+                Warning(f"Region has {fil[i_region].shape[0]} to train, can't keep {to_keep} samples as train data.")
+            else:
+                print(f"Total samples for {i_region} is {len(fil[i_region])}. Dropping last {fil[i_region].shape[0] -to_keep}")
+                fil[i_region] = fil[i_region][:to_keep]
+                raw[i_region] = raw[i_region][:to_keep]
+
     if TRAINING_DATA_TYPE == "Filtered":
         temp = load_samples(fil, fs, WINDOW_LENGTH, PREDICT_STEPS)
         x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp
@@ -288,10 +281,8 @@ def main():
         total_regions += 1
         total_samples += x_train_list[i].shape[0]
     for i in range(len(x_test_list)):  # (n_regions, samples*, WINDOW_LENGTH)
-        total_regions += 1
         total_samples += x_test_list[i].shape[0]
     for i in range(len(x_val_list)):  # (n_regions, samples*, WINDOW_LENGTH)
-        total_regions += 1
         total_samples += x_val_list[i].shape[0]
     print(f"Total regions {total_regions} Total samples {total_samples}")
 
@@ -304,7 +295,7 @@ def main():
         if optimised:
             if clip:
                 clip_percentages = [0, 10]
-            count_h, count_l, num_h, num_l = 2, 0.2, 10000, 100
+            count_h, count_l, num_h, num_l = 2, 0.2, 100000, 500
             power_l, power_h, power_penalty = 0.2, 2, 1000
         else:
             ratio = 0.3
@@ -316,7 +307,7 @@ def main():
 
         print(f"Undersample percentage {x_train_list[0].shape[0] / total_samples * 100:.2f}%")
         # EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
-        # print(f"New Epoch = {EPOCHS}")
+        print(f"New Epoch = {EPOCHS}")
         # here Xtrain have been reduced by regions
 
     print("================================================= Training data after undersampling")
@@ -374,8 +365,6 @@ def main():
 
     if PLOT:
         test1(model, x_data_scalers, "Final")
-        test2(model, x_data_scalers)
-        test_evolution(model)
 
 
 def test1(model, x_data_scalers, epoch):
@@ -436,116 +425,6 @@ def test1(model, x_data_scalers, epoch):
     plt.title(str(epoch))
     # plt.savefig(f"./logs/{folder}/images/test1_{epoch}.eps")
     plt.savefig(f"./logs/{folder}/images/test1_{epoch}.png")
-
-
-def test2(model, x_data_scalers):
-    n_regions = len(x_data_scalers.data_max_)
-
-    def get_model_predictions(model, x_data, y_data, scalers):
-        print(f"Predicting from model. X={x_data.shape} Y={y_data.shape}")
-        X_w = []
-        y_w = []
-        for i in range(WINDOW_LENGTH - 1, len(x_data)):
-            X_w.append(x_data[i - WINDOW_LENGTH + 1:i + 1])
-            y_w.append(y_data[i])
-        X_w, y_w = np.array(X_w), np.array(y_w)
-
-        X_test_w = X_w[split_days - WINDOW_LENGTH - 1:-1]
-        y_test_w = y_w[split_days - WINDOW_LENGTH - 1:-1]
-
-        if model.input.shape[-1] == 1:
-            yhat = []
-            for col in range(n_regions):
-                yhat.append(model.predict(X_test_w[:, :, col:col + 1])[:, 0].reshape(1, -1)[0])
-            yhat = np.squeeze(np.array(yhat)).T
-        else:
-            yhat = model.predict(X_test_w[:, :, :])[:, 0].reshape(-1, n_regions)
-
-        yhat = undo_normalization(yhat, scalers)[0]
-        y_test_w = undo_normalization(y_test_w, scalers)[0]
-        return X_test_w, y_test_w, yhat
-
-    x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
-                                 population=population)
-    _, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
-    x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
-                                   population=population)
-    _, y_test, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
-
-    x_data, y_data, _ = get_data(filtered=False, normalize=False, data=daily_cases, dataf=daily_filtered,
-                                 population=population)
-    x_dataf, y_dataf, _ = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
-                                   population=population)
-    # X = np.expand_dims(x_data[split_days-WINDOW_LENGTH:split_days,:],0)
-    # Xf = np.expand_dims(x_dataf[split_days-WINDOW_LENGTH:split_days,:],0)
-    X = np.expand_dims(x_data[:split_days, :], 0)
-    Xf = np.expand_dims(x_dataf[:split_days, :], 0)
-    Y = y_data[split_days - 1:, :]
-    Yf = y_dataf[split_days - 1:, :]
-
-    Ys = [Y, Yf, yhat, yhatf]
-    method_list = ['Observations Raw',
-                   'Observations Filtered',
-                   f'Predictions using Raw data (Model {TRAINING_DATA_TYPE} {DATASET} data)',
-                   f'Predictions using Filtered data (Model {TRAINING_DATA_TYPE} {DATASET} data)',
-                   ]
-    styles = {
-        'X': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 2},
-        'Xf': {'Preprocessing': 'Filtered', 'Data': 'Training', 'Size': 2},
-        'Observations Raw': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 2},
-        'Observations Filtered': {'Preprocessing': 'Filtered', 'Data': 'Training', 'Size': 2},
-        f'Predictions using Raw data (Model {TRAINING_DATA_TYPE} {DATASET} data)': {'Preprocessing': 'Raw',
-                                                                                    'Data': f'Predictions using Raw data (Model {TRAINING_DATA_TYPE} {DATASET} data)',
-                                                                                    'Size': 4},
-        f'Predictions using Filtered data (Model {TRAINING_DATA_TYPE} {DATASET} data)': {'Preprocessing': 'Filtered',
-                                                                                         'Data': f'Predictions using Filtered data (Model {TRAINING_DATA_TYPE} {DATASET} data)',
-                                                                                         'Size': 3},
-
-    }
-    for i in range(len(Ys)):
-        print(method_list[i], Ys[i].shape)
-        Ys[i] = np.expand_dims(Ys[i], 0)
-    Ys = np.stack(Ys, 1)
-
-    # region_mask = ((200 > np.mean(x_data,0)) * (np.mean(x_data,0) > 00)).astype('int32')
-    region_mask = (np.arange(n_regions) == 4).astype('int32')
-
-    plt.figure(figsize=(18, 9))
-
-    plot_prediction(X, Xf, Ys, method_list, styles, region_names, region_mask)
-
-    # plt.savefig(f"./logs/{folder}/images/test2.eps")
-    plt.savefig(f"./logs/{folder}/images/test2.png")
-
-
-def test_evolution(model):
-    x = model.input.shape[-2]
-    r = model.input.shape[-1]
-    start_seqs = [np.random.random((1, x, r)),
-                  np.ones((1, x, r)) * 0,
-                  np.ones((1, x, r)) * 0.5,
-                  np.ones((1, x, r)) * 1,
-                  np.arange(x * r).reshape((1, x, r)) / 30,
-                  np.sin(np.arange(x) / x * np.pi / 2).reshape((1, x, 1)).repeat(r, -1)
-                  ]
-
-    predictions = []
-    for start_seq in start_seqs:
-        input_seq = np.copy(start_seq)
-        print(input_seq.shape)
-        predict_seq = [start_seq[0, :, :]]
-        for _ in range(50):
-            output = model(input_seq, training=False)
-
-            input_seq = input_seq[:, output.shape[1]:, :]
-            if len(output.shape) == 2:
-                output = np.expand_dims(output, -1)
-            predict_seq.append(output[0])
-            input_seq = np.concatenate([input_seq, output], 1)
-        predictions.append(np.concatenate(predict_seq, 0))
-    plt.figure()
-    plt.semilogy(1 + np.array(predictions)[:, :30, 0].T)
-    plt.savefig(f"./logs/{folder}/images/test_future.png", bbox_inches='tight')
 
 
 if __name__ == "__main__":
