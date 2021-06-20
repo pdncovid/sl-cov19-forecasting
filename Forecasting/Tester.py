@@ -20,7 +20,7 @@ warnings.filterwarnings(
 from utils.metrics import evaluate
 from utils.plots import bar_metrics, plot_prediction
 from utils.functions import distance, normalize_for_nn, undo_normalization
-from utils.data_loader import load_data, per_million, get_daily, get_data
+from utils.data_loader import load_data, per_million, get_daily, get_data,load_multiple_data, load_samples
 from utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
 from utils.data_splitter import split_on_region_dimension, split_on_time_dimension, split_into_pieces_inorder
 
@@ -53,11 +53,11 @@ print(tf.__version__)
 # There are many methods that we can use for time series forecasting and there is not a clear winner. Model selection
 # should always depend on how you data look and what are you trying to achieve. Some models may be more robust against
 # outliers but perform worse than the more sensible and could still be the best choice depending on the use case.
-# 
+#
 # When looking at your data the main split is wether we have extra regressors (features) to our time series or just the
 # series. Based on this we can start exploring different methods for forecasting and their performance in different
 # metrics.
-# 
+#
 # In this section we will show models for both cases, time series with and without extra regressors.
 
 # **Prepare data before modeling**
@@ -110,15 +110,20 @@ def main():
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
 
-    midpoint = False
-    R_EIG_ratio = 3
-    R_power = 1
-    look_back_filter = True
-    look_back_window, window_slide = 50, 1
+    midpoint = True
+
+    if midpoint:
+        R_EIG_ratio = 1.02
+        R_power = 1
+    else:
+        R_EIG_ratio = 3
+        R_power = 1
+
+    look_back_window, window_slide = 100, 1
     PLOT = True
 
     # ===================================================================================================== Loading data
-    global daily_cases, daily_filtered, population, region_names
+    global daily_cases, daily_filtered, population, region_names, test_days
 
     """Required variables:
 
@@ -134,7 +139,7 @@ def main():
 
 
     """
-
+    DATASETS = "SL Texas IR NG"
     d = load_data(DATASET, path=args.path)
     region_names = d["region_names"]
     confirmed_cases = d["confirmed_cases"]
@@ -151,7 +156,7 @@ def main():
     n_features = features.shape[1]
 
     global region_mask
-    region_mask = (np.arange(n_regions) == 5).astype('int32')
+    region_mask = (np.arange(n_regions) == 11).astype('int32')
 
     print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
 
@@ -160,28 +165,33 @@ def main():
                                          midpoint=midpoint,
                                          corr=True,
                                          region_names=region_names, plot_freq=1, view=False)
-
+    test_days = 200
     df = pd.DataFrame(daily_cases.T, columns=features.index)
     df.index = pd.to_datetime(pd.to_datetime(START_DATE).value + df.index * 24 * 3600 * 1000000000)
-
-    df_training = df.loc[df.index <= split_date]
-    df_test = df.loc[df.index > split_date]
-    print(f"{len(df_training)} days of training data \n {len(df_test)} days of testing data ")
-
     features = features.values
-    global split_days
-    split_days = (pd.to_datetime(split_date) - pd.to_datetime(START_DATE)).days
 
-    # to_plot = ['KAL', 'GAL', 'GAM', 'HAM', 'JAF', 'KAN', 'MTL', 'MTR', 'TRI']
-    to_plot = np.array(df_training.columns)
+    df_test = df.iloc[-test_days:, :]
+
+    to_plot = np.array(df.columns)
     np.random.shuffle(to_plot)
     to_plot = to_plot[:4]
-    # to_plot =features.index
+
+    # global _fil, _raw, _fs
+    # _fil, _raw, _fs = load_multiple_data(DATASETS, args.path, look_back_window, window_slide, R_EIG_ratio, R_power,
+    #                                   midpoint)
+    # for i_region in range(len(_fil)):
+    #     if _fil[i_region].shape[0] < test_days:
+    #         Warning(f"Region has too few data {_fil[i_region].shape[0]} to train, can't keep {test_days} samples as test data.")
+    #     else:
+    #         print(f"Total samples for {i_region} is {len(_fil[i_region])}. Dropping last {test_days}")
+    #         _fil[i_region] = _fil[i_region][-test_days:]
+    #         _raw[i_region] = _raw[i_region][-test_days:]
+
     if PLOT:
         plt.figure(figsize=(15, len(to_plot)))
         for i, tp in enumerate(to_plot):
             plt.subplot(1 + len(to_plot) // 3, 3, i + 1)
-            plt.plot(df_training[tp], label=str(tp))
+            plt.plot(df[tp], label=str(tp))
             plt.legend()
 
     resultsDict = {}
@@ -309,16 +319,15 @@ def main():
     #              # [{'label_name': model_names[4][1] + '-raw', 'line_size': 4}, {}],
     #              # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
     #              ]
-
     fil = 'Filtered'
     sam = 'Reduce'
     flip_compare = False
-
     model_names = [
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_10", f'LSTM-ALL-{fil[0]}-{sam}-5'),
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_15", f'LSTM-ALL-{fil[0]}-{sam}-15'),
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_25", f'LSTM-ALL-{fil[0]}-{sam}-25'),
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_30", f'LSTM-ALL-{fil[0]}-{sam}-50'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_30_10", f'LSTM-ALL-{fil[0]}-{sam}-30-10'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_30_15", f'LSTM-ALL-{fil[0]}-{sam}-30-15'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_30_20", f'LSTM-ALL-{fil[0]}-{sam}-30-20'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_30_25", f'LSTM-ALL-{fil[0]}-{sam}-30-25'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_30_30", f'LSTM-ALL-{fil[0]}-{sam}-30-30'),
     ]
     if fil == 'Filtered':
         plot_data = [[{},  # {'label_name': model_names[0][1] + '-raw', 'line_size': 4},
@@ -328,7 +337,9 @@ def main():
                      [{},  # {'label_name': model_names[2][1] + '-raw', 'line_size': 4},
                       {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
                      [{},  # {'label_name': model_names[3][1] + '-raw', 'line_size': 4},
-                      {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
+                      {'label_name': model_names[3][1] + '-fil', 'line_size': 3}],
+                     [{},  # {'label_name': model_names[3][1] + '-raw', 'line_size': 4},
+                      {'label_name': model_names[4][1] + '-fil', 'line_size': 3}],
                      ]
         use_f_gt = True
     else:
@@ -339,6 +350,8 @@ def main():
                      [{'label_name': model_names[2][1] + '-raw', 'line_size': 4},
                       {}],  # {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
                      [{'label_name': model_names[3][1] + '-raw', 'line_size': 4},
+                      {}],  # {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
+                     [{'label_name': model_names[4][1] + '-raw', 'line_size': 4},
                       {}],  # {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
                      ]
         use_f_gt = False
@@ -359,7 +372,8 @@ def main():
     linetypeidx = {}
     for key in colors.keys():
         linetypeidx[key] = 0
-    linetypes = ['-', '--', '-.', 'dotted']
+    linetypes = ['-', 'dotted', '-.', '--',  (0, (1, 10))]
+    prediction_err_daywise = []
     for method in resultsDict.keys():
         # if method == "Yesterdays value":
         #     continue
@@ -392,7 +406,12 @@ def main():
         else:
             daily_err = np.mean(abserr, 0).mean(1)
         plt.plot(daily_err, color=color, linestyle=linetype, label=method)
+        prediction_err_daywise.append(daily_err)
         print(f'{method}\t{np.mean(abserr):.2f}\t{np.mean(sqderr) ** 0.5:.2f}\t{np.mean(mape):.2f}')
+
+    for idx, method in enumerate(resultsDict.keys()):
+        print(f'{method}\t' + '\t'.join(map(str, prediction_err_daywise[idx])))
+
     plt.subplot(211)
     plt.legend(loc='lower right')
     plt.xlabel("Absolute error")
@@ -417,7 +436,7 @@ def main():
 def get_ub_lb(pred, true, n_regions):
     err = abs((pred - true) ** 2)
     ub_err = np.sqrt(np.mean(err, axis=-1, keepdims=True)).repeat(n_regions, axis=-1) + pred
-    lb_err = -np.sqrt(np.mean(err, axis=-1, keepdims=True)).repeat(n_regions, axis=-1) + pred
+    lb_err = np.maximum(-np.sqrt(np.mean(err, axis=-1, keepdims=True)).repeat(n_regions, axis=-1) + pred, 0)
     return ub_err, lb_err
 
 
@@ -445,11 +464,11 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
         return np.array(x), np.array(y)
 
     def get_model_predictions(model, x_data, y_data, scalers):
+        global WINDOW_LENGTH,PREDICT_STEPS
         WINDOW_LENGTH = model.input.shape[1]
         PREDICT_STEPS = model.output.shape[1]
-        print(model.input.shape, "-->", model.output.shape)
-        print(f"Predicting from model. X={x_data.shape} Y={y_data.shape}")
         X_test_w, y_test_w = window_data(x_data, y_data, window=WINDOW_LENGTH, pred=PREDICT_STEPS)
+        print(f"Predicting from model. {model.input.shape} --> {model.output.shape} X={X_test_w.shape} Y={y_test_w.shape}")
 
         if model.input.shape[-1] == 1:
             yhat = []
@@ -542,12 +561,25 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
         print(method_list[i], Ys[i].shape, np.arange(0, Ys[i].shape[0], WINDOW_LENGTH + PREDICT_STEPS))
         Ys[i] = Ys[i][-_cut:, :, :]
         Ys[i] = Ys[i][np.arange(0, Ys[i].shape[0], WINDOW_LENGTH + PREDICT_STEPS), :, :]
-    Ys = np.stack(Ys, 1)
 
     x_test = x_test[np.arange(0, x_test.shape[0], WINDOW_LENGTH + PREDICT_STEPS), -WINDOW_LENGTH:, :]
     x_testf = x_testf[np.arange(0, x_testf.shape[0], WINDOW_LENGTH + PREDICT_STEPS), -WINDOW_LENGTH:, :]
-    plt.figure(figsize=(18, 9))
 
+    showhowmuch = 3
+    x_test = x_test[-showhowmuch:]
+    x_testf = x_testf[-showhowmuch:]
+    for i in range(len(Ys)):
+        Ys[i] = Ys[i][-showhowmuch:]
+    max_window = 0
+    for i in range(len(Ys)):
+        max_window = max(max_window, Ys[i].shape[1])
+    for i in range(len(Ys)):
+        tmp = np.zeros((Ys[i].shape[0], max_window, Ys[i].shape[2]))
+        tmp[:, :, :] = np.nan
+        tmp[:, :Ys[i].shape[1],:] = Ys[i]
+        Ys[i] = tmp
+    Ys = np.stack(Ys, 1)
+    plt.figure(figsize=(18, 9))
     plot_prediction(x_test, x_testf, Ys, method_list, styles, region_names, region_mask)
 
     # plt.savefig(f"images/{DATASET}_DayByDay.eps")
@@ -584,13 +616,13 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
         WINDOW_LENGTH = model.input.shape[1]
         PREDICT_STEPS = model.output.shape[1]
         X_w, y_w = window_data(x_data, y_data, window=WINDOW_LENGTH)
-        if split_days - WINDOW_LENGTH - 1 < 0:
+        if test_days + WINDOW_LENGTH > len(X_w):
             raise Exception(
-                f"Test data too small to  predict  from all models. Try to increase test data size! {split_days} <= {WINDOW_LENGTH}")
-        X_test_w = X_w[split_days - WINDOW_LENGTH - 1:-1]
-        y_test_w = y_w[split_days - WINDOW_LENGTH - 1:-1]
+                f"Test data too large to  predict (input days are not enough, too much in test side). Try to decrease test data size!")
+        X_test_w = X_w[-test_days:]
+        y_test_w = y_w[-test_days:]
 
-        print(f"Predicting from model. X={X_test_w.shape} Y={y_test_w.shape}")
+        print(f"Predicting from model. {model.input.shape} --> {model.output.shape} X={X_test_w.shape} Y={y_test_w.shape}")
 
         if model.input.shape[-1] == 1:
             yhat = []
@@ -608,12 +640,12 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
                                  population=population)
     x_dataf, y_dataf, _ = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
                                    population=population)
-    X = np.expand_dims(x_data[split_days - 14:split_days, :], 0)
-    Xf = np.expand_dims(x_dataf[split_days - 14:split_days, :], 0)
+    X = np.expand_dims(x_data[-test_days - 14:-test_days, :], 0)
+    Xf = np.expand_dims(x_dataf[-test_days - 14:-test_days, :], 0)
     # X = np.expand_dims(x_data[:split_days,:],0)
     # Xf = np.expand_dims(x_dataf[:split_days,:],0)
-    Y = y_data[split_days - 1:, :]
-    Yf = y_dataf[split_days - 1:, :]
+    Y = y_data[-test_days:, :]
+    Yf = y_dataf[-test_days:, :]
 
     Ys = [Y]
     method_list = ['Observations Raw']
@@ -705,17 +737,15 @@ def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, mo
     def get_model_predictions(model, x_data, y_data, scalers):
         WINDOW_LENGTH = model.input.shape[1]
         PREDICT_STEPS = model.output.shape[1]
-        print(f"Predicting from model. X={x_data.shape} Y={y_data.shape}")
-        X_test_w = x_data[split_days - WINDOW_LENGTH - 1:split_days - 1, :]
-        y_test_w = y_data[split_days - 1:, :]
-
-        print(X_test_w.shape, y_test_w.shape)
+        print(f"Predicting from model. {model.input.shape} --> {model.output.shape} X={x_data.shape} Y={y_data.shape}")
+        X_test_w = x_data[-test_days - WINDOW_LENGTH :-test_days, :]
+        y_test_w = y_data[-test_days:, :]
 
         if model.input.shape[-1] == 1:
             X_test_w = np.expand_dims(X_test_w.T, -1)  # shape = regions (samples), window size, 1
 
             yhat = []
-            for day in range(split_days - 1, x_data.shape[0]):
+            for day in range(x_data.shape[0]-test_days, x_data.shape[0]):
                 y_pred = model.predict(X_test_w)
 
                 X_test_w[:, :-1, :] = X_test_w[:, 1:, :]
@@ -726,7 +756,7 @@ def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, mo
         else:
             X_test_w = np.expand_dims(X_test_w, 0)  # shape = 1, window size, regions (samples)
             yhat = []
-            for day in range(split_days - 1, x_data.shape[0]):
+            for day in range(x_data.shape[0]-test_days, x_data.shape[0]):
                 y_pred = model.predict(X_test_w)
 
                 X_test_w[:, :-1, :] = X_test_w[:, 1:, :]
@@ -735,8 +765,6 @@ def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, mo
                 yhat.append(y_pred[:, 0])
 
         yhat = np.squeeze(np.array(yhat))
-        print(yhat.shape, y_test_w.shape)
-
         yhat = undo_normalization(yhat, scalers)[0]
         y_test_w = undo_normalization(y_test_w, scalers)[0]
 
@@ -747,12 +775,12 @@ def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, mo
                                  population=population)
     x_dataf, y_dataf, _ = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
                                    population=population)
-    X = np.expand_dims(x_data[split_days - 14:split_days, :], 0)
-    Xf = np.expand_dims(x_dataf[split_days - 14:split_days, :], 0)
+    X = np.expand_dims(x_data[-test_days- 14:-test_days, :], 0)
+    Xf = np.expand_dims(x_dataf[-test_days- 14:-test_days, :], 0)
     # X = np.expand_dims(x_data[:split_days,:],0)
     # Xf = np.expand_dims(x_dataf[:split_days,:],0)
-    Y = y_data[split_days - 1:, :]
-    Yf = y_dataf[split_days - 1:, :]
+    Y = y_data[-test_days:, :]
+    Yf = y_dataf[-test_days:, :]
 
     Ys = [Y]
     method_list = ['Observations Raw']
