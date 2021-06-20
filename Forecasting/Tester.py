@@ -53,11 +53,11 @@ print(tf.__version__)
 # There are many methods that we can use for time series forecasting and there is not a clear winner. Model selection
 # should always depend on how you data look and what are you trying to achieve. Some models may be more robust against
 # outliers but perform worse than the more sensible and could still be the best choice depending on the use case.
-# 
+#
 # When looking at your data the main split is wether we have extra regressors (features) to our time series or just the
 # series. Based on this we can start exploring different methods for forecasting and their performance in different
 # metrics.
-# 
+#
 # In this section we will show models for both cases, time series with and without extra regressors.
 
 # **Prepare data before modeling**
@@ -110,11 +110,11 @@ def main():
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
 
-    midpoint = False
+    midpoint = True
 
     if midpoint:
-        R_EIG_ratio = 1
-        R_power = 2 / 3
+        R_EIG_ratio = 1.02
+        R_power = 1
     else:
         R_EIG_ratio = 3
         R_power = 1
@@ -165,12 +165,12 @@ def main():
                                          midpoint=midpoint,
                                          corr=True,
                                          region_names=region_names, plot_freq=1, view=False)
-    test_days = 100
+    test_days = 200
     df = pd.DataFrame(daily_cases.T, columns=features.index)
     df.index = pd.to_datetime(pd.to_datetime(START_DATE).value + df.index * 24 * 3600 * 1000000000)
     features = features.values
 
-    df_test = df.iloc[-test_days:,:]
+    df_test = df.iloc[-test_days:, :]
 
     to_plot = np.array(df.columns)
     np.random.shuffle(to_plot)
@@ -322,13 +322,12 @@ def main():
     fil = 'Filtered'
     sam = 'Reduce'
     flip_compare = False
-
     model_names = [
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_10", f'LSTM-ALL-{fil[0]}-{sam}-5'),
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_15", f'LSTM-ALL-{fil[0]}-{sam}-15'),
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_25", f'LSTM-ALL-{fil[0]}-{sam}-25'),
-        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_30", f'LSTM-ALL-{fil[0]}-{sam}-50'),
-
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_30_10", f'LSTM-ALL-{fil[0]}-{sam}-30-10'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_30_15", f'LSTM-ALL-{fil[0]}-{sam}-30-15'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_30_20", f'LSTM-ALL-{fil[0]}-{sam}-30-20'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_30_25", f'LSTM-ALL-{fil[0]}-{sam}-30-25'),
+        (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_30_30", f'LSTM-ALL-{fil[0]}-{sam}-30-30'),
     ]
     if fil == 'Filtered':
         plot_data = [[{},  # {'label_name': model_names[0][1] + '-raw', 'line_size': 4},
@@ -338,11 +337,9 @@ def main():
                      [{},  # {'label_name': model_names[2][1] + '-raw', 'line_size': 4},
                       {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
                      [{},  # {'label_name': model_names[3][1] + '-raw', 'line_size': 4},
-
                       {'label_name': model_names[3][1] + '-fil', 'line_size': 3}],
-                     # [{},  # {'label_name': model_names[3][1] + '-raw', 'line_size': 4},
-                     #  {'label_name': model_names[4][1] + '-fil', 'line_size': 3}],
-
+                     [{},  # {'label_name': model_names[3][1] + '-raw', 'line_size': 4},
+                      {'label_name': model_names[4][1] + '-fil', 'line_size': 3}],
                      ]
         use_f_gt = True
     else:
@@ -353,6 +350,8 @@ def main():
                      [{'label_name': model_names[2][1] + '-raw', 'line_size': 4},
                       {}],  # {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
                      [{'label_name': model_names[3][1] + '-raw', 'line_size': 4},
+                      {}],  # {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
+                     [{'label_name': model_names[4][1] + '-raw', 'line_size': 4},
                       {}],  # {'label_name': model_names[3][1] + '-fil', 'line_size': 3}]
                      ]
         use_f_gt = False
@@ -373,12 +372,8 @@ def main():
     linetypeidx = {}
     for key in colors.keys():
         linetypeidx[key] = 0
-
-    linetypes = ['-', 'dotted','-.','--',  (0, (1, 10))]
+    linetypes = ['-', 'dotted', '-.', '--',  (0, (1, 10))]
     prediction_err_daywise = []
-
-#     linetypes = ['-', '--', '-.', 'dotted']
-
     for method in resultsDict.keys():
         # if method == "Yesterdays value":
         #     continue

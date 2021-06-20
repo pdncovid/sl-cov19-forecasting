@@ -9,6 +9,15 @@ from scipy import signal
 
 def O_LPF(data, datatype, order, R_EIG_ratio, R_power, midpoint, corr, region_names, plot_freq, view, savepath=None):
     # print(f"Smoothing {data.shape}")
+    midpoint = True
+
+    if midpoint:
+        R_EIG_ratio = 1.02
+        R_power = 1
+    else:
+        R_EIG_ratio = 3
+        R_power = 1
+
     if datatype == 'daily':
         data_sums = np.zeros(data.shape[0], )
         for i in range(data.shape[0]):
