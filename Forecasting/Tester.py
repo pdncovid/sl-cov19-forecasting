@@ -69,7 +69,7 @@ def main():
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
                         default='JP')
-    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-1-1')
+    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2020-12-10')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
@@ -456,6 +456,7 @@ def get_ub_lb(pred, true, n_regions):
 
 def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True,
                       skip_plotting=False, add_raw_input=True,add_fil_input=True):
+    print("===================================== TESTING PREDICTIONS =================================================")
     n_regions = len(x_data_scalers.data_max_)
     Ys = []
     method_list = []
@@ -621,7 +622,7 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
                 if not plotting empty dict
                 otherwise dict should contain; label_name, line_size
     """
-
+    print("===================================== TESTING Day by Day =================================================")
     n_regions = len(x_data_scalers.data_max_)
 
     def window_data(X, Y, window=7):
@@ -640,7 +641,8 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
         PREDICT_STEPS = model.output.shape[1]
         X_w, y_w = window_data(x_data, y_data, window=WINDOW_LENGTH)
         if len(X_w) - test_days < WINDOW_LENGTH:
-            raise Exception(f"Test data too small to  predict. Try to decrease test data split date!")
+            raise Exception(f"Test data too small to  predict ({len(X_w)} - {test_days} < {WINDOW_LENGTH}). "
+                            f"Try to decrease test data split date!")
         X_test_w = X_w[test_days:]
         y_test_w = y_w[test_days:]
 
@@ -662,12 +664,12 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
                                  population=population)
     x_dataf, y_dataf, _ = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
                                    population=population)
-    X = np.expand_dims(x_data[test_days - 14:test_days, :], 0)
-    Xf = np.expand_dims(x_dataf[test_days - 14:test_days, :], 0)
+    X = np.expand_dims(x_data[test_days:test_days+WINDOW_LENGTH, :], 0)
+    Xf = np.expand_dims(x_dataf[test_days:test_days+WINDOW_LENGTH, :], 0)
     # X = np.expand_dims(x_data[:split_days,:],0)
     # Xf = np.expand_dims(x_dataf[:split_days,:],0)
-    Y = y_data[test_days:, :]
-    Yf = y_dataf[test_days:, :]
+    Y = y_data[test_days+WINDOW_LENGTH-1:, :]
+    Yf = y_dataf[test_days+WINDOW_LENGTH-1:, :]
 
     Ys = [Y]
     method_list = ['Observations Raw']
@@ -756,6 +758,7 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
 
 # #### Model prediction evolution from given only last 14 days of data.
 def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True):
+    print("===================================== TESTING Future =================================================")
     def get_model_predictions(model, x_data, y_data, scalers):
         WINDOW_LENGTH = model.input.shape[1]
         PREDICT_STEPS = model.output.shape[1]
@@ -797,12 +800,12 @@ def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, mo
                                  population=population)
     x_dataf, y_dataf, _ = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
                                    population=population)
-    X = np.expand_dims(x_data[test_days- 14:test_days, :], 0)
-    Xf = np.expand_dims(x_dataf[test_days- 14:test_days, :], 0)
+    X = np.expand_dims(x_data[test_days- WINDOW_LENGTH:test_days, :], 0)
+    Xf = np.expand_dims(x_dataf[test_days- WINDOW_LENGTH:test_days, :], 0)
     # X = np.expand_dims(x_data[:split_days,:],0)
     # Xf = np.expand_dims(x_dataf[:split_days,:],0)
-    Y = y_data[test_days:, :]
-    Yf = y_dataf[test_days:, :]
+    Y = y_data[test_days+WINDOW_LENGTH-1:, :]
+    Yf = y_dataf[test_days+WINDOW_LENGTH-1:, :]
 
     Ys = [Y]
     method_list = ['Observations Raw']
