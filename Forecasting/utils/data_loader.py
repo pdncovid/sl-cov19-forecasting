@@ -180,7 +180,7 @@ def load_samples(_x, fs, WINDOW_LENGTH, PREDICT_STEPS):
         y = _x[i_region][:, -PREDICT_STEPS:]
         idx = np.arange(x.shape[0])
         np.random.shuffle(idx)
-        x_train_idx = np.ceil(len(idx) * 0.8).astype(int)
+        x_train_idx = np.floor(len(idx) * 0.8).astype(int)
         x_train_list.append(x[idx[:x_train_idx]])
         y_train_list.append(y[idx[:x_train_idx]])
         x_test_list.append(x[idx[x_train_idx:]])

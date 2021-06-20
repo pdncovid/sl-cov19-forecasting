@@ -153,11 +153,11 @@ def main():
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (SL, Texas, USA, Global)', type=str,
                         nargs='+', default='JP')
-    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-02-01')
+    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-2-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
-    parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=25)
+    parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=50)
     parser.add_argument('--output_days', help='Number of days predicted by the model', type=int, default=10)
     parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM_Simple_WO_Regions')
 
@@ -191,7 +191,7 @@ def main():
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
 
-    split_train_data = False
+    split_train_data = True
     midpoint = True
 
     if midpoint:
@@ -256,6 +256,8 @@ def main():
                                       midpoint)
     if split_train_data:
         test_days_split_idx = (pd.to_datetime(split_date) - pd.to_datetime(START_DATE)).days
+        print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
+        print(f"Start date {START_DATE}, split date {split_date} testing days {days-test_days_split_idx}")
         for i_region in range(len(fil)):
             to_keep = (test_days_split_idx-look_back_window)//window_slide
             if fil[i_region].shape[0] <to_keep:
@@ -279,10 +281,8 @@ def main():
         total_regions += 1
         total_samples += x_train_list[i].shape[0]
     for i in range(len(x_test_list)):  # (n_regions, samples*, WINDOW_LENGTH)
-        total_regions += 1
         total_samples += x_test_list[i].shape[0]
     for i in range(len(x_val_list)):  # (n_regions, samples*, WINDOW_LENGTH)
-        total_regions += 1
         total_samples += x_val_list[i].shape[0]
     print(f"Total regions {total_regions} Total samples {total_samples}")
 

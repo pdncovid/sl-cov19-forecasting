@@ -336,8 +336,8 @@ def main():
     #              ]
     fil = 'Filtered'
     sam = 'Reduce'
-    trai = "['SL', 'Texas', 'NG', 'IT']"
-    ipop = [(70, 10), (70, 15),(70, 20),(70, 25),(70, 30),]
+    trai = "['JP']"
+    ipop = [(50, '10a'), (50,'10s'), (50,'10s2')]#, (70, 15),(70, 20),(70, 25),(70, 30),]
     flip_compare = False
     model_names = []
     plot_data = []
@@ -465,6 +465,9 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
         WINDOW_LENGTH = model.input.shape[1]
         PREDICT_STEPS = model.output.shape[1]
         X_test_w, y_test_w = window_data(x_data, y_data, window=WINDOW_LENGTH, pred=PREDICT_STEPS)
+        print(f"windowed data X={X_test_w.shape} Y={y_test_w.shape}")
+        X_test_w = X_test_w[-(x_data.shape[0]-test_days):]
+        y_test_w = y_test_w[-(x_data.shape[0]-test_days):]
         print(
             f"Predicting from model. {model.input.shape} --> {model.output.shape} X={X_test_w.shape} Y={y_test_w.shape}")
 
@@ -626,8 +629,8 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
         if len(X_w) - test_days < 0:
             raise Exception(f"Test data too small to  predict ({len(X_w)} - {test_days} < 0). "
                             f"Try to decrease test data split date!")
-        X_test_w = X_w[test_days:]
-        y_test_w = y_w[test_days:]
+        X_test_w = X_w[-(x_data.shape[0]-test_days):]
+        y_test_w = y_w[-(x_data.shape[0]-test_days):]
 
         print(
             f"Predicting from model. {model.input.shape} --> {model.output.shape} X={X_test_w.shape} Y={y_test_w.shape}")
@@ -648,12 +651,12 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
                                  population=population)
     x_dataf, y_dataf, _ = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
                                    population=population)
-    X = np.expand_dims(x_data[test_days:test_days + WINDOW_LENGTH, :], 0)
-    Xf = np.expand_dims(x_dataf[test_days:test_days + WINDOW_LENGTH, :], 0)
+    X = np.expand_dims(x_data[-(x_data.shape[0]-test_days+WINDOW_LENGTH):-(x_data.shape[0]-test_days), :], 0)
+    Xf = np.expand_dims(x_dataf[-(x_data.shape[0]-test_days+WINDOW_LENGTH):-(x_data.shape[0]-test_days), :], 0)
     # X = np.expand_dims(x_data[:split_days,:],0)
     # Xf = np.expand_dims(x_dataf[:split_days,:],0)
-    Y = y_data[test_days + WINDOW_LENGTH - 1:, :]
-    Yf = y_dataf[test_days + WINDOW_LENGTH - 1:, :]
+    Y = y_data[-(x_data.shape[0]-test_days):, :]
+    Yf = y_dataf[-(x_data.shape[0]-test_days):, :]
 
     Ys = [Y]
     method_list = ['Observations Raw']
