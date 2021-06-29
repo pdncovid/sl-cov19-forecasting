@@ -161,7 +161,7 @@ def main():
     region_mask = (np.arange(n_regions) == 11).astype('int32')
 
     print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
-    print(f"Start date {START_DATE}, split date {split_date} testing days {days-test_days}")
+    print(f"Start date {START_DATE}, split date {split_date} testing days {days - test_days}")
     daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, R_EIG_ratio=R_EIG_ratio,
                                          R_power=R_power,
                                          midpoint=midpoint,
@@ -335,16 +335,25 @@ def main():
     #              # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
     #              ]
     fil = 'Filtered'
-    sam = 'Reduce'
-    trai = "['JP']"
-    ipop = [(50, '10a'), (50,'10s'), (50,'10s2')]#, (70, 15),(70, 20),(70, 25),(70, 30),]
+    sam = 'None'
+    trai = "['SL', 'Texas', 'NG', 'IT']"
+    ipop = [
+            # (30, 10), (30, 15), (30, 20), (30, 25), (30, 30),
+            # (40, 10), (40, 15), (40, 20), (40, 25), (40, 30),
+            # (50, 10), (50, 15), (50, 20),
+            (50, 10),
+            # (50, 30),
+            # (60, 10), (60, 15), (60, 20), (60, 25), (60, 30),
+            # (70, 10), (70, 15), (70, 20), (70, 25), (70, 30),
+            # (50, '10s'), (50, '10s2'),
+            ]  # , (70, 15),(70, 20),(70, 25),(70, 30),]
     flip_compare = False
     model_names = []
     plot_data = []
     for hh in range(len(ipop)):
         model_names.append((
-                           f"{trai}_LSTM_Simple_WO_Regions_{fil}_{sam}_{ipop[hh][0]}_{ipop[hh][1]}",
-                           f'LSTM-ALL-{fil[0]}-{sam}-{ipop[hh][0]}-{ipop[hh][1]}'))
+            f"{trai}_LSTM_Simple_WO_Regions_{fil}_{sam}_{ipop[hh][0]}_{ipop[hh][1]}",
+            f'LSTM-ALL-{fil[0]}-{sam}-{ipop[hh][0]}-{ipop[hh][1]}'))
         if fil == 'Filtered':
             plot_data.append([{}, {'label_name': model_names[hh][1] + ' (F)', 'line_size': 3}])
             use_f_gt = True
@@ -466,8 +475,8 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
         PREDICT_STEPS = model.output.shape[1]
         X_test_w, y_test_w = window_data(x_data, y_data, window=WINDOW_LENGTH, pred=PREDICT_STEPS)
         print(f"windowed data X={X_test_w.shape} Y={y_test_w.shape}")
-        X_test_w = X_test_w[-(x_data.shape[0]-test_days):]
-        y_test_w = y_test_w[-(x_data.shape[0]-test_days):]
+        X_test_w = X_test_w[-(x_data.shape[0] - test_days):]
+        y_test_w = y_test_w[-(x_data.shape[0] - test_days):]
         print(
             f"Predicting from model. {model.input.shape} --> {model.output.shape} X={X_test_w.shape} Y={y_test_w.shape}")
 
@@ -629,8 +638,8 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
         if len(X_w) - test_days < 0:
             raise Exception(f"Test data too small to  predict ({len(X_w)} - {test_days} < 0). "
                             f"Try to decrease test data split date!")
-        X_test_w = X_w[-(x_data.shape[0]-test_days):]
-        y_test_w = y_w[-(x_data.shape[0]-test_days):]
+        X_test_w = X_w[-(x_data.shape[0] - test_days):]
+        y_test_w = y_w[-(x_data.shape[0] - test_days):]
 
         print(
             f"Predicting from model. {model.input.shape} --> {model.output.shape} X={X_test_w.shape} Y={y_test_w.shape}")
@@ -651,12 +660,12 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
                                  population=population)
     x_dataf, y_dataf, _ = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
                                    population=population)
-    X = np.expand_dims(x_data[-(x_data.shape[0]-test_days+WINDOW_LENGTH):-(x_data.shape[0]-test_days), :], 0)
-    Xf = np.expand_dims(x_dataf[-(x_data.shape[0]-test_days+WINDOW_LENGTH):-(x_data.shape[0]-test_days), :], 0)
+    X = np.expand_dims(x_data[-(x_data.shape[0] - test_days + WINDOW_LENGTH):-(x_data.shape[0] - test_days), :], 0)
+    Xf = np.expand_dims(x_dataf[-(x_data.shape[0] - test_days + WINDOW_LENGTH):-(x_data.shape[0] - test_days), :], 0)
     # X = np.expand_dims(x_data[:split_days,:],0)
     # Xf = np.expand_dims(x_dataf[:split_days,:],0)
-    Y = y_data[-(x_data.shape[0]-test_days):, :]
-    Yf = y_dataf[-(x_data.shape[0]-test_days):, :]
+    Y = y_data[-(x_data.shape[0] - test_days):, :]
+    Yf = y_dataf[-(x_data.shape[0] - test_days):, :]
 
     Ys = [Y]
     method_list = ['Observations Raw']
@@ -792,8 +801,8 @@ def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, mo
     Xf = np.expand_dims(x_dataf[test_days - WINDOW_LENGTH:test_days, :], 0)
     # X = np.expand_dims(x_data[:split_days,:],0)
     # Xf = np.expand_dims(x_dataf[:split_days,:],0)
-    Y = y_data[test_days :, :]
-    Yf = y_dataf[test_days :, :]
+    Y = y_data[test_days:, :]
+    Yf = y_dataf[test_days:, :]
 
     Ys = [Y]
     method_list = ['Observations Raw']
