@@ -587,7 +587,7 @@ def load_data_eu(country='Germany', provinces=True,
 
     df_new = _df.iloc[region_idx, :][[date_name, column_name, covid_name]]
 
-    region_list = _df[column_name].unique().tolist()
+    region_list = df_new[column_name].unique().tolist()
     dates = df_new[date_name].unique().tolist()
 
     df_time = pd.DataFrame(index=region_list, columns=dates)
@@ -605,9 +605,9 @@ def load_data_eu(country='Germany', provinces=True,
     for word in remove_rows:
         if word in df_time.index:
             df_time = df_time.drop(index=word)
+
     # fill nan values
     df_time = df_time.fillna(value=0)
-
     confirmed_cases = df_time.values.astype(np.float64)
 
     for i in range(confirmed_cases.shape[0]):
