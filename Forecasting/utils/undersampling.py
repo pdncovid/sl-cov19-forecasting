@@ -150,10 +150,10 @@ def undersample3(x_data, y_data, x_feats, count_h, count_l, num_h, num_l, power_
 
     if PLOT:
         plt.subplot(223)
-        plt.hist(x_mean_init, bins=50, alpha=0.5, label='original')
+        plt.hist(x_mean_init, bins=15, alpha=0.5, label='original')
         plt.title('samples: ' + str(samples_x.shape[0]))
         plt.subplot(224)
-        plt.hist(x_mean_opt, bins=50, alpha=0.5, label='original')
+        plt.hist(x_mean_opt, bins=15, alpha=0.5, label='original')
         plt.title(f'seg:{segments} n_per_seg: {n_per_seg} samples: {x_train_opt.shape[0]}')
         plt.suptitle('OPTIMISED UNDER-SAMPLING' + '\nregion: ' + str(country))
         plt.show()
