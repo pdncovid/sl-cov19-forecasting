@@ -9,14 +9,21 @@ from Forecasting.utils.undersampling import undersample3, undersample_random
 
 
 def main():
-
-    data = load_data_eu('Germany', path=dataset_path)
-
-    print(data)
+    out1 = 'KZ'
+    data = load_data(out1, path=dataset_path)
+    daily_cases = data['daily_cases']
+    regions = data['region_names']
+    for i in range(daily_cases.shape[0]):
+        plt.figure()
+        plt.plot(daily_cases[i, :])
+        plt.title(regions[i])
+        plt.show()
+    print(regions)
     # fil, raw, fs = load_multiple_data(DATASETS=countries, data_path=dataset_path,
     #                                   look_back_window=look_back_window,
     #                                   window_slide=window_slide, R_EIG_ratio=R_EIG_ratio,
     #                                   R_power=R_power, midpoint=midpoint)
+    #
     #
     # temp = load_samples(fil, fs, WINDOW_LENGTH, PREDICT_STEPS)
     #
@@ -38,8 +45,8 @@ def main():
 dataset_path = '../Datasets'
 _df = pd.read_csv(os.path.join(dataset_path, "EU\jrc-covid-19-all-days-by-regions.csv"))
 _eu = _df['CountryName'].unique().tolist()
-# countries1 = ['NG']
-countries = ['IT', 'SL', 'NG', 'Texas']
+countries = ['Spain']
+# countries = ['IT', 'SL', 'NG', 'Texas']
 # countries1 = ['NG', 'IT']
 
 WINDOW_LENGTH = 40
