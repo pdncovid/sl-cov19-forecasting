@@ -152,10 +152,10 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (SL, Texas, USA, Global)', type=str,
-                        nargs='+', default='JP')
+                        nargs='+', default="JP Texas IT BD KZ KR Germany")
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-2-01')
 
-    parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
+    parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=1)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
     parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=50)
     parser.add_argument('--output_days', help='Number of days predicted by the model', type=int, default=10)
@@ -176,10 +176,11 @@ def main():
         x_data_scalers, folder, fmodel_name, count_h, count_l, num_l, num_h, power_l, power_h, power_penalty, clip_percentages
     daily_data = args.daily
     DATASETS = args.dataset
-    if len(DATASETS) == 1:
-        DATASETS = DATASETS[0].split(' ')
     if type(DATASETS) == str:
         DATASETS = [DATASETS]
+    if len(DATASETS) == 1:
+        DATASETS = DATASETS[0].split(' ')
+
     split_date = args.split_date
 
     EPOCHS = args.epochs
