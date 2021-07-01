@@ -363,7 +363,7 @@ def main():
     train(model, train_data, x_train, y_train, x_test, y_test)
 
     # ================================================================================================= Few Evaluations
-
+    model = tf.keras.models.load_model("models/" + fmodel_name + ".h5")
     if PLOT:
         test1(model, x_data_scalers, "Final")
 
