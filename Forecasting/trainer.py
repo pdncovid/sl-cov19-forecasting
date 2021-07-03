@@ -202,7 +202,7 @@ def main():
         R_EIG_ratio = 3
         R_power = 1
 
-    look_back_window, window_slide = 100, 20
+    look_back_window, window_slide = 100, 10
     PLOT = True
 
     # ===================================================================================================== Loading data
