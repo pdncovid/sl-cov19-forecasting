@@ -370,7 +370,7 @@ def load_samples(_x, fs, WINDOW_LENGTH, PREDICT_STEPS):
 
 def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COVID-AI (PG)/spatio_temporal/Datasets"):
     global daily_cases, region_names, confirmed_cases, START_DATE
-    _df = pd.read_csv(os.path.join(path, "EU\jrc-covid-19-all-days-by-regions.csv"))
+    _df = pd.read_csv(os.path.join(path, os.path.join("EU","jrc-covid-19-all-days-by-regions.csv")))
     _eu = _df['CountryName'].unique().tolist()
     _eu.append('IT')
     if DATASET in _eu:
@@ -581,7 +581,7 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
 
         elif DATASET == 'Bangladesh' or DATASET == 'BD':
             dataset_path = os.path.join(path, "BD")
-            df = pd.read_csv(os.path.join(dataset_path, "covid_bd.csv"), index_col=0)
+            df = pd.read_csv(os.path.join(dataset_path, "covid_bd.csv"), index_col=0, encoding='cp1252')
             START_DATE = df.columns[0]
             region_names = df.index.tolist()
             daily_cases = df.values.astype(int)
@@ -667,19 +667,23 @@ def load_data_eu(country='Germany', provinces=True,
     df_new = _df.iloc[region_idx, :][[date_name, column_name, covid_name]]
 
     region_list = df_new[column_name].unique().tolist()
+    if np.nan in region_list:
+        region_list[region_list.index(np.nan)] = 'nan'
     dates = df_new[date_name].unique().tolist()
     df_time = pd.DataFrame(index=region_list, columns=dates)
 
     for _date in dates:
         _df = df_new.loc[df_new[date_name] == _date][[column_name, covid_name]]
         _df = _df.set_index(column_name)
+        _df.index = pd.Series(_df.index).replace(np.nan, 'nan')
         df_time.loc[_df.index, _date] = _df.values.reshape(-1)
-        df_time[df_time.isnull().values] = 0
+    df_time[df_time.isnull().values] = 0
 
     # removing nan rows
     df_time = df_time[df_time.index.notnull()]
     # remove unspecified rows
-    remove_rows = ['Outside mainland Norway', '', ' ', 'nan', 'Nan', 'NOT SPECIFIED', 'Non spécifié', 'Repatriierte']
+    remove_rows = ['Outside mainland Norway', '', ' ', 'nan', 'Nan', 'NOT SPECIFIED', 'Non spécifié', 'Repatriierte',
+                   'Repatriierte']
     for word in remove_rows:
         if word in df_time.index:
             df_time = df_time.drop(index=word)

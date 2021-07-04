@@ -287,66 +287,33 @@ def main():
                                               population=population)
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=daily_cases, dataf=daily_filtered,
                                                  population=population)
-
-    # country = "['SL', 'Texas', 'NG', 'IT']"
+    # trai = "['JP', 'Texas', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
     # modeltype = 'LSTM_Simple_WO_Regions'
+    # flip_compare = False
     # use_f_gt = False
     # model_names = [
-    #     (f'{country}_{modeltype}_Unfiltered_Reduce_50_10', 'LSTM-R-Reduce'),
-    #     (f'{country}_{modeltype}_Unfiltered_None_50_10', 'LSTM-R-None'),
-    #
+    #     (f'{trai}_{modeltype}_Unfiltered_None_50_20', 'LSTM-R-None'),
+    #     (f'{trai}_{modeltype}_Unfiltered_Reduce_50_20', 'LSTM-R-Reduce'),
+    #     # (f'{trai}_{modeltype}_Filtered_None_50_20', 'LSTM-F-None'),
+    #     # (f'{trai}_{modeltype}_Filtered_Reduce_50_20', 'LSTM-F-Reduce'),
     # ]
-    # plot_data = [[{'label_name': model_names[0][1], 'line_size': 4}, {}],
-    #              [{'label_name': model_names[1][1], 'line_size': 4}, {}],
-    #              ]
+    # plot_data = [
+    #     [{'label_name': model_names[0][1] + '-raw', 'line_size': 4}, {}],
+    #     [{'label_name': model_names[1][1] + '-raw', 'line_size': 4}, {}],
+    #     # [{}, {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
+    #     # [{}, {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
+    # ]
 
-    # fil = 'Filtered'
-    # sam = 'Reduce'
-    # tra = "['SL', 'Texas', 'NG', 'IT']"
-    # flip_compare = False
-    # model_names = [
-    #     (f"{tra}_LSTM_Simple_WO_Regions_{fil}_{sam}_50_10", f'LSTM-ALL-{fil[0]}-{sam}-60-10'),
-    #     (f"{tra}_LSTM_Simple_WO_Regions_{fil}_{sam}_50_10", f'LSTM-ALL-{fil[0]}-{sam}-30-10'),
-    #     (f"{tra}_LSTM_Simple_WO_Regions_{fil}_{sam}_25_10", f'LSTM-ALL-{fil[0]}-{sam}-25-10'),
-    #     (f"{tra}_LSTM_Simple_WO_Regions_{fil}_{sam}_15_10", f'LSTM-ALL-{fil[0]}-{sam}-15-10'),
-    #     # (f"['SL', 'Texas', 'NG', 'IT']_LSTM_Simple_WO_Regions_{fil}_{sam}_70_10", f'LSTM-ALL-{fil[0]}-{sam}-70-10'),
-    # ]
-    # plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4},
-    #               {}],
-    #              [{'label_name': model_names[1][1] + '-raw', 'line_size': 4},
-    #               {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
-    #              ]
-
-    # country = args.dataset
-    # modeltype = 'LSTM_Simple_WO_Regions'
-    # model_names = [
-    #     (f'{country}_{modeltype}_Unfiltered_None_14_7', 'LSTM-R-None'),
-    #     (f'{country}_{modeltype}_Filtered_None_14_7', 'LSTM-F-None'),
-    #     # ('SL_{modeltype}_Unfiltered_Loss_14_7', 'LSTM-R-Loss'),
-    #     # ('SL_{modeltype}_Filtered_Loss_14_7', 'LSTM-F-Loss'),
-    #     (f'{country}_{modeltype}_Unfiltered_Reduce_14_7', 'LSTM-R-Reduce'),
-    #     (f'{country}_{modeltype}_Filtered_Reduce_14_7', 'LSTM-F-Reduce'),
-    # ]
-    # plot_data = [[{'label_name': model_names[0][1] + '-raw', 'line_size': 4}, {}],
-    #              [{}, {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
-    #              [{'label_name': model_names[2][1] + '-raw', 'line_size': 4}, {}],
-    #              [{}, {'label_name': model_names[3][1] + '-fil', 'line_size': 3}],
-    #              # [{'label_name': model_names[4][1] + '-raw', 'line_size': 4}, {}],
-    #              # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
-    #              ]
     fil = 'Filtered'
     sam = 'None'
-    trai = "['SL', 'Texas', 'NG', 'IT']"
+    trai = "['JP', 'Texas', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
     ipop = [
             # (30, 10), (30, 15), (30, 20), (30, 25), (30, 30),
             # (40, 10), (40, 15), (40, 20), (40, 25), (40, 30),
-            # (50, 10), (50, 15), (50, 20),
-            (50, 10),
-            # (50, 30),
+            (50, 10), (50, 15), (50, 20), (50, 25), (50, 30),
             # (60, 10), (60, 15), (60, 20), (60, 25), (60, 30),
             # (70, 10), (70, 15), (70, 20), (70, 25), (70, 30),
-            # (50, '10s'), (50, '10s2'),
-            ]  # , (70, 15),(70, 20),(70, 25),(70, 30),]
+            ]
     flip_compare = False
     model_names = []
     plot_data = []
@@ -360,6 +327,7 @@ def main():
         else:
             plot_data.append([{'label_name': model_names[0][1] + ' (R)', 'line_size': 4}, {}])
             use_f_gt = False
+
     if flip_compare:
         use_f_gt = False if use_f_gt else True
     show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=use_f_gt,
@@ -374,9 +342,8 @@ def main():
     i = 0
     colors = {'Naive': 'k', 'Yester': 'c', '(F)': 'r', '(F-D)': 'b', '(F-E)': 'g', '(R)': 'r', '(R-D)': 'b',
               '(R-E)': 'g'}
-    linetypeidx = {}
-    for key in colors.keys():
-        linetypeidx[key] = 0
+    linetypeidx = {'Naive': 0, 'Yester': 0, '(F)': 1, '(F-D)': 1, '(F-E)': 1, '(R)': 2, '(R-D)': 2,
+                   '(R-E)': 2}
     linetypes = ['-', 'dotted', '-.', '--', (0, (1, 10))]
     prediction_err_daywise = []
     for method in resultsDict.keys():
@@ -397,7 +364,7 @@ def main():
             if key in method:
                 color = colors[key]
                 linetype = linetypes[linetypeidx[key]]
-                linetypeidx[key] += 1
+
         plt.subplot(211)
         n, bins, patches = plt.hist(abserr.reshape(-1), 1000, density=True, histtype='step',
                                     cumulative=True, color=color, linestyle=linetype, label=method)

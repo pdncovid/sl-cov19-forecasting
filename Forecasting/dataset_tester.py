@@ -9,7 +9,7 @@ from Forecasting.utils.undersampling import undersample3, undersample_random
 
 
 def main():
-    out1 = 'KZ'
+    out1 = 'Germany'
     data = load_data(out1, path=dataset_path)
     daily_cases = data['daily_cases']
     regions = data['region_names']
