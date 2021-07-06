@@ -69,7 +69,7 @@ def main():
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
                         default='JP')
-    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-2-1')
+    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-1-1')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
@@ -308,12 +308,12 @@ def main():
     sam = 'None'
     trai = "['JP', 'Texas', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
     ipop = [
-            # (30, 10), (30, 15), (30, 20), (30, 25), (30, 30),
-            # (40, 10), (40, 15), (40, 20), (40, 25), (40, 30),
-            (50, 10), (50, 15), (50, 20), (50, 25), (50, 30),
-            # (60, 10), (60, 15), (60, 20), (60, 25), (60, 30),
-            # (70, 10), (70, 15), (70, 20), (70, 25), (70, 30),
-            ]
+        # (30, 10), (30, 15), (30, 20), (30, 25), (30, 30),
+        # (40, 10), (40, 15), (40, 20), (40, 25), (40, 30),
+        (50, 10), (50, 15), (50, 20), (50, 25), (50, 30),
+        # (60, 10), (60, 15), (60, 20), (60, 25), (60, 30),
+        # (70, 10), (70, 15), (70, 20), (70, 25), (70, 30),
+    ]
     flip_compare = False
     model_names = []
     plot_data = []
@@ -330,11 +330,15 @@ def main():
 
     if flip_compare:
         use_f_gt = False if use_f_gt else True
-    show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=use_f_gt,
-                      skip_plotting=False, add_fil_input=True, add_raw_input=True)
 
-    show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=use_f_gt)
-    show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=use_f_gt)
+    skip_plotting = True
+    show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=use_f_gt,
+                      skip_plotting=skip_plotting, add_fil_input=True, add_raw_input=True)
+
+    # show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data,
+    #                    skip_plotting=skip_plotting, use_f_gt=use_f_gt)
+    # show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data,
+    #                     skip_plotting=skip_plotting, use_f_gt=use_f_gt)
 
     # ======================================================================================== ## Comparison of methods
 
@@ -444,8 +448,8 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
         print(f"windowed data X={X_test_w.shape} Y={y_test_w.shape}")
         X_test_w = X_test_w[-(x_data.shape[0] - test_days):]
         y_test_w = y_test_w[-(x_data.shape[0] - test_days):]
-        print(
-            f"Predicting from model. {model.input.shape} --> {model.output.shape} X={X_test_w.shape} Y={y_test_w.shape}")
+        print(f"Predicting from model. {model.input.shape} --> {model.output.shape} "
+              f"X={X_test_w.shape} Y={y_test_w.shape}")
 
         if model.input.shape[-1] == 1:
             yhat = []
@@ -577,7 +581,8 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
 
 
 # #### Prediction of next day from last 14 days for the test period
-def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True):
+def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data,
+                       skip_plotting=False, use_f_gt=True):
     """
     model_names : list of tuples [(model names to load, model label), ...]  let SIZE = n
     plot_data : list of dictionaries [ [ {dict for raw pred} , {dict for filtered pred} ], ... ] SIZE == n
@@ -704,7 +709,8 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
             styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
 
     #########################################################################
-
+    if skip_plotting:
+        return
     for i in range(len(Ys)):
         print(method_list[i], Ys[i].shape)
         Ys[i] = np.expand_dims(Ys[i], 0)
@@ -720,7 +726,8 @@ def show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, mod
 
 
 # #### Model prediction evolution from given only last 14 days of data.
-def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True):
+def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data,
+                        skip_plotting=False, use_f_gt=True):
     print("===================================== TESTING Future =================================================")
 
     def get_model_predictions(model, x_data, y_data, scalers):
@@ -834,7 +841,8 @@ def show_pred_evolution(x_data_scalers, resultsDict, predictionsDict, gtDict, mo
             method_list.append(method_name)
             styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
     #########################################################################
-
+    if skip_plotting:
+        return
     for i in range(len(Ys)):
         print(method_list[i], Ys[i].shape)
         Ys[i] = np.expand_dims(Ys[i], 0)

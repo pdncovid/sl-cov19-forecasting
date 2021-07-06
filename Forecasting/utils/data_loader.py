@@ -628,9 +628,11 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
 
         else:
             raise Exception(f"Dataset name {DATASET} not found!")
-        features = pd.DataFrame(columns=['Population'],
-                                index=region_names)  # todo population ignored, features ignored now
-        features['Population'] = 1e6
+
+        if DATASET != "SL":
+            features = pd.DataFrame(columns=['Population'],
+                                    index=region_names)  # todo population ignored, features ignored now
+            features['Population'] = 1e6
 
         daily_cases[daily_cases < 0] = 0
         return {
