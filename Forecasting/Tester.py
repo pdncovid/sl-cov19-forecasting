@@ -308,9 +308,9 @@ def main():
     sam = 'None'
     trai = "['JP', 'Texas', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
     ipop = [
-        # (30, 10), (30, 15), (30, 20), (30, 25), (30, 30),
+         (30, 10),# (30, 15), (30, 20), (30, 25), (30, 30),
         # (40, 10), (40, 15), (40, 20), (40, 25), (40, 30),
-        (50, 10), (50, 15), (50, 20), (50, 25), (50, 30),
+        # (50, 10), (50, 15), (50, 20), (50, 25), (50, 30),
         # (60, 10), (60, 15), (60, 20), (60, 25), (60, 30),
         # (70, 10), (70, 15), (70, 20), (70, 25), (70, 30),
     ]
@@ -331,7 +331,7 @@ def main():
     if flip_compare:
         use_f_gt = False if use_f_gt else True
 
-    skip_plotting = True
+    skip_plotting = False
     show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=use_f_gt,
                       skip_plotting=skip_plotting, add_fil_input=True, add_raw_input=True)
 
