@@ -155,13 +155,13 @@ def main():
                         nargs='+', default="JP Texas IT BD KZ KR Germany")
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-2-01')
 
-    parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=1)
+    parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
     parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=50)
     parser.add_argument('--output_days', help='Number of days predicted by the model', type=int, default=10)
     parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM_Simple_WO_Regions')
 
-    parser.add_argument('--lr', help='Learning rate', type=float, default=0.002)
+    parser.add_argument('--lr', help='Learning rate', type=float, default=0.001)
     parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
                         default="Filtered")
     parser.add_argument('--undersampling', help='under-sampling method (None, Loss, Reduce)', type=str,

@@ -44,31 +44,12 @@ mpl.rcParams['figure.figsize'] = 18, 8
 print(tf.__version__)
 
 
-# x_data, y_data = get_data(filtered=False, normalize=False)
-# region_mask = (np.mean(x_data,0) > 140).astype('int32')
-
-
-# # Methods for time series forecasting
-
-# There are many methods that we can use for time series forecasting and there is not a clear winner. Model selection
-# should always depend on how you data look and what are you trying to achieve. Some models may be more robust against
-# outliers but perform worse than the more sensible and could still be the best choice depending on the use case.
-# 
-# When looking at your data the main split is wether we have extra regressors (features) to our time series or just the
-# series. Based on this we can start exploring different methods for forecasting and their performance in different
-# metrics.
-# 
-# In this section we will show models for both cases, time series with and without extra regressors.
-
-# **Prepare data before modeling**
-
-
 def main():
     # ============================================================================================ Initialize parameters
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='JP')
+                        default='Russian Fed.')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-1-1')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
@@ -125,20 +106,6 @@ def main():
     # ===================================================================================================== Loading data
     global daily_cases, daily_filtered, population, region_names, test_days
 
-    """Required variables:
-
-    *   **region_names** - Names of the unique regions.
-    *   **confirmed_cases** - 2D array. Each row should corresponds to values in 'region_names'. 
-                            Each column represents a day. Columns should be in ascending order. 
-                            (Starting day -> Present)
-    *   **daily_cases** - confirmed_cases.diff()
-    *   **population** - Population in 'region'
-    *   **features** - Features of the regions. Each column is a certain feature.
-    *   **START_DATE** - Starting date of the data DD/MM/YYYY
-    *   **n_regions** Number of regions
-
-
-    """
     DATASETS = "SL Texas IR NG"
     d = load_data(DATASET, path=args.path)
     region_names = d["region_names"]
@@ -305,14 +272,15 @@ def main():
     # ]
 
     fil = 'Filtered'
-    sam = 'None'
+    sam = 'Reduce'
     trai = "['JP', 'Texas', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
     ipop = [
-         (30, 10),# (30, 15), (30, 20), (30, 25), (30, 30),
-        # (40, 10), (40, 15), (40, 20), (40, 25), (40, 30),
-        # (50, 10), (50, 15), (50, 20), (50, 25), (50, 30),
-        # (60, 10), (60, 15), (60, 20), (60, 25), (60, 30),
-        # (70, 10), (70, 15), (70, 20), (70, 25), (70, 30),
+        (30, 10), (30, 15), (30, 20), (30, 25), (30, 30),
+        (40, 10), (40, 15), (40, 20), (40, 25), (40, 30),
+        (50, 10), (50, 15), (50, 20), (50, 25), (50, 30),
+        (60, 10), (60, 15), (60, 20), (60, 25), (60, 30),
+        (70, 10), (70, 15), (70, 20), (70, 25), (70, 30),
+        # (70, 15)
     ]
     flip_compare = False
     model_names = []
