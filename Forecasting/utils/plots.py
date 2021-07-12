@@ -1,3 +1,5 @@
+import datetime
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -47,7 +49,7 @@ def bar_metrics(resultsDict):
     plt.savefig("results/metrics.png")
 
 
-def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
+def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask, start_date=''):
     """
     [___________][#####]
                         [___________][#####]
@@ -78,7 +80,7 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
         assert (lines_x == lines_y)
 
         d = dict()
-        d['Days'] = []
+        d['Day'] = []
         d['New cases'] = []
         d['Region'] = []
         d['Data type'] = []
@@ -88,14 +90,14 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
             if region_mask[c] == 0:
                   continue
             
-            d['Days'] += [idx + i for i in range(x_n)]
+            d['Day'] += [idx + i for i in range(x_n)]
             d['New cases'] += [i for i in x[:, c]]
             d['Region'] += [region_list[c]] * x_n
             d['Data type'] += ['Train'] * x_n
             d['Size'] += [styles['X']['Size']]*x_n
             d['Preprocessing'] +=[styles['X']['Preprocessing']] *x_n
             
-            d['Days'] += [idx + i for i in range(x_n)]
+            d['Day'] += [idx + i for i in range(x_n)]
             d['New cases'] += [i for i in xf[:, c]]
             d['Region'] += [region_list[c]] * x_n
             d['Data type'] += ['Train'] * x_n
@@ -110,7 +112,7 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
                 preprocessing = styles[method_list[m]]['Preprocessing']
                 d['Preprocessing'] +=[preprocessing] * (y_n + 2)
                 
-                d['Days'] += [idx+i for i in range(x_n-1, x_n+y_n+1)]
+                d['Day'] += [idx+i for i in range(x_n-1, x_n+y_n+1)]
                 if preprocessing=='Filtered':
                     d['New cases'] += [xf[-1, c]] + [i for i in y[m, :, c]]
                     # if _i+1 != X.shape[0]:
@@ -128,13 +130,20 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
         idx += x_n+y_n
 
         df = pd.DataFrame(d)
-        df.set_index('Days')
+        if start_date != '':
+            sd = pd.to_datetime(start_date)
+            days = []
+            for xxx in range(len(df)):
+                days.append(sd + datetime.timedelta(days=int(df['Day'][xxx])))
+            days = pd.Series(days)
+            df['Day'] = days
+        df.set_index('Day')
         dfs.append(df)
         if _i==0:
             legend = 'brief'
         else:
             legend = False
-        ax = sns.lineplot(data=df, x='Days', y='New cases', 
+        ax = sns.lineplot(data=df, x='Day', y='New cases',
                           style='Preprocessing',
                           hue='Data type', size='Size', linewidth=3,
                           # estimator=lambda x: x if len(x)==1 else list(x)[1],
@@ -152,7 +161,7 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask):
                 _handles.append(handles[_i])
                 _labels.append(labels[_i])
             ax.legend(handles=_handles, labels=_labels, loc='upper left')
-    ax.set_xlabel("Days")
+    ax.set_xlabel("Day")
     ax.set_ylabel("Cases")
     # plt.setp(ax.get_legend().get_texts(), fontsize='22') # for legend text
     # plt.setp(ax.get_legend().get_title(), fontsize='32') # for legend title

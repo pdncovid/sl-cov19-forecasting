@@ -371,7 +371,7 @@ def load_samples(_x, fs, WINDOW_LENGTH, PREDICT_STEPS):
 def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COVID-AI (PG)/spatio_temporal/Datasets"):
     global daily_cases, region_names, confirmed_cases, START_DATE
     _df = pd.read_csv(os.path.join(path, os.path.join("EU","jrc-covid-19-all-days-by-regions.csv")))
-    _eu = _df['CountryName'].unique().tolist()
+    _eu = _df['iso3'].unique().tolist()
     _eu.append('IT')
     if DATASET in _eu:
         return load_data_eu(DATASET, path=path)
@@ -645,7 +645,7 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
         }
 
 
-def load_data_eu(country='Germany', provinces=True,
+def load_data_eu(country='DEU', provinces=True,
                  path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COVID-AI (PG)/spatio_temporal/Datasets"):
     dataset_path = os.path.join(path, "EU")
 
@@ -661,7 +661,7 @@ def load_data_eu(country='Germany', provinces=True,
 
     else:
         _df = pd.read_csv(os.path.join(dataset_path, "jrc-covid-19-all-days-by-regions.csv"))
-        region_idx = _df.index[_df['CountryName'].str.contains(country)].tolist()
+        region_idx = _df.index[_df['iso3'].str.contains(country)].tolist()
         column_name = 'Region'
         date_name = 'Date'
         covid_name = 'CumulativePositive'

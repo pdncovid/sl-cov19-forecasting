@@ -152,22 +152,23 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (SL, Texas, USA, Global)', type=str,
-                        nargs='+', default="JP Texas IT BD KZ KR Germany")
+                        nargs='+', default="Texas NG IT BD KZ KR Germany")
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-2-01')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=50)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
-    parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=50)
+    parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=30)
     parser.add_argument('--output_days', help='Number of days predicted by the model', type=int, default=10)
     parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM_Simple_WO_Regions')
 
-    parser.add_argument('--lr', help='Learning rate', type=float, default=0.001)
+    parser.add_argument('--lr', help='Learning rate', type=float, default=0.004)
     parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
                         default="Filtered")
     parser.add_argument('--undersampling', help='under-sampling method (None, Loss, Reduce)', type=str,
-                        default="Reduce")
+                        default="None")
 
     parser.add_argument('--path', help='default dataset path', type=str, default="../Datasets")
+    parser.add_argument('--load_recent', help='Use daily data', action='store_true')
 
     args = parser.parse_args()
 
@@ -235,8 +236,11 @@ def main():
                                             n_features=n_features,
                                             n_regions=n_regions)
 
+
     fmodel_name = str(DATASETS) + "_" + model.name + "_" + TRAINING_DATA_TYPE + '_' + UNDERSAMPLING + '_' + str(
         model.input.shape[1]) + '_' + str(model.output.shape[1])
+    if args.load_recent:
+        model = tf.keras.models.load_model("models/" + fmodel_name + ".h5")
 
     print(fmodel_name)
     folder = time.strftime('%Y.%m.%d-%H.%M.%S', time.localtime()) + "_" + fmodel_name

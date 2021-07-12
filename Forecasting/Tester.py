@@ -49,7 +49,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='Russian Fed.')
+                        default='Norway')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-1-1')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
@@ -104,7 +104,7 @@ def main():
     PLOT = True
 
     # ===================================================================================================== Loading data
-    global daily_cases, daily_filtered, population, region_names, test_days
+    global daily_cases, daily_filtered, population, region_names, test_days, START_DATE
 
     DATASETS = "SL Texas IR NG"
     d = load_data(DATASET, path=args.path)
@@ -254,47 +254,54 @@ def main():
                                               population=population)
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=daily_cases, dataf=daily_filtered,
                                                  population=population)
-    # trai = "['JP', 'Texas', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
-    # modeltype = 'LSTM_Simple_WO_Regions'
-    # flip_compare = False
-    # use_f_gt = False
+    trai = "['JP', 'Texas', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
+    modeltype = 'LSTM_Simple_WO_Regions'
+    flip_compare = False
+    use_f_gt = False
+
+    model_names = [
+        (f'{trai}_{modeltype}_Unfiltered_None_50_10', 'LSTM-R-None'),
+        (f'{trai}_{modeltype}_Unfiltered_Reduce_50_10', 'LSTM-R-Reduce'),
+        (f'{trai}_{modeltype}_Filtered_None_50_10', 'LSTM-F-None'),
+        (f'{trai}_{modeltype}_Filtered_Reduce_50_10', 'LSTM-F-Reduce'),
+    ]
+    plot_data = [
+        [{'label_name': model_names[0][1] + '-raw', 'line_size': 4}, {}],
+        [{'label_name': model_names[1][1] + '-raw', 'line_size': 4}, {}],
+        [{}, {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
+        [{}, {'label_name': model_names[3][1] + '-fil', 'line_size': 3}],
+    ]
     # model_names = [
-    #     (f'{trai}_{modeltype}_Unfiltered_None_50_20', 'LSTM-R-None'),
-    #     (f'{trai}_{modeltype}_Unfiltered_Reduce_50_20', 'LSTM-R-Reduce'),
-    #     # (f'{trai}_{modeltype}_Filtered_None_50_20', 'LSTM-F-None'),
-    #     # (f'{trai}_{modeltype}_Filtered_Reduce_50_20', 'LSTM-F-Reduce'),
+    #     (f'{trai}_{modeltype}_Filtered_None_50_10', 'LSTM-F-None'),
+    #     (f'{trai}_{modeltype}_Filtered_Reduce_50_10', 'LSTM-F-Reduce'),
     # ]
     # plot_data = [
-    #     [{'label_name': model_names[0][1] + '-raw', 'line_size': 4}, {}],
-    #     [{'label_name': model_names[1][1] + '-raw', 'line_size': 4}, {}],
-    #     # [{}, {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
-    #     # [{}, {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
+    #     [{}, {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
+    #     [{}, {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
     # ]
 
-    fil = 'Filtered'
-    sam = 'Reduce'
-    trai = "['JP', 'Texas', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
-    ipop = [
-        (30, 10), (30, 15), (30, 20), (30, 25), (30, 30),
-        (40, 10), (40, 15), (40, 20), (40, 25), (40, 30),
-        (50, 10), (50, 15), (50, 20), (50, 25), (50, 30),
-        (60, 10), (60, 15), (60, 20), (60, 25), (60, 30),
-        (70, 10), (70, 15), (70, 20), (70, 25), (70, 30),
-        # (70, 15)
-    ]
-    flip_compare = False
-    model_names = []
-    plot_data = []
-    for hh in range(len(ipop)):
-        model_names.append((
-            f"{trai}_LSTM_Simple_WO_Regions_{fil}_{sam}_{ipop[hh][0]}_{ipop[hh][1]}",
-            f'LSTM-ALL-{fil[0]}-{sam}-{ipop[hh][0]}-{ipop[hh][1]}'))
-        if fil == 'Filtered':
-            plot_data.append([{}, {'label_name': model_names[hh][1] + ' (F)', 'line_size': 3}])
-            use_f_gt = True
-        else:
-            plot_data.append([{'label_name': model_names[0][1] + ' (R)', 'line_size': 4}, {}])
-            use_f_gt = False
+    # fil = 'Filtered'
+    # sam = 'Reduce'
+    # ipop = [
+    #     # (30, 10), (30, 15), (30, 20), (30, 25), (30, 30),
+    #     # (40, 10), (40, 15), (40, 20), (40, 25), (40, 30),
+    #     # (50, 10), (50, 15), (50, 20), (50, 25), (50, 30),
+    #     # (60, 10), (60, 15), (60, 20), (60, 25), (60, 30),
+    #     # (70, 10), (70, 15), (70, 20), (70, 25), (70, 30),
+    #     (50, 10)
+    # ]
+    # model_names = []
+    # plot_data = []
+    # for hh in range(len(ipop)):
+    #     model_names.append((
+    #         f"{trai}_{modeltype}_{fil}_{sam}_{ipop[hh][0]}_{ipop[hh][1]}",
+    #         f'LSTM-ALL-{fil[0]}-{sam}-{ipop[hh][0]}-{ipop[hh][1]}'))
+    #     if fil == 'Filtered':
+    #         plot_data.append([{}, {'label_name': model_names[hh][1] + ' (F)', 'line_size': 3}])
+    #
+    #     else:
+    #         plot_data.append([{'label_name': model_names[0][1] + ' (R)', 'line_size': 4}, {}])
+    #
 
     if flip_compare:
         use_f_gt = False if use_f_gt else True
@@ -386,6 +393,8 @@ def get_ub_lb(pred, true, n_regions):
 
 def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True,
                       skip_plotting=False, add_raw_input=True, add_fil_input=True):
+    add_ub_lb = True
+    showhowmuch = 1
     print("===================================== TESTING PREDICTIONS =================================================")
     n_regions = len(x_data_scalers.data_max_)
     Ys = []
@@ -453,6 +462,7 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
                                      population=population)
         x_test, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
         ygt = y_testf if use_f_gt else y_test
+
         if len(plot[0].keys()) != 0:
             resultsDict[f'{model_label} (R)'] = evaluate(ygt, yhat)  # raw predictions v raw true values
             predictionsDict[f'{model_label} (R)'] = yhat
@@ -464,18 +474,19 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
             styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
 
             # upper bound and lower bound
-            ub_err, lb_err = get_ub_lb(predictionsDict[f'{model_label} (R)'], gtDict[f'{model_label} (R)'],
-                                       n_regions)
+            if add_ub_lb:
+                ub_err, lb_err = get_ub_lb(predictionsDict[f'{model_label} (R)'], gtDict[f'{model_label} (R)'],
+                                           n_regions)
 
-            Ys.append(ub_err)
-            method_name = plot[0]['label_name']
-            method_list.append(method_name)
-            styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
+                Ys.append(ub_err)
+                method_name = plot[0]['label_name']
+                method_list.append(method_name)
+                styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
 
-            Ys.append(lb_err)
-            method_name = plot[0]['label_name']
-            method_list.append(method_name)
-            styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
+                Ys.append(lb_err)
+                method_name = plot[0]['label_name']
+                method_list.append(method_name)
+                styles[method_name] = {'Preprocessing': 'Raw', 'Data': method_name, 'Size': plot[0]['line_size']}
 
         if len(plot[1].keys()) != 0:
             resultsDict[f'{model_label} (F)'] = evaluate(ygt, yhatf)  # filtered prediction v raw true values
@@ -487,16 +498,17 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
             method_list.append(method_name)
             styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
 
-            ub_err, lb_err = get_ub_lb(predictionsDict[f'{model_label} (F)'],
-                                       gtDict[f'{model_label} (F)'], n_regions)
-            Ys.append(ub_err)
-            method_name = plot[1]['label_name']
-            method_list.append(method_name)
-            styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
-            Ys.append(lb_err)
-            method_name = plot[1]['label_name']
-            method_list.append(method_name)
-            styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
+            if add_ub_lb:
+                ub_err, lb_err = get_ub_lb(predictionsDict[f'{model_label} (F)'],
+                                           gtDict[f'{model_label} (F)'], n_regions)
+                Ys.append(ub_err)
+                method_name = plot[1]['label_name']
+                method_list.append(method_name)
+                styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
+                Ys.append(lb_err)
+                method_name = plot[1]['label_name']
+                method_list.append(method_name)
+                styles[method_name] = {'Preprocessing': 'Filtered', 'Data': method_name, 'Size': plot[1]['line_size']}
 
     #########################################################################
     if skip_plotting:
@@ -523,7 +535,7 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
     if not add_raw_input:
         x_test[:, :, :] = np.nan
 
-    showhowmuch = 3
+
     x_test = x_test[-showhowmuch:]
     x_testf = x_testf[-showhowmuch:]
     for i in range(len(Ys)):
@@ -538,7 +550,7 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
         Ys[i] = tmp
     Ys = np.stack(Ys, 1)
     plt.figure(figsize=(18, 9))
-    plot_prediction(x_test, x_testf, Ys, method_list, styles, region_names, region_mask)
+    plot_prediction(x_test, x_testf, Ys, method_list, styles, region_names, region_mask, start_date=split_date)
 
     # plt.savefig(f"images/{DATASET}_DayByDay.eps")
     # plt.savefig(f"images/{DATASET}_DayByDay.jpg")
