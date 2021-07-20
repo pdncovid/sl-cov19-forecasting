@@ -54,6 +54,16 @@ def expand_dims(arrs, to):
     return ret
 
 
+def show_curves(data, regions):
+    for i in range(data.shape[0]):
+        plt.figure()
+        plt.plot(data[i, :])
+        plt.title(regions[i])
+        plt.show()
+    print(regions)
+    return
+
+
 def per_million(data, population):
     # divide by population
     data_per_mio_capita = np.zeros_like(data)
@@ -370,7 +380,7 @@ def load_samples(_x, fs, WINDOW_LENGTH, PREDICT_STEPS):
 
 def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COVID-AI (PG)/spatio_temporal/Datasets"):
     global daily_cases, region_names, confirmed_cases, START_DATE
-    _df = pd.read_csv(os.path.join(path, os.path.join("EU","jrc-covid-19-all-days-by-regions.csv")))
+    _df = pd.read_csv(os.path.join(path, os.path.join("EU", "jrc-covid-19-all-days-by-regions.csv")))
     _eu = _df['CountryName'].unique().tolist()
     _eu.append('IT')
     if DATASET in _eu:

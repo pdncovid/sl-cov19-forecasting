@@ -20,10 +20,10 @@ def check_spectral(dataset, region_names, window):
 
 
 # check ACF and PACF of each region
-def check_acf(dataset, region_names, window):
+def check_acf(dataset, regions, window):
     cases_acf = []
     cases_pacf = []
-    for i in range(len(region_names)):
+    for i in range(len(regions)):
         _acf = stattools.acf(dataset[i, :], adjusted=True, nlags=window, fft=True, missing="drop")
         _pacf = stattools.pacf(dataset[i, :], nlags=window)
         cases_acf.append(_acf)

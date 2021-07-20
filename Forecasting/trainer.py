@@ -233,7 +233,8 @@ def main():
                                             input_days=WINDOW_LENGTH,
                                             output_days=PREDICT_STEPS,
                                             n_features=n_features,
-                                            n_regions=n_regions)
+                                            n_regions=n_regions,
+                                            show=True)
 
     fmodel_name = str(DATASETS) + "_" + model.name + "_" + TRAINING_DATA_TYPE + '_' + UNDERSAMPLING + '_' + str(
         model.input.shape[1]) + '_' + str(model.output.shape[1])
@@ -293,10 +294,19 @@ def main():
         optimised = True
         clip = True
 
+        # if optimised:
+        #     if clip:
+        #         clip_percentages = [0, 10]
+        #     count_h, count_l, num_h, num_l = 2, 0.2, 100000, 500
+        #     power_l, power_h, power_penalty = 0.2, 2, 1000
+        # else:
+        #     ratio = 0.3
+
         if optimised:
             if clip:
                 clip_percentages = [0, 10]
-            count_h, count_l, num_h, num_l = 2, 0.2, 100000, 500
+            count_h, count_l, num_h, num_l = 2, 0.2, 1000, 50
+            # 10k, 500
             power_l, power_h, power_penalty = 0.2, 2, 1000
         else:
             ratio = 0.3

@@ -75,7 +75,7 @@ def main():
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
     parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=14)
     parser.add_argument('--output_days', help='Number of days predicted by the model', type=float, default=7)
-    parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM_Simple_WO_Regions')
+    parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM4EachDay_WO_Regions')
 
     parser.add_argument('--lr', help='Learning rate', type=int, default=0.002)
     parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
@@ -305,12 +305,13 @@ def main():
     # ]
 
     fil = 'Filtered'
-    sam = 'None'
+    sam = 'Reduce'
     trai = "['JP', 'Texas', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
     ipop = [
             # (30, 10), (30, 15), (30, 20), (30, 25), (30, 30),
             # (40, 10), (40, 15), (40, 20), (40, 25), (40, 30),
-            (50, 10), (50, 15), (50, 20), (50, 25), (50, 30),
+            (60, 30),
+            # (50, 15), (50, 20), (50, 25), (50, 30),
             # (60, 10), (60, 15), (60, 20), (60, 25), (60, 30),
             # (70, 10), (70, 15), (70, 20), (70, 25), (70, 30),
             ]
@@ -319,7 +320,7 @@ def main():
     plot_data = []
     for hh in range(len(ipop)):
         model_names.append((
-            f"{trai}_LSTM_Simple_WO_Regions_{fil}_{sam}_{ipop[hh][0]}_{ipop[hh][1]}",
+            f"{trai}_LSTM4EachDay_WO_Regions_{fil}_{sam}_{ipop[hh][0]}_{ipop[hh][1]}",
             f'LSTM-ALL-{fil[0]}-{sam}-{ipop[hh][0]}-{ipop[hh][1]}'))
         if fil == 'Filtered':
             plot_data.append([{}, {'label_name': model_names[hh][1] + ' (F)', 'line_size': 3}])
