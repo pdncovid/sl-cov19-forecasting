@@ -56,7 +56,7 @@ def main():
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
     parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=14)
     parser.add_argument('--output_days', help='Number of days predicted by the model', type=float, default=7)
-    parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM_Simple_WO_Regions')
+    parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM4EachDay_WO_Regions')
 
     parser.add_argument('--lr', help='Learning rate', type=int, default=0.002)
     parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
@@ -279,6 +279,7 @@ def main():
     #     [{}, {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
     #     [{}, {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
     # ]
+
 
     # fil = 'Filtered'
     # sam = 'Reduce'

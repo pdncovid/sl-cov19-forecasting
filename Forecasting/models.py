@@ -1,8 +1,10 @@
 import tensorflow as tf
 import numpy as np
+import math
+import pydot
 
 
-def get_model(modeltype, input_days, output_days, n_features, n_regions):
+def get_model(modeltype, input_days, output_days, n_features, n_regions, show=False):
     if modeltype == "Dense_WO_regions":
         reduce_regions2batch = True
         model = Dense_WO_regions(input_days, output_days, n_features)
@@ -26,8 +28,11 @@ def get_model(modeltype, input_days, output_days, n_features, n_regions):
         model = LSTM4EachDay_WO_Regions(input_days, output_days)
     else:
         raise TypeError("Model type not defined")
-    # model.summary()
-    # tf.keras.utils.plot_model(model, show_shapes=True, rankdir='LR')
+
+    if show:
+        model.summary()
+        # tf.keras.utils.plot_model(model, show_shapes=True, rankdir='LR')
+
     return model, reduce_regions2batch
 
 
@@ -133,20 +138,23 @@ def LSTM4EachDay_W_Regions(input_seq_size, output_seq_size, n_regions):
 
 
 def LSTM4EachDay_WO_Regions(input_seq_size, output_seq_size):
-    inp_seq = tf.keras.layers.Input((input_seq_size, 1), name="input_seq")
+    k = 5
+    assert output_seq_size % k == 0
 
+    inp_seq = tf.keras.layers.Input((input_seq_size, 1), name="input_seq")
     lstm_input = inp_seq
-    for i in range(output_seq_size):
+    for i in range(0, output_seq_size, k):
         pre_cells = output_seq_size - i
         xx = tf.keras.layers.LSTM(pre_cells)(lstm_input)
-        xx = xx[:, 0:1]
-        xx = tf.reshape(xx, (-1, 1, 1))
+        xx = xx[:, 0:k]
+        xx = tf.reshape(xx, (-1, k, 1))
 
         out = xx if i == 0 else tf.keras.layers.concatenate([out, xx], axis=1)
 
-        lstm_input = tf.keras.layers.concatenate([lstm_input[:, 1:, :], xx], axis=1)
+        lstm_input = tf.keras.layers.concatenate([lstm_input[:, k:, :], xx], axis=1)
 
-    out = tf.reshape(out, (-1, output_seq_size, 1))
+    x = tf.keras.layers.Activation('relu')(out)
+    x = tf.keras.layers.Reshape((output_seq_size, 1))(x)
     # out = tf.keras.layers.Activation('sigmoid')(out)
-    model = tf.keras.models.Model(inp_seq, out, name="LSTM4EachDay_WO_Regions")
+    model = tf.keras.models.Model(inp_seq, x, name="LSTM4EachDay_WO_Regions")
     return model

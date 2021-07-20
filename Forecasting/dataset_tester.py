@@ -3,39 +3,44 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import statsmodels.tsa.stattools as stattools
 
-from Forecasting.utils.data_loader import load_data_eu, load_data, load_smooth_data, load_samples, load_multiple_data
+from Forecasting.utils.data_loader import load_data_eu, load_data, load_smooth_data, load_samples, load_multiple_data, \
+    show_curves
 from Forecasting.utils.undersampling import undersample3, undersample_random
+from Forecasting.utils.data_analyser import check_acf
+
+
+# from Forecasting.models import get_model
 
 
 def main():
-    out1 = 'Germany'
-    data = load_data(out1, path=dataset_path)
-    daily_cases = data['daily_cases']
-    regions = data['region_names']
-    for i in range(daily_cases.shape[0]):
-        plt.figure()
-        plt.plot(daily_cases[i, :])
-        plt.title(regions[i])
-        plt.show()
-    print(regions)
-    # fil, raw, fs = load_multiple_data(DATASETS=countries, data_path=dataset_path,
-    #                                   look_back_window=look_back_window,
-    #                                   window_slide=window_slide, R_EIG_ratio=R_EIG_ratio,
-    #                                   R_power=R_power, midpoint=midpoint)
-    #
-    #
-    # temp = load_samples(fil, fs, WINDOW_LENGTH, PREDICT_STEPS)
-    #
-    # x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp
-    #
-    # if optimised:
-    #     x_train_uf, y_train_uf, x_train_feat = undersample3(x_train_list, y_train_list, fs_train, count_h, count_l,
-    #                                                         num_h, num_l, power_l, power_h, power_penalty, clip,
-    #                                                         clip_percentages, str(countries), plot_, repeat)
-    # else:
-    #     x_train_uf, y_train_uf, x_train_feat = undersample_random(x_train_list, y_train_list, fs_train, ratio,
-    #                                                               str(countries), plot_)
+    # data = load_data('Spain', path=dataset_path)
+    # daily_cases = data['daily_cases']
+    # region_names = data['region_names']
+    # start_date = data['START_DATE']
+    # print(region_names)
+    # print(start_date)
+    # print(daily_cases.shape)
+    # plt.figure(figsize=(12, 4))
+    # num = 1
+
+    fil, raw, fs = load_multiple_data(DATASETS=countries, data_path=dataset_path,
+                                      look_back_window=look_back_window,
+                                      window_slide=window_slide, R_EIG_ratio=R_EIG_ratio,
+                                      R_power=R_power, midpoint=midpoint)
+
+    temp = load_samples(fil, fs, WINDOW_LENGTH, PREDICT_STEPS)
+
+    x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp
+
+    if optimised:
+        x_train_uf, y_train_uf, x_train_feat = undersample3(x_train_list, y_train_list, fs_train, count_h, count_l,
+                                                            num_h, num_l, power_l, power_h, power_penalty, clip,
+                                                            clip_percentages, str(countries), plot_, repeat)
+    else:
+        x_train_uf, y_train_uf, x_train_feat = undersample_random(x_train_list, y_train_list, fs_train, ratio,
+                                                                  str(countries), plot_)
 
 
 # %% SCRIPT STARTS HERE
@@ -45,9 +50,9 @@ def main():
 dataset_path = '../Datasets'
 _df = pd.read_csv(os.path.join(dataset_path, "EU\jrc-covid-19-all-days-by-regions.csv"))
 _eu = _df['CountryName'].unique().tolist()
-countries = ['Spain']
-# countries = ['IT', 'SL', 'NG', 'Texas']
-# countries1 = ['NG', 'IT']
+# countries = ['Spain']
+# countries = "JP Texas IT BD KZ KR Germany"
+countries = ['Norway']
 
 WINDOW_LENGTH = 40
 PREDICT_STEPS = 10
@@ -62,7 +67,7 @@ else:
     R_power = 1
 
 look_back_window = 100
-window_slide = 20
+window_slide = 10
 repeat = False
 # window_slide = 1
 
@@ -71,13 +76,16 @@ repeat = False
 optimised = True
 clip = True
 plot_ = True
+sample_all = False
 
 if optimised:
     if clip:
         clip_percentages = [0, 10]
-    count_h, count_l, num_h, num_l = 2, 0.2, 10000, 100
-    # 10k, 500
-    power_l, power_h, power_penalty = 0.2, 2, 1000
+        if sample_all:
+            count_h, count_l, num_h, num_l = 2, 0.2, 1000, 50
+        else:
+            count_h, count_l, num_h, num_l = 2, 0.2, 2500, 100
+        power_l, power_h, power_penalty = 0.2, 2, 1000
 else:
     ratio = 0.3
 
