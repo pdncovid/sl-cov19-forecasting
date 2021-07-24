@@ -302,18 +302,16 @@ def main():
         # else:
         #     ratio = 0.3
 
-        if optimised:
-            if clip:
-                clip_percentages = [0, 10]
-            count_h, count_l, num_h, num_l = 2, 0.2, 1000, 50
-            # 10k, 500
-            power_l, power_h, power_penalty = 0.2, 2, 1000
-        else:
-            ratio = 0.3
+        # if optimised:
+        #     if clip:
+        #         clip_percentages = [0, 10]
+        #     count_h, count_l, num_h, num_l = 2, 0.2, 1000, 50
+        #     # 10k, 500
+        #     power_l, power_h, power_penalty = 0.2, 2, num_l
+        # else:
+        #     ratio = 0.3
 
-        x_train_list, y_train_list, fs_train = undersample3(x_train_list, y_train_list, fs_train, count_h, count_l,
-                                                            num_h, num_l, power_l, power_h, power_penalty, clip,
-                                                            clip_percentages, str(DATASETS), PLOT,
+        x_train_list, y_train_list, fs_train = undersample3(x_train_list, y_train_list, fs_train, window_slide, clip, str(DATASETS), PLOT,
                                                             f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
 
         print(f"Undersample percentage {x_train_list[0].shape[0] / total_samples * 100:.2f}%")

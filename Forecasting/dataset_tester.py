@@ -35,9 +35,8 @@ def main():
     x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp
 
     if optimised:
-        x_train_uf, y_train_uf, x_train_feat = undersample3(x_train_list, y_train_list, fs_train, count_h, count_l,
-                                                            num_h, num_l, power_l, power_h, power_penalty, clip,
-                                                            clip_percentages, str(countries), plot_, repeat)
+        x_train_uf, y_train_uf, x_train_feat = undersample3(x_train_list, y_train_list, fs_train, window_slide, clip,
+                                                            str(countries), plot_, repeat)
     else:
         x_train_uf, y_train_uf, x_train_feat = undersample_random(x_train_list, y_train_list, fs_train, ratio,
                                                                   str(countries), plot_)
@@ -52,7 +51,7 @@ _df = pd.read_csv(os.path.join(dataset_path, "EU\jrc-covid-19-all-days-by-region
 _eu = _df['CountryName'].unique().tolist()
 # countries = ['Spain']
 # countries = "JP Texas IT BD KZ KR Germany"
-countries = ['Norway']
+countries = ['Russian Fed.']
 
 WINDOW_LENGTH = 40
 PREDICT_STEPS = 10
@@ -67,7 +66,7 @@ else:
     R_power = 1
 
 look_back_window = 100
-window_slide = 10
+window_slide = 1
 repeat = False
 # window_slide = 1
 
@@ -77,17 +76,8 @@ optimised = True
 clip = True
 plot_ = True
 sample_all = False
+ratio = 0.3
 
-if optimised:
-    if clip:
-        clip_percentages = [0, 10]
-        if sample_all:
-            count_h, count_l, num_h, num_l = 2, 0.2, 1000, 50
-        else:
-            count_h, count_l, num_h, num_l = 2, 0.2, 2500, 100
-        power_l, power_h, power_penalty = 0.2, 2, 1000
-else:
-    ratio = 0.3
 
 # >> MAIN LOOP
 if __name__ == "__main__":

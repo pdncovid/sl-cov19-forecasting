@@ -56,9 +56,15 @@ def get_count(segments, data):
     return count, bounds, idx
 
 
-def undersample3(x_data, y_data, x_feats, count_h, count_l, num_h, num_l, power_l, power_h, power_penalty,
-                 clip, clip_percentages, country, PLOT, repeat,
+def undersample3(x_data, y_data, x_feats, window_slide, clip, country, PLOT, repeat=False,
                  savepath=None):
+    if clip:
+        clip_percentages = [0, 10]
+    else:
+        clip_percentages = [0, 0]
+    count_h, count_l, num_h, num_l = 2, 0.2, 10000 // window_slide, 500 // window_slide
+    power_l, power_h, power_penalty = 0.2, 2, num_l
+
     global idx_clip
     print(f"Under-sampling! Expected data (regions, samples*, window).")
     total_regions, total_samples = 0, 0
