@@ -49,7 +49,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='Norway')
+                        default='NOR')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-1-1')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
@@ -254,32 +254,67 @@ def main():
                                               population=population)
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=daily_cases, dataf=daily_filtered,
                                                  population=population)
-    trai = "['JP', 'Texas', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
+
+    trai = "['Texas', 'NG', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
     modeltype = 'LSTM_Simple_WO_Regions'
     flip_compare = False
-    use_f_gt = False
+    use_f_gt = True
 
     model_names = [
-        (f'{trai}_{modeltype}_Unfiltered_None_50_10', 'LSTM-R-None'),
-        (f'{trai}_{modeltype}_Unfiltered_Reduce_50_10', 'LSTM-R-Reduce'),
-        (f'{trai}_{modeltype}_Filtered_None_50_10', 'LSTM-F-None'),
-        (f'{trai}_{modeltype}_Filtered_Reduce_50_10', 'LSTM-F-Reduce'),
+        # (f"['JP']_{modeltype}_Filtered_None_50_10", 'LSTM-JP-F-None'),
+        # (f"['JP']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-JP-F-Reduce'),
+        # (f"['SL']_{modeltype}_Filtered_None_50_10", 'LSTM-SL-F-None'),
+        # (f"['SL']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-SL-F-Reduce'),
+        (f"['RUS']_{modeltype}_Filtered_None_50_10", 'LSTM-RUS-F-None'),
+        (f"['RUS']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-RUS-F-Reduce'),
+        (f"['NOR']_{modeltype}_Filtered_None_50_10", 'LSTM-NOR-F-None'),
+        (f"['NOR']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-NOR-F-Reduce'),
+
+        # (f"['JP']_{modeltype}_Filtered_None_50_10", 'LSTM-JP-F-None'),
+        # (f"['JP']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-JP-F-Reduce'),
+        # (f"['SL']_{modeltype}_Filtered_None_50_10", 'LSTM-SL-F-None'),
+        # (f"['SL']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-SL-F-Reduce'),
+        (f"['RUS']_{modeltype}_Filtered_None_50_10", 'LSTM-RUS-F-None'),
+        (f"['RUS']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-RUS-F-Reduce'),
+        (f"['NOR']_{modeltype}_Filtered_None_50_10", 'LSTM-NOR-F-None'),
+        (f"['NOR']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-NOR-F-Reduce'),
     ]
     plot_data = [
-        [{'label_name': model_names[0][1] + '-raw', 'line_size': 4}, {}],
-        [{'label_name': model_names[1][1] + '-raw', 'line_size': 4}, {}],
+        [{}, {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
+        [{}, {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
         [{}, {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
         [{}, {'label_name': model_names[3][1] + '-fil', 'line_size': 3}],
+        [{'label_name': model_names[4][1] + '-raw', 'line_size': 3}, {}],
+        [{'label_name': model_names[5][1] + '-raw', 'line_size': 3}, {}],
+        [{'label_name': model_names[6][1] + '-raw', 'line_size': 3}, {}],
+        [{'label_name': model_names[7][1] + '-raw', 'line_size': 3}, {}],
+        # [{}, {'label_name': model_names[4][1] + '-fil', 'line_size': 3}],
+        # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
+        # [{}, {'label_name': model_names[6][1] + '-fil', 'line_size': 3}],
+        # [{}, {'label_name': model_names[7][1] + '-fil', 'line_size': 3}],
+
+        # [{'label_name': model_names[8][1] + '-raw', 'line_size': 3}, {}],
+        # [{'label_name': model_names[9][1] + '-raw', 'line_size': 3}, {}],
+        # [{'label_name': model_names[10][1] + '-raw', 'line_size': 3}, {}],
+        # [{'label_name': model_names[11][1] + '-raw', 'line_size': 3}, {}],
+        # [{'label_name': model_names[12][1] + '-raw', 'line_size': 3}, {}],
+        # [{'label_name': model_names[13][1] + '-raw', 'line_size': 3}, {}],
+        # [{'label_name': model_names[14][1] + '-raw', 'line_size': 3}, {}],
+        # [{'label_name': model_names[15][1] + '-raw', 'line_size': 3}, {}],
     ]
+
     # model_names = [
-    #     (f'{trai}_{modeltype}_Filtered_None_50_10', 'LSTM-F-None'),
-    #     (f'{trai}_{modeltype}_Filtered_Reduce_50_10', 'LSTM-F-Reduce'),
+    #     (f'{trai}_{modeltype}_Unfiltered_None_50_10', 'LSTM-R-None'),
+    #     (f'{trai}_{modeltype}_Unfiltered_Reduce_50_10', 'LSTM-R-Reduce'),
+    #     # (f'{trai}_{modeltype}_Filtered_None_50_10', 'LSTM-F-None'),
+    #     # (f'{trai}_{modeltype}_Filtered_Reduce_50_10', 'LSTM-F-Reduce'),
     # ]
     # plot_data = [
-    #     [{}, {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
-    #     [{}, {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
+    #     [{'label_name': model_names[0][1] + '-raw', 'line_size': 10}, {}],
+    #     [{'label_name': model_names[1][1] + '-raw', 'line_size': 10}, {}],
+    #     # [{}, {'label_name': model_names[0][1] + '-fil', 'line_size': 10}],
+    #     # [{}, {'label_name': model_names[1][1] + '-fil', 'line_size': 10}],
     # ]
-
 
     # fil = 'Filtered'
     # sam = 'Reduce'
@@ -401,10 +436,10 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
     Ys = []
     method_list = []
     styles = {
-        'X': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 2},
-        'Xf': {'Preprocessing': 'Filtered', 'Data': 'Training', 'Size': 2},
-        'Observations Raw': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 2},
-        'Observations Filtered': {'Preprocessing': 'Filtered', 'Data': 'Training', 'Size': 2},
+        'X': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 7},
+        'Xf': {'Preprocessing': 'Filtered', 'Data': 'Training', 'Size': 7},
+        'Observations Raw': {'Preprocessing': 'Raw', 'Data': 'Training', 'Size': 7},
+        'Observations Filtered': {'Preprocessing': 'Filtered', 'Data': 'Training', 'Size': 7},
     }
 
     def window_data(X, Y, window=14, pred=7):
@@ -535,7 +570,6 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
         x_testf[:, :, :] = np.nan
     if not add_raw_input:
         x_test[:, :, :] = np.nan
-
 
     x_test = x_test[-showhowmuch:]
     x_testf = x_testf[-showhowmuch:]

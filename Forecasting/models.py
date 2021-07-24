@@ -1,7 +1,5 @@
 import tensorflow as tf
 import numpy as np
-import math
-import pydot
 
 
 def get_model(modeltype, input_days, output_days, n_features, n_regions, show=False):

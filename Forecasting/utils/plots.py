@@ -93,14 +93,14 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask, st
             d['Day'] += [idx + i for i in range(x_n)]
             d['New cases'] += [i for i in x[:, c]]
             d['Region'] += [region_list[c]] * x_n
-            d['Data type'] += ['Train'] * x_n
+            d['Data type'] += ['Training data'] * x_n
             d['Size'] += [styles['X']['Size']]*x_n
             d['Preprocessing'] +=[styles['X']['Preprocessing']] *x_n
             
             d['Day'] += [idx + i for i in range(x_n)]
             d['New cases'] += [i for i in xf[:, c]]
             d['Region'] += [region_list[c]] * x_n
-            d['Data type'] += ['Train'] * x_n
+            d['Data type'] += ['Training data'] * x_n
             d['Size'] += [styles['Xf']['Size']]*x_n
             d['Preprocessing'] +=[styles['Xf']['Preprocessing']] *x_n
             
@@ -145,7 +145,7 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask, st
             legend = False
         ax = sns.lineplot(data=df, x='Day', y='New cases',
                           style='Preprocessing',
-                          hue='Data type', size='Size', linewidth=3,
+                          hue='Data type',  linewidth=3,
                           # estimator=lambda x: x if len(x)==1 else list(x)[1],
                           markers=True, dashes=True,
                           legend=legend)
@@ -156,7 +156,7 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask, st
             _handles = []
             _labels = []
             for _i in range(len(labels)):
-                if labels[_i] == 'Size' or len(labels[_i]) == 1:
+                if labels[_i] == 'Size' or len(labels[_i]) < 3:
                     continue
                 _handles.append(handles[_i])
                 _labels.append(labels[_i])
