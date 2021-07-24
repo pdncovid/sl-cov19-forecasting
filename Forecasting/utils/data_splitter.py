@@ -2,7 +2,7 @@ import itertools
 import time
 
 import numpy as np
-from utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
+from Forecasting.utils.smoothing_functions import O_LPF, NO_LPF, O_NDA, NO_NDA
 from multiprocessing import Pool
 
 
