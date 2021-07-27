@@ -157,15 +157,15 @@ def main():
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=100)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
-    parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=30)
+    parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=50)
     parser.add_argument('--output_days', help='Number of days predicted by the model', type=int, default=10)
     parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM_Simple_WO_Regions')
 
     parser.add_argument('--lr', help='Learning rate', type=float, default=0.004)
     parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
-                        default="Filtered")
+                        default="Unfiltered")
     parser.add_argument('--undersampling', help='under-sampling method (None, Loss, Reduce)', type=str,
-                        default="Reduced")
+                        default="Loss")
 
     parser.add_argument('--path', help='default dataset path', type=str, default="../Datasets")
     parser.add_argument('--load_recent', help='Use daily data', action='store_true')
@@ -175,15 +175,13 @@ def main():
     global daily_data, DATASET, DATASETS, split_date, EPOCHS, BATCH_SIZE, BUFFER_SIZE, WINDOW_LENGTH, PREDICT_STEPS, lr, \
         TRAINING_DATA_TYPE, UNDERSAMPLING, PLOT, daily_cases, daily_filtered, population, region_names, test_days_split_idx, \
         x_data_scalers, folder, fmodel_name, count_h, count_l, num_l, num_h, power_l, power_h, power_penalty, clip_percentages
+
     daily_data = args.daily
     DATASETS = args.dataset
-    if type(DATASETS) == str:
-        DATASETS = [DATASETS]
-    if len(DATASETS) == 1:
-        DATASETS = DATASETS[0].split(' ')
+
+    DATASETS = ["Texas", "IT", "BD", "KZ", "KR", "Germany", "NG"]
 
     split_date = args.split_date
-
     EPOCHS = args.epochs
     BATCH_SIZE = args.batchsize
     BUFFER_SIZE = 100
@@ -192,6 +190,11 @@ def main():
     lr = args.lr
     TRAINING_DATA_TYPE = args.preprocessing
     UNDERSAMPLING = args.undersampling
+
+    if type(DATASETS) == str:
+        DATASETS = [DATASETS]
+    if len(DATASETS) == 1:
+        DATASETS = DATASETS[0].split(' ')
 
     split_train_data = True
     midpoint = True
@@ -204,7 +207,7 @@ def main():
         R_power = 1
 
     look_back_window, window_slide = 100, 10
-    PLOT = True
+    PLOT = False
 
     # ===================================================================================================== Loading data
     DATASET = 'JP'
@@ -217,26 +220,23 @@ def main():
     n_regions = d["n_regions"]
     daily_cases[daily_cases < 0] = 0
     population = features["Population"]
-
+    #
     days = confirmed_cases.shape[1]
     n_features = features.shape[1]
 
-
     features = features.values
-
-    daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, midpoint=midpoint, corr=True,
-                                         R_EIG_ratio=R_EIG_ratio, R_power=R_power,
-                                         region_names=region_names, plot_freq=1, view=False)
-
-    # ================================================================================================= Initialize Model
-
+    #
+    # daily_filtered, cutoff_freqs = O_LPF(daily_cases, datatype='daily', order=3, midpoint=midpoint, corr=True,
+    #                                      R_EIG_ratio=R_EIG_ratio, R_power=R_power,
+    #                                      region_names=region_names, plot_freq=1, view=False)
+    #
+    # # ================================================================================================= Initialize Model
+    #
     model, reduce_regions2batch = get_model(args.modeltype,
                                             input_days=WINDOW_LENGTH,
                                             output_days=PREDICT_STEPS,
                                             n_features=n_features,
-                                            n_regions=n_regions,
-                                            show=True)
-
+                                            n_regions=n_regions)
 
     fmodel_name = str(DATASETS) + "_" + model.name + "_" + TRAINING_DATA_TYPE + '_' + UNDERSAMPLING + '_' + str(
         model.input.shape[1]) + '_' + str(model.output.shape[1])
@@ -246,97 +246,108 @@ def main():
     print(fmodel_name)
     folder = time.strftime('%Y.%m.%d-%H.%M.%S', time.localtime()) + "_" + fmodel_name
     os.makedirs('./logs/' + folder + '/images')
-    # ===================================================================================== Preparing data for training
-    if PLOT:
-        plt.plot(daily_cases.T)
-        plt.savefig('./logs/' + folder + "/images/raw_data.png", bbox_inches='tight')
-        plt.plot(daily_filtered.T)
-        plt.savefig('./logs/' + folder + "/images/filtered_data.png", bbox_inches='tight')
+    # # ===================================================================================== Preparing data for training
+    x_train2 = []
+    y_train2 = []
+    x_feat2 = []
 
-    x_data, y_data, x_data_scalers = get_data(False, normalize=True, data=daily_cases, dataf=daily_filtered,
-                                              population=population)
-    x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=daily_cases, dataf=daily_filtered,
-                                                 population=population)
+    x_test2 = []
+    y_test2 = []
+    x_feat_test2 = []
 
-    fil, raw, fs = load_multiple_data(DATASETS, args.path, look_back_window, window_slide, R_EIG_ratio, R_power,
-                                      midpoint)
-    if split_train_data:
-        test_days_split_idx = (pd.to_datetime(split_date) - pd.to_datetime(START_DATE)).days
-        print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
-        print(f"Start date {START_DATE}, split date {split_date} testing days {days-test_days_split_idx}")
-        for i_region in range(len(fil)):
-            to_keep = (test_days_split_idx-look_back_window)//window_slide
-            if fil[i_region].shape[0] <to_keep:
-                Warning(f"Region has {fil[i_region].shape[0]} to train, can't keep {to_keep} samples as train data.")
-            else:
-                print(f"Total samples for {i_region} is {len(fil[i_region])}. Dropping last {fil[i_region].shape[0] -to_keep}")
-                fil[i_region] = fil[i_region][:to_keep]
-                raw[i_region] = raw[i_region][:to_keep]
+    for DATASET in DATASETS:
 
-    if TRAINING_DATA_TYPE == "Filtered":
-        temp = load_samples(fil, fs, WINDOW_LENGTH, PREDICT_STEPS)
-        x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp
-    else:
-        temp = load_samples(raw, fs, WINDOW_LENGTH, PREDICT_STEPS)
-        x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp
+        fil, raw, fs = load_multiple_data(DATASET, args.path, look_back_window, window_slide, R_EIG_ratio, R_power,
+                                          midpoint)
+        if split_train_data:
+            test_days_split_idx = (pd.to_datetime(split_date) - pd.to_datetime(START_DATE)).days
+            print(f"Total population {population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
+            print(f"Start date {START_DATE}, split date {split_date} testing days {days - test_days_split_idx}")
+            for i_region in range(len(fil)):
+                to_keep = (test_days_split_idx - look_back_window) // window_slide
+                if fil[i_region].shape[0] < to_keep:
+                    Warning(
+                        f"Region has {fil[i_region].shape[0]} to train, can't keep {to_keep} samples as train data.")
+                else:
+                    print(
+                        f"Total samples for {i_region} is {len(fil[i_region])}. Dropping last {fil[i_region].shape[0] - to_keep}")
+                    fil[i_region] = fil[i_region][:to_keep]
+                    raw[i_region] = raw[i_region][:to_keep]
 
-    # ==================================================================================================== Undersampling
-    print("================================================== Training data before undersampling")
-    total_regions, total_samples = 0, 0
-    for i in range(len(x_train_list)):  # (n_regions, samples*, WINDOW_LENGTH)
-        total_regions += 1
-        total_samples += x_train_list[i].shape[0]
-    for i in range(len(x_test_list)):  # (n_regions, samples*, WINDOW_LENGTH)
-        total_samples += x_test_list[i].shape[0]
-    for i in range(len(x_val_list)):  # (n_regions, samples*, WINDOW_LENGTH)
-        total_samples += x_val_list[i].shape[0]
-    print(f"Total regions {total_regions} Total samples {total_samples}")
+        if TRAINING_DATA_TYPE == "Filtered":
+            temp = load_samples(fil, fs, WINDOW_LENGTH, PREDICT_STEPS)
+            x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp
+        else:
+            temp = load_samples(raw, fs, WINDOW_LENGTH, PREDICT_STEPS)
+            x_train_list, y_train_list, x_test_list, y_test_list, x_val_list, y_val_list, fs_train, fs_test, fs_val = temp
 
-    if UNDERSAMPLING == "Reduce":
-        # under-sampling parameters
+        # ==================================================================================================== Undersampling
+        print("================================================== Training data before undersampling")
+        total_regions, total_samples = 0, 0
+        for i in range(len(x_train_list)):  # (n_regions, samples*, WINDOW_LENGTH)
+            total_regions += 1
+            total_samples += x_train_list[i].shape[0]
+        for i in range(len(x_test_list)):  # (n_regions, samples*, WINDOW_LENGTH)
+            total_samples += x_test_list[i].shape[0]
+        for i in range(len(x_val_list)):  # (n_regions, samples*, WINDOW_LENGTH)
+            total_samples += x_val_list[i].shape[0]
+        print(f"Total regions {total_regions} Total samples {total_samples}")
 
-        optimised = True
-        clip = True
+        if UNDERSAMPLING == "Reduce":
+            # under-sampling parameters
+            clip = True
 
-        # if optimised:
-        #     if clip:
-        #         clip_percentages = [0, 10]
-        #     count_h, count_l, num_h, num_l = 2, 0.2, 100000, 500
-        #     power_l, power_h, power_penalty = 0.2, 2, 1000
-        # else:
-        #     ratio = 0.3
+            x_train_list, y_train_list, fs_train = undersample3(x_train_list, y_train_list, fs_train, window_slide,
+                                                                clip,
+                                                                str(DATASETS), PLOT,
+                                                                f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
 
-        # if optimised:
-        #     if clip:
-        #         clip_percentages = [0, 10]
-        #     count_h, count_l, num_h, num_l = 2, 0.2, 1000, 50
-        #     # 10k, 500
-        #     power_l, power_h, power_penalty = 0.2, 2, num_l
-        # else:
-        #     ratio = 0.3
+            print(f"Undersample percentage {x_train_list[0].shape[0] / total_samples * 100:.2f}%")
+            # EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
+            print(f"New Epoch = {EPOCHS}")
+            # here Xtrain have been reduced by regions
 
-        x_train_list, y_train_list, fs_train = undersample3(x_train_list, y_train_list, fs_train, window_slide, clip, str(DATASETS), PLOT,
-                                                            f'./logs/{folder}/images/under_{DATASETS}.png' if PLOT else None)
+        print("================================================= Training data after undersampling")
+        # print("Train", x_train.shape, y_train.shape, x_train_feat.shape)
+        # print("Val", x_val.shape, y_val.shape, x_val_feat.shape)
+        # print("Test", x_test.shape, y_test.shape, x_test_feat.shape)
+        if reduce_regions2batch:
+            x_train_list, y_train_list, fs_train = reduce_regions_to_batch([x_train_list, y_train_list, fs_train])
+            x_test_list, y_test_list, fs_test = reduce_regions_to_batch([x_test_list, y_test_list, fs_test])
+            x_val_list, y_val_list, fs_val = reduce_regions_to_batch([x_val_list, y_val_list, fs_val])
 
-        print(f"Undersample percentage {x_train_list[0].shape[0] / total_samples * 100:.2f}%")
-        # EPOCHS = min(250, int(EPOCHS * total_samples / x_train_list[0].shape[0]))
-        print(f"New Epoch = {EPOCHS}")
-        # here Xtrain have been reduced by regions
+            x_train, y_train, x_train_feat = expand_dims([x_train_list, y_train_list, fs_train], 3)
+            x_test, y_test, x_test_feat = expand_dims([x_test_list, y_test_list, fs_test], 3)
+            x_val, y_val, x_val_feat = expand_dims([x_val_list, y_val_list, fs_val], 3)
+        else:
+            raise NotImplementedError()
 
-    print("================================================= Training data after undersampling")
-    # print("Train", x_train.shape, y_train.shape, x_train_feat.shape)
-    # print("Val", x_val.shape, y_val.shape, x_val_feat.shape)
-    # print("Test", x_test.shape, y_test.shape, x_test_feat.shape)
-    if reduce_regions2batch:
-        x_train_list, y_train_list, fs_train = reduce_regions_to_batch([x_train_list, y_train_list, fs_train])
-        x_test_list, y_test_list, fs_test = reduce_regions_to_batch([x_test_list, y_test_list, fs_test])
-        x_val_list, y_val_list, fs_val = reduce_regions_to_batch([x_val_list, y_val_list, fs_val])
+        x_train = np.array(x_train)
+        y_train = np.array(y_train)
+        x_train_feat = np.array(x_train_feat)
 
-        x_train, y_train, x_train_feat = expand_dims([x_train_list, y_train_list, fs_train], 3)
-        x_test, y_test, x_test_feat = expand_dims([x_test_list, y_test_list, fs_test], 3)
-        x_val, y_val, x_val_feat = expand_dims([x_val_list, y_val_list, fs_val], 3)
-    else:
-        raise NotImplementedError()
+        x_train2.append(x_train)
+        y_train2.append(y_train)
+        x_feat2.append(x_train_feat)
+
+        x_test = np.array(x_test)
+        y_test = np.array(y_test)
+        x_test_feat = np.array(x_test_feat)
+
+        x_test2.append(x_test)
+        y_test2.append(y_test)
+        x_feat_test2.append(x_test_feat)
+
+    x_train = np.concatenate(x_train2, axis=0)
+    y_train = np.concatenate(y_train2, axis=0)
+    x_train_feat = np.concatenate(x_feat2, axis=0)
+
+    x_test = np.concatenate(x_test2, axis=0)
+    y_test = np.concatenate(y_test2, axis=0)
+    x_test_feat = np.concatenate(x_feat_test2, axis=0)
+
+    print(x_train.shape, y_train.shape)
+    print(x_test.shape, y_test.shape)
 
     # ============================================================================================== Creating Dataset
     train_data = tf.data.Dataset.from_tensor_slices((x_train, y_train))
@@ -371,9 +382,7 @@ def main():
         plt.savefig('./logs/' + folder + f"/images/Train_data.png", bbox_inches='tight')
 
     # =================================================================================================  Train
-
     train(model, train_data, x_train, y_train, x_test, y_test)
-
     # ================================================================================================= Few Evaluations
     model = tf.keras.models.load_model("models/" + fmodel_name + ".h5")
     if PLOT:

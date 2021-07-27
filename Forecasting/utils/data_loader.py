@@ -383,8 +383,9 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
 
     _df = pd.read_csv(os.path.join(path, os.path.join("EU","jrc-covid-19-all-days-by-regions.csv")))
     _eu = _df['iso3'].unique().tolist()
-
+    _eu2 = _df['CountryName'].unique().tolist()
     _eu.append('IT')
+    # print(_eu)
     if DATASET in _eu:
         return load_data_eu(DATASET, path=path)
     else:
