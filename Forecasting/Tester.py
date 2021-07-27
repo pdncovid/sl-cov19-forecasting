@@ -48,8 +48,8 @@ def main():
     # ============================================================================================ Initialize parameters
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
-    parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='Norway')
+    parser.add_argument('--dataset', help='Dataset used for training. (JP SL RUS NOR)', type=str,
+                        default='SL')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-1-1')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
@@ -100,7 +100,7 @@ def main():
         R_EIG_ratio = 3
         R_power = 1
 
-    look_back_window, window_slide = 100, 1
+    look_back_window, window_slide = 100, 10
     PLOT = True
 
     # ===================================================================================================== Loading data
@@ -254,16 +254,18 @@ def main():
                                               population=population)
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=daily_cases, dataf=daily_filtered,
                                                  population=population)
-    trai = "['JP', 'Texas', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
+    # trai = "['JP', 'Texas', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
+
+    trai = "['Texas', 'NG', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
     modeltype = 'LSTM_Simple_WO_Regions'
     flip_compare = False
     use_f_gt = False
 
     model_names = [
         (f'{trai}_{modeltype}_Unfiltered_None_50_10', 'LSTM-R-None'),
-        (f'{trai}_{modeltype}_Unfiltered_Reduce_50_10', 'LSTM-R-Reduce'),
+        (f'{trai}_{modeltype}_Unfiltered_Loss_50_10', 'LSTM-R-Loss'),
         (f'{trai}_{modeltype}_Filtered_None_50_10', 'LSTM-F-None'),
-        (f'{trai}_{modeltype}_Filtered_Reduce_50_10', 'LSTM-F-Reduce'),
+        (f'{trai}_{modeltype}_Filtered_Loss_50_10', 'LSTM-F-Loss'),
     ]
     plot_data = [
         [{'label_name': model_names[0][1] + '-raw', 'line_size': 4}, {}],
