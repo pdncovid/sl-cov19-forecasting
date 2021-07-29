@@ -72,16 +72,17 @@ def get_loss_f(undersampling, xcheck, freq):
         return tf.reduce_mean((y_true - y_pred) ** 2)
 
     def loss_f_new(y_true, y_pred, x):
-        region_sample_freq = np.zeros((x.shape[0], x.shape[-1]), dtype='double')
+        region_sample_freq = np.zeros(y_true.shape, dtype='double')
 
-        for batch in range(x.shape[0]):
-            for n in range(x.shape[-1]):
-                i = bs(xcheck, np.mean(x[batch, :, n])) - 1
-                region_sample_freq[batch, n] = freq[i]
+        for batch in range(y_true.shape[0]):
+            for t in range(y_true.shape[1]):
+                for n in range(y_true.shape[2]):
+                    i = bs(xcheck, np.mean(x[batch, t, n])) - 1
+                    region_sample_freq[batch, t, n] = freq[i]
         y_pred = tf.dtypes.cast(y_pred, tf.float64)
-        mse = tf.reduce_mean((y_true - y_pred) ** 2, 1)
+        se = (y_true - y_pred) ** 2
 
-        return tf.reduce_mean(mse * (1 / np.log(region_sample_freq)) ** 2 * 10)
+        return tf.reduce_mean(se * (1 / np.log(region_sample_freq)) ** 2 * 10)
 
     if undersampling == "Reduce" or undersampling == 'None':
         return loss_f_normal
@@ -165,9 +166,10 @@ def main():
     parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
                         default="Filtered")
     parser.add_argument('--undersampling', help='under-sampling method (None, Loss, Reduce)', type=str,
-                        default="None")
+                        default="Loss")
 
     parser.add_argument('--path', help='default dataset path', type=str, default="../Datasets")
+    parser.add_argument('--window_slide', help='window_slide', type=int, default=10)
     parser.add_argument('--load_recent', help='Use daily data', action='store_true')
 
     args = parser.parse_args()
@@ -203,7 +205,7 @@ def main():
         R_EIG_ratio = 3
         R_power = 1
 
-    look_back_window, window_slide = 100, 1
+    look_back_window, window_slide = 100, args.window_slide
     PLOT = True
 
     # ===================================================================================================== Loading data
@@ -241,7 +243,10 @@ def main():
     fmodel_name = str(DATASETS) + "_" + model.name + "_" + TRAINING_DATA_TYPE + '_' + UNDERSAMPLING + '_' + str(
         model.input.shape[1]) + '_' + str(model.output.shape[1])
     if args.load_recent:
-        model = tf.keras.models.load_model("models/" + fmodel_name + ".h5")
+        try:
+            model = tf.keras.models.load_model("models/" + fmodel_name + ".h5")
+        except:
+            pass
 
     print(fmodel_name)
     folder = time.strftime('%Y.%m.%d-%H.%M.%S', time.localtime()) + "_" + fmodel_name
@@ -347,7 +352,7 @@ def main():
     train_data = train_data.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
 
     global freq, xcheck
-    freq, xcheck = np.histogram(np.concatenate(x_train, -1).mean(0))
+    freq, xcheck = np.histogram(x_train.reshape((-1,))) #  np.concatenate(x_train, -1).mean(0))
 
     print("================================================== Training data after reducing shapes")
     print("Train", x_train.shape, y_train.shape, x_train_feat.shape)

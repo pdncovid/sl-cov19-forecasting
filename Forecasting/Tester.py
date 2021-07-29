@@ -259,62 +259,59 @@ def main():
     modeltype = 'LSTM_Simple_WO_Regions'
     flip_compare = False
     use_f_gt = True
-
-    model_names = [
-        # (f"['JP']_{modeltype}_Filtered_None_50_10", 'LSTM-JP-F-None'),
-        # (f"['JP']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-JP-F-Reduce'),
-        # (f"['SL']_{modeltype}_Filtered_None_50_10", 'LSTM-SL-F-None'),
-        # (f"['SL']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-SL-F-Reduce'),
-        (f"['RUS']_{modeltype}_Filtered_None_50_10", 'LSTM-RUS-F-None'),
-        (f"['RUS']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-RUS-F-Reduce'),
-        (f"['NOR']_{modeltype}_Filtered_None_50_10", 'LSTM-NOR-F-None'),
-        (f"['NOR']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-NOR-F-Reduce'),
-
-        # (f"['JP']_{modeltype}_Filtered_None_50_10", 'LSTM-JP-F-None'),
-        # (f"['JP']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-JP-F-Reduce'),
-        # (f"['SL']_{modeltype}_Filtered_None_50_10", 'LSTM-SL-F-None'),
-        # (f"['SL']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-SL-F-Reduce'),
-        (f"['RUS']_{modeltype}_Filtered_None_50_10", 'LSTM-RUS-F-None'),
-        (f"['RUS']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-RUS-F-Reduce'),
-        (f"['NOR']_{modeltype}_Filtered_None_50_10", 'LSTM-NOR-F-None'),
-        (f"['NOR']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-NOR-F-Reduce'),
-    ]
-    plot_data = [
-        [{}, {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
-        [{}, {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
-        [{}, {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
-        [{}, {'label_name': model_names[3][1] + '-fil', 'line_size': 3}],
-        [{'label_name': model_names[4][1] + '-raw', 'line_size': 3}, {}],
-        [{'label_name': model_names[5][1] + '-raw', 'line_size': 3}, {}],
-        [{'label_name': model_names[6][1] + '-raw', 'line_size': 3}, {}],
-        [{'label_name': model_names[7][1] + '-raw', 'line_size': 3}, {}],
-        # [{}, {'label_name': model_names[4][1] + '-fil', 'line_size': 3}],
-        # [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
-        # [{}, {'label_name': model_names[6][1] + '-fil', 'line_size': 3}],
-        # [{}, {'label_name': model_names[7][1] + '-fil', 'line_size': 3}],
-
-        # [{'label_name': model_names[8][1] + '-raw', 'line_size': 3}, {}],
-        # [{'label_name': model_names[9][1] + '-raw', 'line_size': 3}, {}],
-        # [{'label_name': model_names[10][1] + '-raw', 'line_size': 3}, {}],
-        # [{'label_name': model_names[11][1] + '-raw', 'line_size': 3}, {}],
-        # [{'label_name': model_names[12][1] + '-raw', 'line_size': 3}, {}],
-        # [{'label_name': model_names[13][1] + '-raw', 'line_size': 3}, {}],
-        # [{'label_name': model_names[14][1] + '-raw', 'line_size': 3}, {}],
-        # [{'label_name': model_names[15][1] + '-raw', 'line_size': 3}, {}],
-    ]
+    skip_plotting = True
 
     # model_names = [
-    #     (f'{trai}_{modeltype}_Unfiltered_None_50_10', 'LSTM-R-None'),
-    #     (f'{trai}_{modeltype}_Unfiltered_Reduce_50_10', 'LSTM-R-Reduce'),
-    #     # (f'{trai}_{modeltype}_Filtered_None_50_10', 'LSTM-F-None'),
-    #     # (f'{trai}_{modeltype}_Filtered_Reduce_50_10', 'LSTM-F-Reduce'),
+    #     (f"['JP']_{modeltype}_Filtered_None_50_10", 'LSTM-JP-F-None'),
+    #     (f"['JP']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-JP-F-Reduce'),
+    #     (f"['SL']_{modeltype}_Filtered_None_50_10", 'LSTM-SL-F-None'),
+    #     (f"['SL']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-SL-F-Reduce'),
+    #     (f"['RUS']_{modeltype}_Filtered_None_50_10", 'LSTM-RUS-F-None'),
+    #     (f"['RUS']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-RUS-F-Reduce'),
+    #     (f"['NOR']_{modeltype}_Filtered_None_50_10", 'LSTM-NOR-F-None'),
+    #     (f"['NOR']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-NOR-F-Reduce'),
+    #
+    #     (f"['JP']_{modeltype}_Filtered_None_50_10", 'LSTM-JP-F-None'),
+    #     (f"['JP']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-JP-F-Reduce'),
+    #     (f"['SL']_{modeltype}_Filtered_None_50_10", 'LSTM-SL-F-None'),
+    #     (f"['SL']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-SL-F-Reduce'),
+    #     (f"['RUS']_{modeltype}_Filtered_None_50_10", 'LSTM-RUS-F-None'),
+    #     (f"['RUS']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-RUS-F-Reduce'),
+    #     (f"['NOR']_{modeltype}_Filtered_None_50_10", 'LSTM-NOR-F-None'),
+    #     (f"['NOR']_{modeltype}_Filtered_Reduce_50_10", 'LSTM-NOR-F-Reduce'),
     # ]
     # plot_data = [
-    #     [{'label_name': model_names[0][1] + '-raw', 'line_size': 10}, {}],
-    #     [{'label_name': model_names[1][1] + '-raw', 'line_size': 10}, {}],
-    #     # [{}, {'label_name': model_names[0][1] + '-fil', 'line_size': 10}],
-    #     # [{}, {'label_name': model_names[1][1] + '-fil', 'line_size': 10}],
+    #     [{}, {'label_name': model_names[0][1] + '-fil', 'line_size': 3}],
+    #     [{}, {'label_name': model_names[1][1] + '-fil', 'line_size': 3}],
+    #     [{}, {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
+    #     [{}, {'label_name': model_names[3][1] + '-fil', 'line_size': 3}],
+    #     [{}, {'label_name': model_names[4][1] + '-fil', 'line_size': 3}],
+    #     [{}, {'label_name': model_names[5][1] + '-fil', 'line_size': 3}],
+    #     [{}, {'label_name': model_names[6][1] + '-fil', 'line_size': 3}],
+    #     [{}, {'label_name': model_names[7][1] + '-fil', 'line_size': 3}],
+    #
+    #     [{'label_name': model_names[8][1] + '-raw', 'line_size': 3}, {}],
+    #     [{'label_name': model_names[9][1] + '-raw', 'line_size': 3}, {}],
+    #     [{'label_name': model_names[10][1] + '-raw', 'line_size': 3}, {}],
+    #     [{'label_name': model_names[11][1] + '-raw', 'line_size': 3}, {}],
+    #     [{'label_name': model_names[12][1] + '-raw', 'line_size': 3}, {}],
+    #     [{'label_name': model_names[13][1] + '-raw', 'line_size': 3}, {}],
+    #     [{'label_name': model_names[14][1] + '-raw', 'line_size': 3}, {}],
+    #     [{'label_name': model_names[15][1] + '-raw', 'line_size': 3}, {}],
     # ]
+
+    model_names = [
+        (f'{trai}_{modeltype}_Unfiltered_None_50_10', 'LSTM-R-None'),
+        (f'{trai}_{modeltype}_Unfiltered_Reduce_50_10', 'LSTM-R-Reduce'),
+        (f'{trai}_{modeltype}_Filtered_None_50_10', 'LSTM-F-None'),
+        (f'{trai}_{modeltype}_Filtered_Reduce_50_10', 'LSTM-F-Reduce'),
+    ]
+    plot_data = [
+        [{'label_name': model_names[0][1] + '-raw', 'line_size': 10}, {}],
+        [{'label_name': model_names[1][1] + '-raw', 'line_size': 10}, {}],
+        [{}, {'label_name': model_names[2][1] + '-fil', 'line_size': 10}],
+        [{}, {'label_name': model_names[3][1] + '-fil', 'line_size': 10}],
+    ]
 
     # fil = 'Filtered'
     # sam = 'Reduce'
@@ -342,7 +339,6 @@ def main():
     if flip_compare:
         use_f_gt = False if use_f_gt else True
 
-    skip_plotting = False
     show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=use_f_gt,
                       skip_plotting=skip_plotting, add_fil_input=True, add_raw_input=True)
 
