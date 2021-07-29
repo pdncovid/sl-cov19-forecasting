@@ -49,14 +49,14 @@ def main():
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (JP SL RUS NOR)', type=str,
-                        default='SL')
+                        default='RUS')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-1-1')
 
     parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
     parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
     parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=14)
     parser.add_argument('--output_days', help='Number of days predicted by the model', type=float, default=7)
-    parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM4EachDay_WO_Regions')
+    parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM_Simple_WO_Regions')
 
     parser.add_argument('--lr', help='Learning rate', type=int, default=0.002)
     parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
@@ -106,7 +106,13 @@ def main():
     # ===================================================================================================== Loading data
     global daily_cases, daily_filtered, population, region_names, test_days, START_DATE
 
-    DATASETS = "SL Texas IR NG"
+    DATASET = 'JP'
+    # trai = "['Texas', 'NG', 'IT', 'BD', 'KZ', 'KR', 'DEU']"
+    trai = [DATASET]
+    modeltype = 'LSTM_Simple_WO_Regions'
+    flip_compare = False
+    use_f_gt = False
+
     d = load_data(DATASET, path=args.path)
     region_names = d["region_names"]
     confirmed_cases = d["confirmed_cases"]
@@ -256,10 +262,6 @@ def main():
                                                  population=population)
     # trai = "['JP', 'Texas', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
 
-    trai = "['Texas', 'NG', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
-    modeltype = 'LSTM_Simple_WO_Regions'
-    flip_compare = False
-    use_f_gt = False
 
     model_names = [
         (f'{trai}_{modeltype}_Unfiltered_None_50_10', 'LSTM-R-None'),
