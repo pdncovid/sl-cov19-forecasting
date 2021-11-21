@@ -184,7 +184,7 @@ def compare(lt,lp, n_clusters, permute_both=True):
 d = load_data(DATASET,path="../Datasets")
 region_names=d["region_names"] 
 confirmed_cases=d["confirmed_cases"] 
-daily_cases=d["daily_cases"] 
+to_predict=d["daily_cases"]
 features=d["features"] 
 START_DATE=d["START_DATE"] 
 n_regions=d["n_regions"] 
@@ -203,7 +203,7 @@ print(f"Total population {population.sum()/1e6:.2f}M, regions:{n_regions}, days:
 
 
 if is_daily_data:
-    ds, dspm = preprocess(daily_cases, population)
+    ds, dspm = preprocess(to_predict, population)
 else:
     ds, dspm = preprocess(confirmed_cases, population)
 

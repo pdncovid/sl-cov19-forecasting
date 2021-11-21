@@ -67,6 +67,8 @@ def show_curves(data, regions):
 def per_million(data, population):
     # divide by population
     data_per_mio_capita = np.zeros_like(data)
+    if population is None:
+        population = np.ones((data.shape[0],))*1e6
     for i in range(len(population)):
         data_per_mio_capita[i, :] = data[i, :] / population[i] * 1e6
     return data_per_mio_capita
@@ -82,7 +84,7 @@ def get_daily(data):
     return data
 
 
-def get_data(filtered, normalize, data, dataf, population):
+def get_data(filtered, normalize, data, dataf, population=None, lastndays=None):
     if not filtered:
         x, y = np.copy(data), np.copy(data)
     else:
@@ -90,8 +92,10 @@ def get_data(filtered, normalize, data, dataf, population):
 
     x = per_million(x, population)
     y = per_million(y, population)
+    if lastndays is not None:
+        x = x[-lastndays:]
+        y = y[-lastndays:]
     if normalize:
-
         x, xs = normalize_for_nn(x, None if type(normalize) == bool else normalize)
         y, xs = normalize_for_nn(y, xs)
         return x.T, y.T, xs
@@ -381,7 +385,7 @@ def load_samples(_x, fs, WINDOW_LENGTH, PREDICT_STEPS):
 def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COVID-AI (PG)/spatio_temporal/Datasets"):
     global daily_cases, region_names, confirmed_cases, START_DATE
 
-    _df = pd.read_csv(os.path.join(path, os.path.join("EU","jrc-covid-19-all-days-by-regions.csv")))
+    _df = pd.read_csv(os.path.join(path, os.path.join("EU", "jrc-covid-19-all-days-by-regions.csv")))
     _eu = _df['iso3'].unique().tolist()
     _eu2 = _df['CountryName'].unique().tolist()
     _eu.append('IT')

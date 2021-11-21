@@ -47,49 +47,20 @@ print(tf.__version__)
 def main():
     # ============================================================================================ Initialize parameters
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
-    parser.add_argument('--daily', help='Use daily data', action='store_true')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
-                        default='NOR')
+                        default='SL')
     parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-1-1')
 
-    parser.add_argument('--epochs', help='Epochs to be trained', type=int, default=10)
-    parser.add_argument('--batchsize', help='Batch size', type=int, default=16)
-    parser.add_argument('--input_days', help='Number of days input into the NN', type=int, default=14)
-    parser.add_argument('--output_days', help='Number of days predicted by the model', type=float, default=7)
     parser.add_argument('--modeltype', help='Model type', type=str, default='LSTM_Simple_WO_Regions')
 
-    parser.add_argument('--lr', help='Learning rate', type=int, default=0.002)
-    parser.add_argument('--preprocessing', help='Preprocessing on the training data (Unfiltered, Filtered)', type=str,
-                        default="Filtered")
-    parser.add_argument('--undersampling', help='under-sampling method (Loss, Reduce)', type=str, default="Reduce")
-
     parser.add_argument('--path', help='default dataset path', type=str, default="../Datasets")
-    parser.add_argument('--asymptotic_t',
-                        help='Mean asymptotic period. (Test acc gradually increases with disease age)',
-                        type=int, default=14)
-
-    parser.add_argument('--initialize',
-                        help='How to initialize the positions (0-Random, 1-From file 2-From probability map)', type=int,
-                        default=0)
-
-    parser.add_argument('--mobility', help='How people move around (0-Random, 1-Brownian)', type=int, default=0)
-    parser.add_argument('--mobility_r', help='mobility radius', type=int, default=10)
 
     args = parser.parse_args()
 
-    global daily_data, DATASET, split_date, EPOCHS, BATCH_SIZE, BUFFER_SIZE, WINDOW_LENGTH, PREDICT_STEPS, lr, TRAINING_DATA_TYPE, UNDERSAMPLING, PLOT
-    daily_data = args.daily
+    global DATASET, split_date, PLOT
+
     DATASET = args.dataset
     split_date = args.split_date
-
-    EPOCHS = args.epochs
-    BATCH_SIZE = args.batchsize
-    BUFFER_SIZE = 100
-    WINDOW_LENGTH = args.input_days
-    PREDICT_STEPS = args.output_days
-    lr = args.lr
-    TRAINING_DATA_TYPE = args.preprocessing
-    UNDERSAMPLING = args.undersampling
 
     midpoint = True
 
@@ -106,12 +77,9 @@ def main():
     # ===================================================================================================== Loading data
     global daily_cases, daily_filtered, population, region_names, test_days, START_DATE
 
-    DATASET = 'JP'
-    # trai = "['Texas', 'NG', 'IT', 'BD', 'KZ', 'KR', 'DEU']"
-    trai = [DATASET]
+    trai = "['Texas', 'NG', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
+    # trai = [DATASET]
     modeltype = 'LSTM_Simple_WO_Regions'
-    flip_compare = False
-    use_f_gt = False
 
     d = load_data(DATASET, path=args.path)
     region_names = d["region_names"]
@@ -260,50 +228,85 @@ def main():
                                               population=population)
     x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=daily_cases, dataf=daily_filtered,
                                                  population=population)
-    # trai = "['JP', 'Texas', 'IT', 'BD', 'KZ', 'KR', 'Germany']"
 
+    # model_names = [
+    #     (f'{trai}_{modeltype}_Unfiltered_None_60_30', 'LSTM-R-None (GT:F)'),
+    #     (f'{trai}_{modeltype}_Unfiltered_Loss_60_30', 'LSTM-R-Loss (GT:F)'),
+    #     (f'{trai}_{modeltype}_Filtered_None_60_30', 'LSTM-F-None (GT:F)'),
+    #     (f'{trai}_{modeltype}_Filtered_Loss_60_30', 'LSTM-F-Loss (GT:F)'),
+    #     (f'{trai}_{modeltype}_Unfiltered_None_60_30', 'LSTM-R-None (GT:R)'),
+    #     (f'{trai}_{modeltype}_Unfiltered_Loss_60_30', 'LSTM-R-Loss (GT:R)'),
+    #     (f'{trai}_{modeltype}_Filtered_None_60_30', 'LSTM-F-None (GT:R)'),
+    #     (f'{trai}_{modeltype}_Filtered_Loss_60_30', 'LSTM-F-Loss (GT:R)'),
+    # ]
+    # plot_data = [
+    #     [{}, {'label_name': model_names[0][1], 'line_size': 4}],
+    #     [{}, {'label_name': model_names[1][1], 'line_size': 4}],
+    #     [{}, {'label_name': model_names[2][1], 'line_size': 3}],
+    #     [{}, {'label_name': model_names[3][1], 'line_size': 3}],
+    #     [{}, {'label_name': model_names[4][1], 'line_size': 4}],
+    #     [{}, {'label_name': model_names[5][1], 'line_size': 4}],
+    #     [{}, {'label_name': model_names[6][1], 'line_size': 3}],
+    #     [{}, {'label_name': model_names[7][1], 'line_size': 3}],
+    #
+    # ]
+    # use_f_gt = [True, True, True, True, False, False, False, False]
+
+    # model_names = [
+    #     (f'{trai}_{modeltype}_Filtered_None_60_30', 'LSTM-F-None (GT:F)'),
+    #     (f'{trai}_{modeltype}_Filtered_Loss_60_30', 'LSTM-F-Loss (GT:F)'),
+    #     (f'{trai}_{modeltype}_Filtered_None_60_30', 'LSTM-F-None (GT:R)'),
+    #     (f'{trai}_{modeltype}_Filtered_Loss_60_30', 'LSTM-F-Loss (GT:R)'),
+    # ]
+    # plot_data = [
+    #     [{}, {'label_name': model_names[0][1], 'line_size': 4}],
+    #     [{}, {'label_name': model_names[1][1], 'line_size': 4}],
+    #     [{}, {'label_name': model_names[2][1], 'line_size': 4}],
+    #     [{}, {'label_name': model_names[3][1], 'line_size': 4}],
+    # ]
+    # use_f_gt = [True, True, False, False]
 
     model_names = [
-        (f'{trai}_{modeltype}_Unfiltered_None_50_10', 'LSTM-R-None'),
-        (f'{trai}_{modeltype}_Unfiltered_Loss_50_10', 'LSTM-R-Loss'),
-        (f'{trai}_{modeltype}_Filtered_None_50_10', 'LSTM-F-None'),
-        (f'{trai}_{modeltype}_Filtered_Loss_50_10', 'LSTM-F-Loss'),
+        # (f'{trai}_{modeltype}_Filtered_None_50_10', 'LSTM-F-None (F)'),
+        (f'{trai}_{modeltype}_Filtered_Loss_50_10', 'LSTM-F-Loss (F)'),
+        # (f'{trai}_{modeltype}_Unfiltered_None_50_10', 'LSTM-F-None (R)'),
+        # (f'{trai}_{modeltype}_Unfiltered_Loss_50_10', 'LSTM-F-Loss (R)'),
     ]
     plot_data = [
-        [{'label_name': model_names[0][1] + '-raw', 'line_size': 4}, {}],
-        [{'label_name': model_names[1][1] + '-raw', 'line_size': 4}, {}],
-        [{}, {'label_name': model_names[2][1] + '-fil', 'line_size': 3}],
-        [{}, {'label_name': model_names[3][1] + '-fil', 'line_size': 3}],
+        [{}, {'label_name': model_names[0][1], 'line_size': 4}],
+        # [{}, {'label_name': model_names[1][1], 'line_size': 4}],
+        # [{'label_name': model_names[0][1], 'line_size': 4}, {}],
+        # [{'label_name': model_names[1][1], 'line_size': 4}, {}],
     ]
+    use_f_gt = [True, True, False, False]
+
     # fil = 'Filtered'
-    # sam = 'Reduce'
+    # sam = 'Loss'
     # ipop = [
     #     # (30, 10), (30, 15), (30, 20), (30, 25), (30, 30),
     #     # (40, 10), (40, 15), (40, 20), (40, 25), (40, 30),
     #     # (50, 10), (50, 15), (50, 20), (50, 25), (50, 30),
-    #     # (60, 10), (60, 15), (60, 20), (60, 25), (60, 30),
+    #     (60, 10), (60, 15), (60, 20), (60, 25), (60, 30),
     #     # (70, 10), (70, 15), (70, 20), (70, 25), (70, 30),
-    #     (50, 10)
+    #     # (50, 10)
     # ]
     # model_names = []
     # plot_data = []
+    # use_f_gt = []
     # for hh in range(len(ipop)):
     #     model_names.append((
     #         f"{trai}_{modeltype}_{fil}_{sam}_{ipop[hh][0]}_{ipop[hh][1]}",
     #         f'LSTM-ALL-{fil[0]}-{sam}-{ipop[hh][0]}-{ipop[hh][1]}'))
+    #     use_f_gt.append(True)
     #     if fil == 'Filtered':
     #         plot_data.append([{}, {'label_name': model_names[hh][1] + ' (F)', 'line_size': 3}])
     #
     #     else:
     #         plot_data.append([{'label_name': model_names[0][1] + ' (R)', 'line_size': 4}, {}])
-    #
-
-    if flip_compare:
-        use_f_gt = False if use_f_gt else True
 
     skip_plotting = False
     show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=use_f_gt,
-                      skip_plotting=skip_plotting, add_fil_input=True, add_raw_input=True)
+                      skip_plotting=skip_plotting, add_fil_input=True, add_raw_input=True, add_ub_lb=False)
 
     # show_pred_daybyday(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data,
     #                    skip_plotting=skip_plotting, use_f_gt=use_f_gt)
@@ -386,10 +389,9 @@ def get_ub_lb(pred, true, n_regions):
     return ub_err, lb_err
 
 
-def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt=True,
-                      skip_plotting=False, add_raw_input=True, add_fil_input=True):
-    add_ub_lb = True
-    showhowmuch = 1
+def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, model_names, plot_data, use_f_gt,
+                      skip_plotting=False, add_raw_input=True, add_fil_input=True, add_ub_lb=False):
+    showhowmuch = 3
     print("===================================== TESTING PREDICTIONS =================================================")
     n_regions = len(x_data_scalers.data_max_)
     Ys = []
@@ -417,9 +419,9 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
         WINDOW_LENGTH = model.input.shape[1]
         PREDICT_STEPS = model.output.shape[1]
         X_test_w, y_test_w = window_data(x_data, y_data, window=WINDOW_LENGTH, pred=PREDICT_STEPS)
-        print(f"windowed data X={X_test_w.shape} Y={y_test_w.shape}")
-        X_test_w = X_test_w[-(x_data.shape[0] - test_days):]
-        y_test_w = y_test_w[-(x_data.shape[0] - test_days):]
+        # print(f"windowed data X={X_test_w.shape} Y={y_test_w.shape}")
+        # X_test_w = X_test_w[-(x_data.shape[0] - test_days):]
+        # y_test_w = y_test_w[-(x_data.shape[0] - test_days):]
         print(f"Predicting from model. {model.input.shape} --> {model.output.shape} "
               f"X={X_test_w.shape} Y={y_test_w.shape}")
 
@@ -431,15 +433,17 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
         else:
             yhat = model.predict(X_test_w[:, :, :])
 
+        # yhat[:,-1,:] =yhat[:,-2,:]+0.02
+
         X_test_w = undo_normalization(X_test_w, scalers)
         yhat = undo_normalization(yhat, scalers)
         y_test_w = undo_normalization(y_test_w, scalers)
         return X_test_w, y_test_w, yhat
 
     x_data, y_data, _ = get_data(filtered=False, normalize=False, data=daily_cases, dataf=daily_filtered,
-                                 population=population)
+                                 population=population, lastndays=test_days)
     x_dataf, y_dataf, _ = get_data(filtered=True, normalize=False, data=daily_cases, dataf=daily_filtered,
-                                   population=population)
+                                   population=population, lastndays=test_days)
 
     #########################################################################
     for i in range(len(model_names)):
@@ -449,14 +453,14 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
 
         # get filtered data and predict the new cases for test period
         x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
-                                       population=population)
+                                       population=population, lastndays=test_days)
         x_testf, y_testf, yhatf = get_model_predictions(model, x_dataf, y_dataf, x_data_scalers)
 
         # get raw data and predict the new cases for test period (yhat: (days,regions))
         x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers, data=daily_cases, dataf=daily_filtered,
-                                     population=population)
+                                     population=population, lastndays=test_days)
         x_test, y_test, yhat = get_model_predictions(model, x_data, y_data, x_data_scalers)
-        ygt = y_testf if use_f_gt else y_test
+        ygt = y_testf if use_f_gt[i] else y_test
 
         if len(plot[0].keys()) != 0:
             resultsDict[f'{model_label} (R)'] = evaluate(ygt, yhat)  # raw predictions v raw true values
@@ -520,6 +524,7 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
         _cut = min(Ys[i].shape[0], _cut)
     for i in range(len(Ys)):
         print(method_list[i], Ys[i].shape, np.arange(0, Ys[i].shape[0], WINDOW_LENGTH + PREDICT_STEPS))
+        to_skip = np.arange(0, Ys[i].shape[0], WINDOW_LENGTH + PREDICT_STEPS)[-showhowmuch]
         Ys[i] = Ys[i][-_cut:, :, :]
         Ys[i] = Ys[i][np.arange(0, Ys[i].shape[0], WINDOW_LENGTH + PREDICT_STEPS), :, :]
 
@@ -529,7 +534,6 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
         x_testf[:, :, :] = np.nan
     if not add_raw_input:
         x_test[:, :, :] = np.nan
-
 
     x_test = x_test[-showhowmuch:]
     x_testf = x_testf[-showhowmuch:]
@@ -545,7 +549,9 @@ def show_predictions2(x_data_scalers, resultsDict, predictionsDict, gtDict, mode
         Ys[i] = tmp
     Ys = np.stack(Ys, 1)
     plt.figure(figsize=(18, 9))
-    plot_prediction(x_test, x_testf, Ys, method_list, styles, region_names, region_mask, start_date=split_date)
+
+    start_date = str(pd.to_datetime(split_date) + pd.DateOffset(days=int(to_skip)))
+    plot_prediction(x_test, x_testf, Ys, method_list, styles, region_names, region_mask, start_date=start_date)
 
     # plt.savefig(f"images/{DATASET}_DayByDay.eps")
     # plt.savefig(f"images/{DATASET}_DayByDay.jpg")

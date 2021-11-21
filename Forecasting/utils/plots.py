@@ -1,6 +1,7 @@
 import datetime
 
 import matplotlib.pyplot as plt
+import matplotlib.dates as md
 import pandas as pd
 import seaborn as sns
 import numpy as np
@@ -80,7 +81,7 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask, st
         assert (lines_x == lines_y)
 
         d = dict()
-        d['Day'] = []
+        d['Date'] = []
         d['New cases'] = []
         d['Region'] = []
         d['Data type'] = []
@@ -90,14 +91,14 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask, st
             if region_mask[c] == 0:
                   continue
             
-            d['Day'] += [idx + i for i in range(x_n)]
+            d['Date'] += [idx + i for i in range(x_n)]
             d['New cases'] += [i for i in x[:, c]]
             d['Region'] += [region_list[c]] * x_n
             d['Data type'] += ['Training data'] * x_n
             d['Size'] += [styles['X']['Size']]*x_n
             d['Preprocessing'] +=[styles['X']['Preprocessing']] *x_n
             
-            d['Day'] += [idx + i for i in range(x_n)]
+            d['Date'] += [idx + i for i in range(x_n)]
             d['New cases'] += [i for i in xf[:, c]]
             d['Region'] += [region_list[c]] * x_n
             d['Data type'] += ['Training data'] * x_n
@@ -112,7 +113,7 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask, st
                 preprocessing = styles[method_list[m]]['Preprocessing']
                 d['Preprocessing'] +=[preprocessing] * (y_n + 2)
                 
-                d['Day'] += [idx+i for i in range(x_n-1, x_n+y_n+1)]
+                d['Date'] += [idx+i for i in range(x_n-1, x_n+y_n+1)]
                 if preprocessing=='Filtered':
                     d['New cases'] += [xf[-1, c]] + [i for i in y[m, :, c]]
                     # if _i+1 != X.shape[0]:
@@ -134,22 +135,28 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask, st
             sd = pd.to_datetime(start_date)
             days = []
             for xxx in range(len(df)):
-                days.append(sd + datetime.timedelta(days=int(df['Day'][xxx])))
+                days.append(sd + datetime.timedelta(days=int(df['Date'][xxx])))
             days = pd.Series(days)
-            df['Day'] = days
-        df.set_index('Day')
+            df['Date'] = days
+        df.set_index('Date')
         dfs.append(df)
         if _i==0:
             legend = 'brief'
         else:
             legend = False
-        ax = sns.lineplot(data=df, x='Day', y='New cases',
+        ax = sns.lineplot(data=df, x='Date', y='New cases',
                           style='Preprocessing',
                           hue='Data type',  linewidth=3,
                           # estimator=lambda x: x if len(x)==1 else list(x)[1],
-                          markers=True, dashes=True,
+                          markers=False, dashes=True,
                           legend=legend)
-        
+        # specify the position of the major ticks at the beginning of the week
+        ax.xaxis.set_major_locator(md.MonthLocator(bymonthday=1))
+        # specify the format of the labels as 'year-month-day'
+        ax.xaxis.set_major_formatter(md.DateFormatter('%Y-%m-%d'))
+        # (optional) rotate by 90° the labels in order to improve their spacing
+        # plt.setp(ax.xaxis.get_majorticklabels(), rotation=90)
+
         if legend != False:
             plt.legend()
             handles, labels = ax.get_legend_handles_labels()
@@ -161,8 +168,8 @@ def plot_prediction(X, Xf, Ys, method_list, styles, region_list, region_mask, st
                 _handles.append(handles[_i])
                 _labels.append(labels[_i])
             ax.legend(handles=_handles, labels=_labels, loc='upper left')
-    ax.set_xlabel("Day")
-    ax.set_ylabel("Cases")
+    ax.set_xlabel("Date")
+    ax.set_ylabel("New daily cases")
     # plt.setp(ax.get_legend().get_texts(), fontsize='22') # for legend text
     # plt.setp(ax.get_legend().get_title(), fontsize='32') # for legend title
     return dfs
