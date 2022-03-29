@@ -3,7 +3,6 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import statsmodels.tsa.stattools as stattools
 
 from Forecasting.utils.data_loader import load_data_eu, load_data, load_smooth_data, load_samples, load_multiple_data, \
     show_curves

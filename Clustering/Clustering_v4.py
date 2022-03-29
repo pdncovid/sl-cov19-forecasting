@@ -83,7 +83,7 @@ args = parser.parse_args()
 is_daily_data = args.ds_type == "daily"
 is_per_million = args.per_million
 is_regionwise = args.regionwise
-DATASET = args.dataset
+TEST_DAYS = args.dataset
 scaler_type = args.scaler
 seg_length = args.seglen
 view = args.view
@@ -181,8 +181,8 @@ def compare(lt,lp, n_clusters, permute_both=True):
     return best
 
 
-d = load_data(DATASET,path="../Datasets")
-region_names=d["region_names"] 
+d = load_data(TEST_DAYS, path="../Datasets")
+test_region_names=d["region_names"]
 confirmed_cases=d["confirmed_cases"] 
 to_predict=d["daily_cases"]
 features=d["features"] 
@@ -194,18 +194,18 @@ lon = features["Lon"].values
 
 features=features.drop(['Lat', 'Lon'], axis=1)
 
-population = features["Population"]
-for i in range(len(population)):
-    print("{:.2f}%".format(confirmed_cases[i,:].max()/population[i]*100), region_names[i])
+test_population = features["Population"]
+for i in range(len(test_population)):
+    print("{:.2f}%".format(confirmed_cases[i,:].max() / test_population[i] * 100), test_region_names[i])
 
 days = confirmed_cases.shape[1]
-print(f"Total population {population.sum()/1e6:.2f}M, regions:{n_regions}, days:{days}")
+print(f"Total population {test_population.sum() / 1e6:.2f}M, regions:{n_regions}, days:{days}")
 
 
 if is_daily_data:
-    ds, dspm = preprocess(to_predict, population)
+    ds, dspm = preprocess(to_predict, test_population)
 else:
-    ds, dspm = preprocess(confirmed_cases, population)
+    ds, dspm = preprocess(confirmed_cases, test_population)
 
 
 if is_per_million:

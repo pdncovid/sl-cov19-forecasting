@@ -478,7 +478,7 @@ def load_data(DATASET, path="/content/drive/Shareddrives/covid.eng.pdn.ac.lk/COV
 
             # dataframes
             df_confirmed = pd.read_csv(os.path.join(dataset_path, "Texas COVID-19 Case Count Data by County.csv"),
-                                       skiprows=2, nrows=254)  # https://dshs.texas.gov/coronavirus/AdditionalData.aspx
+                                       skiprows=2, nrows=254, encoding='windows-1252')  # https://dshs.texas.gov/coronavirus/AdditionalData.aspx
             df_population = pd.read_csv(os.path.join(dataset_path, "2019_txpopest_county.csv"),
                                         header=0)  # https://demographics.texas.gov/Resources/TPEPP/Estimates/2019/2019_txpopest_county.csv
 

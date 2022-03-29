@@ -207,20 +207,18 @@ def O_LPF(data, datatype, order, R_EIG_ratio, R_power, midpoint, corr, region_na
 
 
 def main():
-    default_model = "['Texas', 'NG', 'IT', 'BD', 'KZ', 'KR', 'Germany']_LSTM_Simple_WO_Regions_Filtered_Loss_50_10"
+    default_model = "['SL', 'Texas', 'NG', 'IT', 'BD', 'KZ', 'KR', 'DEU']_LSTM_Simple_WO_Regions_Filtered_Loss_50_10"
     # ============================================================================================ Initialize parameters
     parser = argparse.ArgumentParser(description='Train NN model for forecasting COVID-19 pandemic')
     parser.add_argument('--dataset', help='Dataset used for training. (Sri Lanka, Texas, USA, Global)', type=str,
                         default='SL')
-    parser.add_argument('--split_date', help='Train-Test splitting date', type=str, default='2021-1-1')
     parser.add_argument('--path', help='default dataset path', type=str, default="../Datasets")
     parser.add_argument('--model', help='Model name', type=str, default=default_model)
     args = parser.parse_args()
 
-    global DATASET, split_date, PLOT
+    global DATASET, PLOT
 
     DATASET = args.dataset
-    split_date = args.split_date
     model_name = args.model
 
     midpoint = True
@@ -235,7 +233,7 @@ def main():
     districtwise = False
     calc_days = 20
     # ===================================================================================================== Loading data
-    global to_predict, daily_filtered, population, region_names, test_days, START_DATE, region_mask
+    global to_predict, daily_filtered, population, region_names, region_mask, data_end_date
 
     population = None
     if districtwise:
@@ -251,7 +249,7 @@ def main():
         region_names = ["local_new_case", "local_new_death"]
         START_DATE = df.iloc[0, 0]
     df_predict = None
-    for _d in range(-calc_days, 1, 1):
+    for _d in range(-calc_days, 0, 1):
         if districtwise:
             if _d != 0:
                 _df = df.iloc[:, :_d]
@@ -266,12 +264,9 @@ def main():
             else:
                 _df = df
             to_predict = _df[region_names].values.T
-
+        data_end_date = max(_df["Date"])
         to_predict[to_predict < 0] = 0
         n_regions = to_predict.shape[0]
-        days = to_predict.shape[1]
-        test_days = (pd.to_datetime(split_date) - pd.to_datetime(START_DATE)).days
-        print(f"Start date {START_DATE}, split date {split_date} testing days {days - test_days}")
 
         region_mask = (np.arange(n_regions) != -1).astype('int32')
 
@@ -286,9 +281,7 @@ def main():
         x_dataf, y_dataf, x_data_scalersf = get_data(True, normalize=True, data=to_predict, dataf=daily_filtered,
                                                      population=population)
         model_names = [(model_name, 'LSTM-F-Loss (F)'), ]
-        plot_data = [[{}, {'label_name': model_names[0][1], 'line_size': 4}], ]
-        _df_predict = get_predictions(x_data_scalers, model_names, add_fil_input=True, add_raw_input=True,
-                                      add_ub_lb=False)
+        _df_predict = get_predictions(x_data_scalers, model_names)
         if districtwise:
             _df_predict['Date'] = _df_predict['Date'].dt.strftime('%m/%d/%Y')
             _df_predict = _df_predict.set_index('Date')
@@ -311,7 +304,7 @@ def main():
         if df_predict is None:
             df_predict = _df_predict
         else:
-            weight = 0.1
+            weight = 0.0
             if districtwise:
                 df_predict[_df_predict.columns[-1]] = _df_predict[_df_predict.columns[-1]]
                 for col in _df_predict.columns[2:]:
@@ -348,6 +341,7 @@ def main():
         df_predict.iloc[-2,1:]=(df_predict.iloc[-3,1:]+df_predict.iloc[-1,1:])/2
         pd.DataFrame.to_csv(df_predict, f"total_predictions.csv", index=False)
     print(df_predict)
+    plt.show()
 
 def get_ub_lb(pred, true, n_regions):
     err = abs((pred - true) ** 2)
@@ -390,9 +384,9 @@ def get_predictions(x_data_scalers, model_names, add_raw_input=True, add_fil_inp
         return X_test_w, yhat
 
     x_data, y_data, _ = get_data(filtered=False, normalize=False, data=to_predict, dataf=daily_filtered,
-                                 population=population, lastndays=test_days)
+                                 population=population, lastndays=None)
     x_dataf, y_dataf, _ = get_data(filtered=True, normalize=False, data=to_predict, dataf=daily_filtered,
-                                   population=population, lastndays=test_days)
+                                   population=population, lastndays=None)
 
     #########################################################################
     for i in range(len(model_names)):
@@ -402,12 +396,12 @@ def get_predictions(x_data_scalers, model_names, add_raw_input=True, add_fil_inp
 
         # get filtered data and predict the new cases for test period
         x_dataf, y_dataf, _ = get_data(filtered=True, normalize=x_data_scalers, data=to_predict, dataf=daily_filtered,
-                                       population=population, lastndays=test_days)
+                                       population=population, lastndays=None)
         x_testf, yhatf = get_model_predictions(model, x_dataf, x_data_scalers)
 
         # get raw data and predict the new cases for test period (yhat: (days,regions))
         x_data, y_data, _ = get_data(filtered=False, normalize=x_data_scalers, data=to_predict, dataf=daily_filtered,
-                                     population=population, lastndays=test_days)
+                                     population=population, lastndays=None)
         x_test, yhat = get_model_predictions(model, x_data, x_data_scalers)
 
         Ys.append(yhatf)
@@ -417,21 +411,16 @@ def get_predictions(x_data_scalers, model_names, add_raw_input=True, add_fil_inp
         styles[model_label] = {'Preprocessing': 'Filtered', 'Data': model_label, 'Size': 3}
 
     Ys = np.stack(Ys, 1)
-    to_skip = x_data.shape[0] - test_days - WINDOW_LENGTH
-    start_date = str(pd.to_datetime(split_date) + pd.DateOffset(days=int(to_skip)))
-    print("start date", start_date)
     plt.figure()
-    x = [pd.to_datetime(start_date) + pd.DateOffset(days=int(i)) for i in range(x_test.shape[1])]
+    x = [pd.to_datetime(data_end_date) + pd.DateOffset(days=int(i)-x_test.shape[1]) for i in range(x_test.shape[1])]
     plt.plot(x, x_test.sum(0))
     plt.plot(x, x_testf.sum(0))
-    x = [pd.to_datetime(start_date) + pd.DateOffset(days=int(i)) for i in
-         range(x_test.shape[1], x_test.shape[1] + Ys.shape[2])]
+    x = [pd.to_datetime(data_end_date) + pd.DateOffset(days=int(i)) for i in range(Ys.shape[2])]
     plt.plot(x, Ys[0].sum(0), '--')
 
     # Ys shape - (sectors=1, models=1, predict_days, regions)
     to_save = Ys[0, 0, :, :]
-    dates = [pd.to_datetime(start_date) + pd.DateOffset(days=int(i)) for i in
-             range(x_test.shape[1], x_test.shape[1] + Ys.shape[2])]
+    dates = [pd.to_datetime(data_end_date) + pd.DateOffset(days=int(i)) for i in range(Ys.shape[2])]
 
     s = pd.Series(dates, name="Date")
     df = pd.DataFrame(to_save)
